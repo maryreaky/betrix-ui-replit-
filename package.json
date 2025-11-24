@@ -17,6 +17,7 @@
     "bcryptjs": "^3.0.3",
     "body-parser": "^1.20.3",
     "bull": "^4.16.5",
+    "bullmq": "^5.64.1",
     "compression": "^1.8.1",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
