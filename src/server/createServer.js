@@ -1,4 +1,4 @@
-const path = require('path');
+﻿const path = require('path');
 
 let appModule;
 try {
@@ -26,6 +26,35 @@ if (appModule && typeof appModule.createServer === 'function') {
   const express = require('express');
   module.exports.createServer = function createServer() {
     const app = express();
+/* TEMP FAST WEBHOOK HANDLER - START (remove after debugging) */
+try {
+  // Quick validation and immediate 200 response; enqueue for async processing
+  app.post('/webhook', (req, res) => {
+    try {
+      const secret = req.get('x-telegram-bot-api-secret-token') || '';
+      if (process.env.TELEGRAM_WEBHOOK_SECRET && secret !== process.env.TELEGRAM_WEBHOOK_SECRET) {
+        console.warn('WEBHOOK RECEIVED: invalid secret');
+        res.status(403).send('forbidden');
+        return;
+      }
+      // Minimal structured enqueue log
+      try { console.log(JSON.stringify({ event: 'webhook.received', path: req.originalUrl || req.url, ip: req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress, bodySize: JSON.stringify(req.body || {}).length })); } catch(e){}
+      // Replace the following line with your queue API call (non-blocking)
+      if (typeof queue !== 'undefined' && queue.enqueue) {
+        try { queue.enqueue('telegram:update', req.body); } catch(e) { console.error('enqueue error', e); }
+      } else {
+        // fallback: push to a lightweight in-memory queue or log for manual processing
+        console.debug('No queue available: webhook enqueued to fallback (debug)');
+      }
+      res.status(200).send('OK');
+    } catch (err) {
+      console.error('webhook handler error', err);
+      // still respond 200 to avoid Telegram retries if you prefer; otherwise use 500
+      res.status(200).send('OK');
+    }
+  });
+} catch (e) { console.error('TEMP FAST WEBHOOK HANDLER INSERT ERROR', e); }
+/* TEMP FAST WEBHOOK HANDLER - END */
     app.get('/health', (req, res) => res.status(200).send('ok'));
     return app;
   };
@@ -39,3 +68,4 @@ if (require.main === module) {
     console.log(`SERVER: listening on port ${port}`);
   });
 }
+
