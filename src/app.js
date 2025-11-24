@@ -246,7 +246,16 @@ const baseLimiter = (windowMs, max, message) =>
     standardHeaders: true,
     legacyHeaders: false,
     skip: req => NODE_ENV === "development",
-    keyGenerator: req => { try { return ipKeyGenerator(req); } catch { return req.ip || (req.headers["x-forwarded-for"]||"").split(",")[0]?.trim() || "unknown"; } } );
+    keyGenerator: req => {
+      try {
+        // Use express-rate-limit helper to normalize IPv6/IPv4 addresses
+        return ipKeyGenerator(req);
+      } catch (e) {
+        // Fallback: proxy-aware req.ip or first X-Forwarded-For entry
+        return req.ip || (req.headers["x-forwarded-for"] || "").split(",")[0]?.trim() || "unknown";
+      }
+    }
+  });
 
 const freeLimiter = baseLimiter(60 * 1000, 30, "Rate limit exceeded. Upgrade for higher limits.");
 const memberLimiter = baseLimiter(60 * 1000, 60, "Rate limit exceeded for member tier.");
@@ -525,4 +534,5 @@ const start = async () => {
 start();
 
 export { app, server, redis, wss };
+
 
