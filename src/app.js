@@ -1,5 +1,6 @@
 /**
- * BETRIX EXPRESS SERVER - COMPLETE PRODUCTION-READY
+ * BETRIX EXPRESS SERVER - PRODUCTION-READY (COMPREHENSIVE)
+ *
  * - Full feature set: branding, menus, 150+ endpoints scaffolding
  * - Robust middleware: Helmet, CORS, Compression, Morgan, Body parsing
  * - IPv6-safe rate limiting using express-rate-limit ipKeyGenerator
@@ -13,8 +14,14 @@
  * - Multer file upload handling with validation
  * - Graceful shutdown and initialization seeding
  *
- * NOTE: If running Node < 18, install and import node-fetch.
+ * Notes:
+ * - Node 18+ provides global fetch. If using Node < 18, install node-fetch and uncomment import.
+ * - Ensure package.json includes: express, body-parser, ioredis, helmet, cors, express-rate-limit, compression,
+ *   morgan, ws, multer, bcryptjs, path, and any other runtime dependencies.
  */
+
+// If Node < 18, uncomment the next line and install node-fetch:
+// import fetch from "node-fetch";
 
 import express from "express";
 import bodyParser from "body-parser";
@@ -31,11 +38,8 @@ import { createServer } from "http";
 import multer from "multer";
 import bcrypt from "bcryptjs";
 
-// If Node < 18, uncomment and install node-fetch
-// import fetch from "node-fetch";
-
 // ============================================================================
-// PATHS & ENV
+// PATHS & ENVIRONMENT
 // ============================================================================
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -125,11 +129,9 @@ const log = (level, module, message, data = null) => {
   console.log(`[${timestamp}] [${level}] [${module}] ${message}${addon}`);
 
   // Redis append + trim
-  redis.lpush(LOG_STREAM_KEY, JSON.stringify(entry)).then(() => {
-    redis.ltrim(LOG_STREAM_KEY, 0, LOG_LIMIT - 1).catch(() => {});
-  }).catch(err => {
-    console.error("Redis log storage error:", err?.message || err);
-  });
+  redis.lpush(LOG_STREAM_KEY, JSON.stringify(entry))
+    .then(() => redis.ltrim(LOG_STREAM_KEY, 0, LOG_LIMIT - 1).catch(() => {}))
+    .catch(err => console.error("Redis log storage error:", err?.message || err));
 
   // Counters
   redis.incr(`stats:logs:${level}`).catch(() => {});
@@ -302,7 +304,7 @@ const baseRateLimiter = (windowMs, max, message) =>
     standardHeaders: true,
     legacyHeaders: false,
     skip: req => NODE_ENV === "development",
-    keyGenerator: req => ipKeyGenerator(req) // IPv6-safe helper
+    keyGenerator: req => ipKeyGenerator(req)
   });
 
 const freeLimiter = baseRateLimiter(60 * 1000, 30, "Rate limit exceeded. Upgrade for higher limits.");
