@@ -2283,53 +2283,31 @@ console.log("   ├─ Gemini AI (natural language conversations)");
 console.log("   ├─ API-Football (live, standings, odds)");
 console.log("   └─ Rate Limiter (tier-based limits)");
 
-process.on("SIGTERM", () => {
-  console.log("[SHUTDOWN] SIGTERM received, shutting down gracefully...");
-  process.exit(0);
-});
+console.log("");
+console.log("   SYSTEM SERVICES (5 total):");
+console.log("   ├─ Redis Cache (multi-tier caching)");
+console.log("   ├─ User Management (profiles, access control)");
+console.log("   ├─ Context Manager (conversation history)");
+console.log("   ├─ Telegram Integration (webhook messaging)");
+console.log("   └─ Background Worker (no HTTP server)");
 
-process.on("unhandledRejection", (err) => {
-  console.error("[FATAL] Unhandled promise rejection:", err);
-});
+console.log("");
+console.log("   COMMAND HANDLERS (22 implemented):");
+console.log("   ├─ /start, /menu, /live, /standings, /odds");
+console.log("   ├─ /predict, /analyze, /tips, /pricing, /signup");
+console.log("   ├─ /status, /refer, /leaderboard, /dossier, /coach");
+console.log("   ├─ /stats, /engage, /betting_stats, /trends, /upcoming");
+console.log("   ├─ /health, /help, + Natural Language Chat");
+console.log("   └─ Callback button handling for inline interactions");
 
-process.on("uncaughtException", (err) => {
-  console.error("[FATAL] Uncaught exception:", err);
-  process.exit(1);
-});
+console.log("");
+console.log("[💎] Status: PRODUCTION READY");
+console.log("[🎯] Architecture: Monolithic unified file (3000+ lines)");
+console.log("[🔐] Security: Rate limiting, input sanitization, validation");
+console.log("[⚡] Performance: Multi-tier caching, async/await, connection pooling");
+console.log("=".repeat(130) + "\n");
 
-console.log("[BETRIX] ✅ Ultimate unified worker fully initialized and operational\n");
-  console.log("   ├─ Prediction Engine (ELO ratings, form scoring, ML confidence)");
-  console.log("   ├─ Payment Engine (M-Pesa, PayPal, transactions)");
-  console.log("   ├─ Admin Engine (metrics, revenue, users, broadcasts)");
-  console.log("   ├─ Betting History (recording, stats, ROI)");
-  console.log("   ├─ User Settings (preferences, personalization)");
-  console.log("   ├─ Search Engine (matches, leagues, upcoming)");
-  console.log("   ├─ Gemini AI (natural language conversations)");
-  console.log("   ├─ API-Football (live, standings, odds)");
-  console.log("   └─ Rate Limiter (tier-based limits)");
-   console.log("");
-  console.log("   SYSTEM SERVICES (5 total):");
-  console.log("   ├─ Redis Cache (multi-tier caching)");
-  console.log("   ├─ User Management (profiles, access control)");
-  console.log("   ├─ Context Manager (conversation history)");
-  console.log("   ├─ Telegram Integration (webhook messaging)");
-  console.log("   └─ HTTP Server (Express with 5 routes)");
-  console.log("");
-  console.log("   COMMAND HANDLERS (22 implemented):");
-  console.log("   ├─ /start, /menu, /live, /standings, /odds");
-  console.log("   ├─ /predict, /analyze, /tips, /pricing, /signup");
-  console.log("   ├─ /status, /refer, /leaderboard, /dossier, /coach");
-  console.log("   ├─ /stats, /engage, /betting_stats, /trends, /upcoming");
-  console.log("   ├─ /health, /help, + Natural Language Chat");
-  console.log("   └─ Callback button handling for inline interactions");
-  console.log("");
-  console.log("[💎] Status: PRODUCTION READY");
-  console.log("[🎯] Architecture: Monolithic unified file (3000+ lines)");
-  console.log("[🔐] Security: Rate limiting, input sanitization, validation");
-  console.log("[⚡] Performance: Multi-tier caching, async/await, connection pooling");
-  console.log("=".repeat(130) + "\n");
-
-// Correct continuation:
+// Graceful shutdown handlers
 process.on("SIGTERM", () => {
   console.log("[SHUTDOWN] SIGTERM received, shutting down gracefully...");
   process.exit(0);
@@ -2346,6 +2324,20 @@ process.on("uncaughtException", (err) => {
 
 console.log("[BETRIX] ✅ Ultimate unified worker fully initialized and operational\n");
 
+// Keep Redis subscription alive (so Node event loop stays busy)
+redis.subscribe("jobs", (err) => {
+  if (err) console.error("[REDIS] ❌ Subscribe error:", err);
+});
+
+redis.on("message", (channel, message) => {
+  console.log(`[REDIS] Job received on ${channel}: ${message}`);
+  // TODO: process job here
+});
+
+// Heartbeat to prove liveness
+setInterval(() => {
+  console.log("[HEARTBEAT] Worker alive at", new Date().toISOString());
+}, 30000);
 // ============================================================================
 // LEADERBOARD & RANKING SYSTEM (300+ LINES)
 // ============================================================================
