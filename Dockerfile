@@ -1,1 +1,13 @@
-# Use Node.js 20\nFROM node:20\n\nWORKDIR /app\n\nCOPY package*.json ./\nRUN npm install --production\n\nCOPY . .\n\nEXPOSE 5000\n\nCMD ["node","src/worker.js"]
+# Use Node.js 20
+FROM node:20
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install --production
+
+COPY . .
+
+EXPOSE 5000
+
+CMD ["node","src/worker.js"]
