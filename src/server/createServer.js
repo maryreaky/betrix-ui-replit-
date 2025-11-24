@@ -1,4 +1,4 @@
-﻿const path = require('path');
+const path = require('path');
 
 let appModule;
 try {
@@ -26,23 +26,6 @@ if (appModule && typeof appModule.createServer === 'function') {
   const express = require('express');
   module.exports.createServer = function createServer() {
     const app = express();
-/* TEMP WEBHOOK LOGGING MIDDLEWARE - START (remove after debugging) */
-try {
-  if (typeof app !== "undefined" && !app.__hasTempWebhookLogger) {
-    app.__hasTempWebhookLogger = true;
-    app.use("/webhook", (req, res, next) => {
-      try {
-        console.log("WEBHOOK INCOMING", {
-          method: req.method,
-          url: req.originalUrl || req.url,
-          secretHeader: req.headers["x-telegram-bot-api-secret-token"]
-        });
-      } catch (e) { console.error("WEBHOOK LOG ERROR", e); }
-      next();
-    });
-  }
-} catch (e) { console.error("TEMP WEBHOOK MIDDLEWARE INSERTION ERROR", e); }
-/* TEMP WEBHOOK LOGGING MIDDLEWARE - END */
     app.get('/health', (req, res) => res.status(200).send('ok'));
     return app;
   };
@@ -56,4 +39,3 @@ if (require.main === module) {
     console.log(`SERVER: listening on port ${port}`);
   });
 }
-
