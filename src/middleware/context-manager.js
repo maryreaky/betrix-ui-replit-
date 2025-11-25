@@ -10,6 +10,17 @@ const logger = new Logger("ContextManager");
 const MAX_CONTEXT_HISTORY = 20;
 const CONTEXT_TTL = 86400 * 7; // 7 days
 
+// Rough token estimator: 1 token ≈ 4 characters (approximation)
+function estimateTokens(text) {
+  try {
+    if (!text) return 0;
+    const chars = String(text).length;
+    return Math.max(1, Math.ceil(chars / 4));
+  } catch (e) {
+    return 1;
+  }
+}
+
 class ContextManager {
   constructor(redis) {
     this.redis = redis;
@@ -25,11 +36,20 @@ class ContextManager {
         sender,
         message,
         timestamp: Date.now(),
+        tokens: estimateTokens(message),
       };
 
       await this.redis.lpush(key, JSON.stringify(entry));
       await this.redis.ltrim(key, 0, MAX_CONTEXT_HISTORY);
       await this.redis.expire(key, CONTEXT_TTL);
+      // Maintain a rolling token sum for quick checks
+      try {
+        const tokenKey = `context:${userId}:tokens`;
+        await this.redis.incrby(tokenKey, entry.tokens);
+        await this.redis.expire(tokenKey, CONTEXT_TTL);
+      } catch (e) {
+        // ignore
+      }
     } catch (err) {
       logger.warn("Record message failed", err);
     }
@@ -56,6 +76,48 @@ class ContextManager {
     } catch (err) {
       logger.warn("Get context failed", err);
       return [];
+    }
+  }
+
+  /**
+   * Trim context so total tokens <= maxTokens. Removes oldest messages first.
+   */
+  async trimContextToTokenBudget(userId, maxTokens = 1500) {
+    try {
+      const tokenKey = `context:${userId}:tokens`;
+      let current = 0;
+      try {
+        const v = await this.redis.get(tokenKey);
+        current = v ? Number(v) : 0;
+      } catch (e) {
+        current = 0;
+      }
+
+      if (current <= maxTokens) return;
+
+      const key = `context:${userId}:history`;
+      // Pop from the tail (oldest) until under budget
+      while (current > maxTokens) {
+        const item = await this.redis.rpop(key);
+        if (!item) break;
+        try {
+          const parsed = JSON.parse(item);
+          const t = parsed?.tokens || estimateTokens(parsed?.message || '');
+          current = Math.max(0, current - t);
+        } catch (e) {
+          // ignore parse errors
+        }
+      }
+
+      // store updated token count
+      try {
+        await this.redis.set(tokenKey, String(current));
+        await this.redis.expire(tokenKey, CONTEXT_TTL);
+      } catch (e) {
+        // ignore
+      }
+    } catch (err) {
+      logger.warn('trimContext failed', err?.message || String(err));
     }
   }
 

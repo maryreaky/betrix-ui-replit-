@@ -251,6 +251,12 @@ async function handleUpdate(update) {
         // Natural language - use composite AI (Gemini -> HuggingFace -> LocalAI)
         // Build a compact context object: minimal user info + recent messages
         const fullUser = (await userService.getUser(userId)) || {};
+        // Ensure context is trimmed to model prompt budget before fetching recent messages
+        try {
+          await contextManager.trimContextToTokenBudget(userId, CONFIG.GEMINI.MAX_PROMPT_TOKENS || 1500);
+        } catch (e) {
+          logger.warn('Context trim failed', e?.message || String(e));
+        }
         const recent = await contextManager.getContext(userId).catch(() => []);
         const recentTexts = recent.slice(-6).map(m => `${m.sender}: ${m.message}`);
         const compactContext = {
