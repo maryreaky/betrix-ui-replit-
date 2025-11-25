@@ -453,51 +453,6 @@ const randInt = (min, max) => {
 console.log("[UTILS] ✓ randInt()  random integer - worker.js:454");
 
 /**
- * Safe HTTP fetch with automatic retries
- * Handles network errors and timeouts gracefully
- * @param {string} url - The URL to fetch
- * @param {object} options - Fetch options
- * @param {string} label - Label for logging
- * @param {number} retries - Number of retry attempts
- * @returns {object} Parsed JSON response
- */
- * Text chunking for Telegram message splitting
- * Telegram has 4096 character limit per message
- * @param {string} text - Text to chunk
- * @param {number} maxSize - Maximum chunk size
- * @returns {array} Array of text chunks
- */
-function chunkText(text, maxSize = SAFE_CHUNK_SIZE) {
-  if (!text) return [""];
-  
-  const chunks = [];
-  let remaining = String(text);
-  
-  while (remaining.length > maxSize) {
-    // Find best break point (newline preferred)
-    let breakPoint = remaining.lastIndexOf("\n", maxSize);
-    
-    if (breakPoint < maxSize * 0.6) {
-      breakPoint = remaining.lastIndexOf(" ", maxSize);
-    }
-    
-    if (breakPoint < maxSize * 0.6) {
-      breakPoint = maxSize;
-    }
-    
-    chunks.push(remaining.slice(0, breakPoint));
-    remaining = remaining.slice(breakPoint).trimStart();
-  }
-  
-  if (remaining) {
-    chunks.push(remaining);
-  }
-  
-  return chunks;
-}
-console.log("[UTILS] ✓ chunkText()  message splitting - worker.js:541");
-
-/**
  * Send message to Telegram with automatic chunking
  * Handles long messages by splitting them
  * @param {string} chatId - Telegram chat ID
