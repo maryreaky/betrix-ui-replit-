@@ -1,0 +1,25 @@
+name: Mapping Miss Monitor
+
+on:
+  schedule:
+    - cron: '0 * * * *' # hourly
+  workflow_dispatch: {}
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install deps
+        run: |
+          npm ci
+      - name: Run mapping miss monitor
+        env:
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          ADMIN_TELEGRAM_ID: ${{ secrets.ADMIN_TELEGRAM_ID }}
+        run: node scripts/mapping-miss-monitor.js

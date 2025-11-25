@@ -82,6 +82,12 @@ export async function handleMpesaCallback(req, redis, bot) {
         // Resolve order by quick mappings only (phone or provider reference)
         if (!orderId) {
           logger.warn('No quick mapping found for M-Pesa payment', { amount, phoneNumber });
+          // increment mapping-miss counter (daily)
+          try {
+            const missKey = `monitor:payment:mapping_misses:${new Date().toISOString().slice(0,10)}`;
+            await redis.incr(missKey);
+            await redis.expire(missKey, 60 * 60 * 24 * 14);
+          } catch (e) { logger.warn('Failed to increment mapping-miss counter', e?.message || String(e)); }
           await alertAdmin(bot, 'M-Pesa mapping not found', { amount, phoneNumber, mpesaReceiptNumber, Body: Body?.stkCallback });
           return { success: false, message: 'Order mapping not found' };
         }
@@ -167,6 +173,11 @@ export async function handleSafaricomTillCallback(req, redis, bot) {
         // Require quick mapping (reference or transaction id). Do not scan.
         if (!orderId) {
           logger.warn('No quick mapping found for Till payment', { amount, transaction_id });
+          try {
+            const missKey = `monitor:payment:mapping_misses:${new Date().toISOString().slice(0,10)}`;
+            await redis.incr(missKey);
+            await redis.expire(missKey, 60 * 60 * 24 * 14);
+          } catch (e) { logger.warn('Failed to increment mapping-miss counter', e?.message || String(e)); }
           await alertAdmin(bot, 'Safaricom Till mapping not found', { amount, transaction_id, reference: req.body.reference, till_number });
           return { success: false, message: 'Order mapping not found' };
         }
@@ -271,6 +282,11 @@ export async function handlePayPalWebhook(req, redis, bot) {
         // expensive scans in production and avoids race conditions.
         if (!subscription) {
           logger.warn('PayPal webhook received but no mapped order found', { captureId: id });
+          try {
+            const missKey = `monitor:payment:mapping_misses:${new Date().toISOString().slice(0,10)}`;
+            await redis.incr(missKey);
+            await redis.expire(missKey, 60 * 60 * 24 * 14);
+          } catch (e) { logger.warn('Failed to increment mapping-miss counter', e?.message || String(e)); }
           await alertAdmin(bot, 'PayPal mapping not found', { captureId: id, possibleOrderIds });
           return { success: false, message: 'Order mapping not found' };
         }
@@ -316,6 +332,11 @@ export async function handleBinanceWebhook(req, redis, bot) {
           } catch (e) { logger.warn('verifyAndActivatePayment failed for mapped Binance order', e); subscription = null; }
         } else {
           logger.warn('No mapping found for Binance transaction', { transactionId });
+          try {
+            const missKey = `monitor:payment:mapping_misses:${new Date().toISOString().slice(0,10)}`;
+            await redis.incr(missKey);
+            await redis.expire(missKey, 60 * 60 * 24 * 14);
+          } catch (e) { logger.warn('Failed to increment mapping-miss counter', e?.message || String(e)); }
           await alertAdmin(bot, 'Binance mapping not found', { transactionId, totalFeeInUSD });
           return { success: false, message: 'Order mapping not found' };
         }
