@@ -29,6 +29,23 @@ class GeminiService {
     try {
       const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
+      // Build a compact context summary to avoid huge prompts
+      const ctxSummary = (() => {
+        try {
+          if (!context || typeof context !== 'object') return {};
+          return {
+            id: context.id || context.userId || null,
+            name: context.name || null,
+            role: context.role || null,
+            preferredLanguage: context.preferredLanguage || context.language || 'en',
+            favoriteLeagues: context.favoriteLeagues || context.leagues || null,
+            recentMessages: Array.isArray(context.recentMessages) ? context.recentMessages.slice(-6) : [],
+          };
+        } catch (e) {
+          return {};
+        }
+      })();
+
       const systemPrompt = `You are BETRIX - a world-class autonomous sports AI assistant.
 
 IDENTITY:
@@ -56,7 +73,7 @@ STYLE:
 - Provide data-backed insights
 - Ask clarifying questions if needed
 
-USER CONTEXT: ${JSON.stringify(context)}
+USER CONTEXT: ${JSON.stringify(ctxSummary)}
 
 IMPORTANT:
 - Always identify yourself as BETRIX when asked

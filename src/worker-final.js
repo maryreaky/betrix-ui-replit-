@@ -247,7 +247,20 @@ async function handleUpdate(update) {
         await handleCommand(chatId, userId, cmd, args, text);
       } else {
         // Natural language - use composite AI (Gemini -> HuggingFace -> LocalAI)
-        const response = await ai.chat(text, await userService.getUser(userId));
+        // Build a compact context object: minimal user info + recent messages
+        const fullUser = (await userService.getUser(userId)) || {};
+        const recent = await contextManager.getContext(userId).catch(() => []);
+        const recentTexts = recent.slice(-6).map(m => `${m.sender}: ${m.message}`);
+        const compactContext = {
+          id: userId,
+          name: fullUser.name || null,
+          role: fullUser.role || null,
+          favoriteLeagues: fullUser.favoriteLeagues || fullUser.leagues || null,
+          preferredLanguage: fullUser.preferredLanguage || fullUser.language || 'en',
+          recentMessages: recentTexts,
+        };
+
+        const response = await ai.chat(text, compactContext);
         await contextManager.recordMessage(userId, response, "bot");
         await telegram.sendMessage(chatId, response);
       }
