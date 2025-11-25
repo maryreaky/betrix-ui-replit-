@@ -54,7 +54,7 @@ export function startPrefetchScheduler({ redis, openLiga, rss, scorebat, footbal
       // 1) News feeds - lightweight, good to run frequently
       if (rss) {
         try {
-          if (!await isAllowedToRun('rss')) { log('INFO','PREFETCH','Skipping rss due to backoff'); }
+          if (!await isAllowedToRun('rss')) { /* skip due to backoff */ }
           else {
             const feeds = ['https://feeds.bbci.co.uk/sport/football/rss.xml', 'https://www.theguardian.com/football/rss', 'https://www.espn.com/espn/rss/football/news'];
             const r = await rss.fetchMultiple(feeds).catch(async (err) => { await recordFailure('rss'); throw err; });
@@ -70,7 +70,7 @@ export function startPrefetchScheduler({ redis, openLiga, rss, scorebat, footbal
       // 2) ScoreBat - lightweight when freeFeed
       if (scorebat) {
         try {
-          if (!await isAllowedToRun('scorebat')) { log('INFO','PREFETCH','Skipping scorebat due to backoff'); }
+          if (!await isAllowedToRun('scorebat')) { /* skip due to backoff */ }
           else {
             const sb = await scorebat.freeFeed().catch(async (err) => { await recordFailure('scorebat'); throw err; });
             if (sb) { await safeSet('prefetch:scorebat:free', { fetchedAt: ts, data: sb }, 60); await recordSuccess('scorebat'); }
@@ -85,7 +85,7 @@ export function startPrefetchScheduler({ redis, openLiga, rss, scorebat, footbal
       // 3) OpenLigaDB - small queries for popular leagues
       if (openLiga) {
         try {
-          if (!await isAllowedToRun('openligadb')) { log('INFO','PREFETCH','Skipping openligadb due to backoff'); }
+          if (!await isAllowedToRun('openligadb')) { /* skip due to backoff */ }
           else {
             const leagues = await openLiga.getAvailableLeagues().catch(async (err) => { await recordFailure('openligadb'); throw err; });
             if (leagues) { await safeSet('prefetch:openligadb:leagues', { fetchedAt: ts, leagues }, 120); await recordSuccess('openligadb'); }
