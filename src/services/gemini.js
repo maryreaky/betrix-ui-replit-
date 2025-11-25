@@ -67,22 +67,49 @@ IMPORTANT:
 
 Now respond to the user's message with intelligence and personality.`;
 
-      const result = await model.generateContent({
+      // Primary generation attempt (conservative output size)
+      let result = await model.generateContent({
         contents: [{ role: "user", parts: [{ text: systemPrompt + "\n\nUser: " + userMessage }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 500 },
+        generationConfig: { temperature: 0.7, maxOutputTokens: 300 },
       });
 
-      const text = result.response?.text?.() || "";
-      
-      // Debug: log the full response to detect issues
+      let text = result.response?.text?.() || "";
+
+      // If model hit token limits, retry with a much shorter system prompt and lower max tokens
+      const finishReason = result.response?.candidates?.[0]?.finishReason || null;
+      if ((!text || text.trim().length === 0) && finishReason === 'MAX_TOKENS') {
+        logger.warn("Gemini returned empty response due to MAX_TOKENS, retrying with trimmed prompt", {
+          finishReason,
+          usage: result.response?.usageMetadata || null,
+          responseId: result.response?.responseId || null,
+        });
+
+        // Build a compact fallback system prompt to reduce token usage
+        const shortSystem = `You are BETRIX — concise sports analyst. Answer briefly and directly.`;
+        try {
+          result = await model.generateContent({
+            contents: [{ role: "user", parts: [{ text: shortSystem + "\nUser: " + userMessage }] }],
+            generationConfig: { temperature: 0.7, maxOutputTokens: 180 },
+          });
+
+          text = result.response?.text?.() || "";
+          if (text && text.trim().length > 0) {
+            logger.info("Gemini retry succeeded with trimmed prompt");
+            return text;
+          }
+        } catch (retryErr) {
+          logger.warn("Gemini retry failed", retryErr?.message || String(retryErr));
+        }
+      }
+
       if (!text || text.trim().length === 0) {
         logger.warn("Gemini returned empty response", {
-          status: result.response?.candidates?.[0]?.finishReason,
+          status: finishReason,
           fullResponse: JSON.stringify(result.response)
         });
         return this.fallbackResponse(userMessage, context);
       }
-      
+
       logger.info("Gemini response generated");
       return text;
     } catch (error) {
