@@ -11,7 +11,7 @@
     "start": "bash start.sh",
   "dev": "node src/worker-db.js",
   "worker": "node src/worker-final.js",
-    "test": "echo \"Tests coming soon\""
+    "test": "node --test tests/*.js"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -32,6 +32,7 @@
     "multer": "^2.0.2",
     "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
+    "csv-parse": "^5.4.0",
     "cheerio": "^1.0.0-rc.12",
     "pg": "^8.16.3",
     "telegraf": "^4.16.3",

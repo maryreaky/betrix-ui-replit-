@@ -17,6 +17,13 @@ import { HuggingFaceService } from "./services/huggingface.js";
 import { AzureAIService } from "./services/azure-ai.js";
 import { FreeSportsService } from "./services/free-sports.js";
 import { BotHandlers } from "./handlers.js";
+import OpenLigaDBService from "./services/openligadb.js";
+import RSSAggregator from "./services/rss-aggregator.js";
+import FootballDataService from "./services/footballdata.js";
+import ScoreBatService from "./services/scorebat.js";
+import Scrapers from "./services/scrapers.js";
+import { startPrefetchScheduler } from "./tasks/prefetch-scheduler.js";
+import CacheService from "./services/cache.js";
 import { AdvancedHandler } from "./advanced-handler.js";
 import { PremiumService } from "./services/premium.js";
 import { AdminDashboard } from "./admin/dashboard.js";
@@ -66,6 +73,12 @@ const azure = new AzureAIService(
   process.env.AZURE_API_VERSION || (CONFIG.AZURE && CONFIG.AZURE.API_VERSION) || '2023-05-15'
 );
 const freeSports = new FreeSportsService(redis);
+const cache = new CacheService(redis);
+const openLiga = new OpenLigaDBService(undefined, cache, { ttlSeconds: 30 });
+const rssAggregator = new RSSAggregator(cache, { ttlSeconds: 60 });
+const footballDataService = new FootballDataService();
+const scorebatService = new ScoreBatService(process.env.SCOREBAT_TOKEN || null);
+const scrapers = new Scrapers(redis);
 
 // Composite AI wrapper: try Gemini per-request, fall back to LocalAI on errors.
 const ai = {
@@ -154,7 +167,40 @@ const ai = {
 const analytics = new AnalyticsService(redis);
 const rateLimiter = new RateLimiter(redis);
 const contextManager = new ContextManager(redis);
-const basicHandlers = new BotHandlers(telegram, userService, apiFootball, ai, redis, freeSports);
+const basicHandlers = new BotHandlers(telegram, userService, apiFootball, ai, redis, freeSports, {
+  openLiga,
+  rss: rssAggregator,
+  scorebat: scorebatService,
+  footballData: footballDataService,
+  scrapers,
+});
+
+// Start prefetch scheduler (runs in-worker). Interval controlled by PREFETCH_INTERVAL_SECONDS (default 60s).
+try {
+  startPrefetchScheduler({ redis, openLiga, rss: rssAggregator, scorebat: scorebatService, footballData: footballDataService, intervalSeconds: Number(process.env.PREFETCH_INTERVAL_SECONDS || 60) });
+  logger.info('Prefetch scheduler started', { intervalSeconds: Number(process.env.PREFETCH_INTERVAL_SECONDS || 60) });
+} catch (e) {
+  logger.warn('Prefetch scheduler failed to start', e?.message || String(e));
+}
+
+// Subscribe to prefetch events for internal observability and reactive caching
+try {
+  const sub = new Redis(CONFIG.REDIS_URL);
+  sub.subscribe('prefetch:updates', 'prefetch:error').then(() => logger.info('Subscribed to prefetch pub/sub channels')).catch(()=>{});
+  sub.on('message', async (channel, message) => {
+    let payload = message;
+    try { payload = JSON.parse(message); } catch (e) { /* raw */ }
+    logger.info('Prefetch event', { channel, payload });
+    // Example reactive action: when openligadb updates, optionally warm specific caches
+    try {
+      if (channel === 'prefetch:updates' && payload && payload.type === 'openligadb') {
+        // touch a short key indicating last openligadb update
+        await redis.set('prefetch:last:openligadb', Date.now());
+        await redis.expire('prefetch:last:openligadb', 300);
+      }
+    } catch (e) { logger.warn('Failed reactive prefetch action', e?.message || String(e)); }
+  });
+} catch (e) { logger.warn('Prefetch subscriber failed to start', e?.message || String(e)); }
 const advancedHandler = new AdvancedHandler(basicHandlers, redis, telegram, userService, ai);
 const premiumService = new PremiumService(redis, ai);
 const adminDashboard = new AdminDashboard(redis, telegram, analytics);
@@ -311,6 +357,8 @@ async function handleCommand(chatId, userId, cmd, args, fullText) {
       "/help": () => basicHandlers.help(chatId),
       "/about": () => basicHandlers.about(chatId),
       "/live": () => basicHandlers.live(chatId, userId),
+      "/news": () => basicHandlers.news(chatId),
+      "/highlights": () => basicHandlers.highlights(chatId),
       "/standings": () => basicHandlers.standings(chatId, args[0]),
       "/league": () => basicHandlers.league(chatId, args.join(" ")),
       "/predict": () => basicHandlers.predict(chatId, args.join(" ")),

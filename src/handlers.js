@@ -10,13 +10,19 @@ import { CONFIG } from "./config.js";
 const logger = new Logger("Handlers");
 
 class BotHandlers {
-  constructor(telegram, userService, apiFootball, gemini, redis, freeSports = null) {
+  constructor(telegram, userService, apiFootball, gemini, redis, freeSports = null, extras = {}) {
     this.telegram = telegram;
     this.userService = userService;
     this.apiFootball = apiFootball;
     this.gemini = gemini;
     this.redis = redis;
     this.freeSports = freeSports;
+    // optional extra free-data services
+    this.openLiga = extras.openLiga || null;
+    this.rss = extras.rss || null;
+    this.scorebat = extras.scorebat || null;
+    this.footballDataService = extras.footballData || null;
+    this.scrapers = extras.scrapers || null;
   }
 
   // ===== START & MENU =====
@@ -79,6 +85,37 @@ class BotHandlers {
       const data = await this.apiFootball.getLive();
 
       if (!data?.response?.length) {
+        // Try OpenLigaDB free fallback
+        if (this.openLiga) {
+          try {
+            const league = 'bl1';
+            const recent = await this.openLiga.getRecentMatches(league, new Date().getFullYear(), 3).catch(()=>[]);
+            if (recent && recent.length) {
+              const text = `${ICONS.live} <b>Live / Recent (fallback)</b>\n\n` +
+                recent.slice(0, 8).map((m, i) => {
+                  const home = m.Team1?.Name || m.Team1?.teamName || m.Team1 || m.name || m.home || m.HomeTeam || 'Home';
+                  const away = m.Team2?.Name || m.Team2?.teamName || m.Team2 || m.away || m.AwayTeam || 'Away';
+                  const score = (m.PointsTeam1 != null && m.PointsTeam2 != null) ? `${m.PointsTeam1}-${m.PointsTeam2}` : '-';
+                  return `${i+1}. ${home} <b>${score}</b> ${away}`;
+                }).join('\n');
+              return this.telegram.sendMessage(chatId, text);
+            }
+          } catch (e) {
+            // ignore and continue to other fallbacks
+          }
+        }
+
+        // Try football-data CSV fallback
+        if (this.footballDataService) {
+          try {
+            const fd = await this.footballDataService.fixturesFromCsv('E0', '2324').catch(()=>null);
+            if (fd && fd.fixtures && fd.fixtures.length) {
+              const sample = fd.fixtures.slice(0,6).map((f,i)=>`${i+1}. ${f.home} vs ${f.away} (${f.date||'TBD'})`).join('\n');
+              return this.telegram.sendMessage(chatId, `${ICONS.live} <b>Upcoming (from CSV)</b>\n\n${sample}`);
+            }
+          } catch(e) {}
+        }
+
         const msg = await this.gemini.chat("No live football matches right now. Give a friendly 2-line response.");
         return this.telegram.sendMessage(chatId, `${ICONS.live} ${msg}`);
       }
@@ -146,9 +183,21 @@ class BotHandlers {
       return this.telegram.sendMessage(chatId, text);
     } catch (err) {
       logger.error("Standings error", err);
+      // Try OpenLigaDB fallback
+      try {
+        if (this.openLiga) {
+          const recent = await this.openLiga.getRecentMatches(league || 'bl1', new Date().getFullYear(), 4).catch(()=>[]);
+          if (recent && recent.length) {
+            const text = `${ICONS.standings} <b>Recent results (fallback)</b>\n\n` + recent.slice(0,10).map((r,i)=>`${i+1}. ${r.Team1?.Name||r.home||'Home'} vs ${r.Team2?.Name||r.away||'Away'} ${r.PointsTeam1!=null?`${r.PointsTeam1}-${r.PointsTeam2}`:''}`).join('\n');
+            return this.telegram.sendMessage(chatId, text);
+          }
+        }
+      } catch (e) {
+        // ignore
+      }
       return this.telegram.sendMessage(
         chatId,
-        `❌ Unable to fetch standings. Try /standings epl for Premier League.`
+        `❌ Unable to fetch standings right now. Try /standings epl for Premier League.`
       );
     }
   }
@@ -210,6 +259,40 @@ class BotHandlers {
       logger.error("Analysis error", err);
       const fallback = await this.gemini.chat("Unable to analyze this match right now. Helpful response.");
       return this.telegram.sendMessage(chatId, `❌ ${fallback}`);
+    }
+  }
+
+  // ===== NEWS & HIGHLIGHTS =====
+  async news(chatId) {
+    try {
+      if (this.rss) {
+        const feeds = ['https://feeds.bbci.co.uk/sport/football/rss.xml', 'https://www.theguardian.com/football/rss', 'https://www.espn.com/espn/rss/football/news'];
+        const results = await this.rss.fetchMultiple(feeds);
+        const merged = results.flatMap(r => (r.items || []).slice(0,3)).slice(0,10);
+        const text = `${ICONS.news} <b>Latest Football Headlines</b>\n\n` + merged.map((it,i)=>`${i+1}. ${it.title}`).join('\n');
+        return this.telegram.sendMessage(chatId, text);
+      }
+      const msg = await this.gemini.chat('Provide recent football headlines in 3 lines.');
+      return this.telegram.sendMessage(chatId, `📰 ${msg}`);
+    } catch (err) {
+      logger.error('News error', err);
+      return this.telegram.sendMessage(chatId, '❌ Unable to fetch news right now.');
+    }
+  }
+
+  async highlights(chatId) {
+    try {
+      if (this.scorebat) {
+        const feed = await this.scorebat.freeFeed().catch(()=>null);
+        if (feed && feed.response) {
+          const items = feed.response.slice(0,6).map((it,i)=>`${i+1}. ${it.title} - ${it.competition}`);
+          return this.telegram.sendMessage(chatId, `🎬 <b>Highlights</b>\n\n${items.join('\n')}`);
+        }
+      }
+      return this.telegram.sendMessage(chatId, '🎬 Highlights unavailable. Try again later.');
+    } catch (err) {
+      logger.error('Highlights error', err);
+      return this.telegram.sendMessage(chatId, '❌ Unable to fetch highlights.');
     }
   }
 

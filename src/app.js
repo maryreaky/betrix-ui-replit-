@@ -30,6 +30,12 @@ import { GeminiService } from "./services/gemini.js";
 import { LocalAIService } from "./services/local-ai.js";
 import { HuggingFaceService } from "./services/huggingface.js";
 import { AzureAIService } from "./services/azure-ai.js";
+import OpenLigaDBService from "./services/openligadb.js";
+import RSSAggregator from "./services/rss-aggregator.js";
+import FootballDataService from "./services/footballdata.js";
+import ScoreBatService from "./services/scorebat.js";
+import Scrapers from "./services/scrapers.js";
+import { normalizeMatch, chooseBestMatch } from "./services/normalizer.js";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 
@@ -99,6 +105,13 @@ app.set("trust proxy", 1);
 const server = createServer(app);
 const redis = new Redis(REDIS_URL);
 const wss = new WebSocketServer({ server });
+
+// Instantiate free-data services
+const openLiga = new OpenLigaDBService();
+const rssAggregator = new RSSAggregator(redis, { ttlSeconds: 60 });
+const footballData = new FootballDataService();
+const scorebat = new ScoreBatService(process.env.SCOREBAT_TOKEN || null);
+const scrapers = new Scrapers(redis);
 
 // ============================================================================
 // LOGGING
@@ -191,6 +204,25 @@ const handleWebSocketMessage = (ws, data, clientId) => {
       safeSend(ws, { type: "error", error: "Unknown message type" });
   }
 };
+
+// ============================================================================
+// PUB/SUB: prefetch updates -> broadcast to WebSocket clients
+// ============================================================================
+try {
+  const sub = new Redis(REDIS_URL);
+  sub.subscribe('prefetch:updates', 'prefetch:error').then(() => {
+    log('INFO', 'PREFETCH', 'Subscribed to prefetch channels');
+  }).catch(()=>{});
+
+  sub.on('message', (channel, message) => {
+    let payload = message;
+    try { payload = JSON.parse(message); } catch (e) { /* keep raw */ }
+    log('INFO', 'PREFETCH', `pubsub:${channel}`, { payload });
+    try { broadcastToAdmins({ type: channel, data: payload }); } catch (e) { console.error('broadcast prefetch failed', e); }
+  });
+} catch (e) {
+  console.error('prefetch subscriber failed to start', e);
+}
 
 // ============================================================================
 // MIDDLEWARE
@@ -383,6 +415,113 @@ app.get("/metrics", async (req, res) => {
     res.json(formatResponse(true, { uptime: process.uptime(), logs: logCount }, "Metrics"));
   } catch (err) {
     res.status(500).json(formatResponse(false, null, "Metrics fetch failed"));
+  }
+});
+
+// Simple endpoints for free sources
+app.get('/openligadb/leagues', async (req, res) => {
+  try {
+    const leagues = await openLiga.getAvailableLeagues();
+    return res.json(formatResponse(true, leagues.slice(0, 200), 'OpenLigaDB leagues'));
+  } catch (err) {
+    log('ERROR', 'OPENLIGA', 'Failed to fetch leagues', { err: err.message });
+    return res.status(500).json(formatResponse(false, null, 'Failed to fetch leagues'));
+  }
+});
+
+app.get('/openligadb/matchdata', async (req, res) => {
+  try {
+    const league = req.query.league;
+    const season = req.query.season || new Date().getFullYear();
+    const group = req.query.group || 1;
+    if (!league) return res.status(400).json(formatResponse(false, null, 'Missing league param (e.g. bl1)'));
+    const data = await openLiga.getMatchData(league, season, group);
+    return res.json(formatResponse(true, data, 'Match data'));
+  } catch (err) {
+    log('ERROR', 'OPENLIGA', 'Matchdata fetch failed', { err: err.message });
+    return res.status(500).json(formatResponse(false, null, 'Failed to fetch match data'));
+  }
+});
+
+// Friendly live wrapper: best-effort recent matches for a league
+app.get('/live', async (req, res) => {
+  try {
+    const league = req.query.league || 'bl1';
+    const season = req.query.season || new Date().getFullYear();
+    const groups = Number(req.query.groups || 3);
+    const data = await openLiga.getRecentMatches(league, season, groups);
+    // Filter to upcoming / recent matches within sensible window
+    return res.json(formatResponse(true, data, 'Live/Recent matches (best-effort)'));
+  } catch (err) {
+    log('ERROR', 'LIVE', 'Live fetch failed', { err: err.message });
+    return res.status(500).json(formatResponse(false, null, 'Failed to fetch live matches'));
+  }
+});
+
+// Aggregate news feeds (BBC + ESPN + Guardian recommended)
+app.get('/news', async (req, res) => {
+  try {
+    const feeds = [
+      'https://feeds.bbci.co.uk/sport/football/rss.xml',
+      'https://www.theguardian.com/football/rss',
+      'https://www.espn.com/espn/rss/football/news'
+    ];
+    const results = await rssAggregator.fetchMultiple(feeds);
+    return res.json(formatResponse(true, results, 'Aggregated sports news feeds'));
+  } catch (err) {
+    log('ERROR', 'RSS', 'News aggregation failed', { err: err.message });
+    return res.status(500).json(formatResponse(false, null, 'Failed to fetch news'));
+  }
+});
+
+// Football-data CSV endpoint
+app.get('/fixtures', async (req, res) => {
+  try {
+    const comp = req.query.comp || 'E0';
+    const season = req.query.season || '2324';
+    const data = await footballData.fixturesFromCsv(comp, season);
+    // Cache to Redis for short period
+    await redis.set(`cache:fixtures:${comp}:${season}`, JSON.stringify(data), 'EX', 60 * 60).catch(()=>{});
+    return res.json(formatResponse(true, data, 'Fixtures from football-data.co.uk (best-effort)'));
+  } catch (err) {
+    log('ERROR', 'FOOTBALLDATA', 'Fixtures fetch failed', { err: err.message });
+    return res.status(500).json(formatResponse(false, null, 'Failed to fetch fixtures'));
+  }
+});
+
+// Highlights endpoint via ScoreBat
+app.get('/highlights', async (req, res) => {
+  try {
+    const feed = await scorebat.freeFeed().catch(e => ({ error: e.message }));
+    return res.json(formatResponse(true, feed, 'ScoreBat highlights (free feed)'));
+  } catch (err) {
+    log('ERROR', 'SCOREBAT', 'Highlights fetch failed', { err: err.message });
+    return res.status(500).json(formatResponse(false, null, 'Failed to fetch highlights'));
+  }
+});
+
+// Standings normalization endpoint: combine OpenLigaDB + football-data
+app.get('/standings', async (req, res) => {
+  try {
+    const league = req.query.league || 'bl1';
+    const season = req.query.season || new Date().getFullYear();
+    // Try OpenLigaDB first
+    let openData = [];
+    try { openData = await openLiga.getMatchData(league, season, 1).catch(()=>[]); } catch(e) { openData = []; }
+    // Try football-data as fallback for fixtures/standings
+    let fdData = [];
+    try { const fdRes = await footballData.fixturesFromCsv('E0', '2324').catch(()=>null); if (fdRes) fdData = fdRes.fixtures || []; } catch(e) { fdData = []; }
+
+    // Normalize some matches and pick best
+    const normalized = [];
+    for (const m of (openData || []).slice(0,50)) normalized.push(normalizeMatch(m, 'openligadb'));
+    for (const m of (fdData || []).slice(0,50)) normalized.push(normalizeMatch(m, 'footballdata'));
+
+    const best = normalized.map(n => ({...n, rank: n.confidence})).slice(0,50);
+    return res.json(formatResponse(true, { combined: best, sources: { open: !!openData.length, footballData: !!fdData.length } }, 'Combined standings/matches (normalized)'));
+  } catch (err) {
+    log('ERROR', 'STANDINGS', 'Standings failed', { err: err.message });
+    return res.status(500).json(formatResponse(false, null, 'Failed to fetch standings'));
   }
 });
 
