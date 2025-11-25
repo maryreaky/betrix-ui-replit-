@@ -337,6 +337,35 @@ redis.on("connect", () => {
 
 redis.on("ready", () => {
   console.log("[REDIS] ✅ Redis client ready to serve requests\n");
+
+  // ============================================================================
+  // TELEGRAM QUEUE CONSUMER
+  // ============================================================================
+  import { Worker } from "bullmq";
+
+  const telegramWorker = new Worker(
+    "telegram-updates",
+    async (job) => {
+      console.log(`[QUEUE] Processing job ${job.id}`, job.data);
+
+      // Example: echo back the message text to the user
+      if (job.data.message?.chat?.id && job.data.message?.text) {
+        await sendTelegram(
+          job.data.message.chat.id,
+          `Echo: ${job.data.message.text}`
+        );
+      }
+    },
+    { connection: redis }
+  );
+
+  telegramWorker.on("completed", (job) => {
+    console.log(`[QUEUE] Job ${job.id} completed`);
+  });
+
+  telegramWorker.on("failed", (job, err) => {
+    console.error(`[QUEUE] Job ${job?.id} failed: ${err.message}`);
+  });
 });
 
 redis.on("reconnecting", () => {
