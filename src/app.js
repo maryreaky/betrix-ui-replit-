@@ -400,7 +400,7 @@ app.get("/", (req, res) => {
     brand: { name: BETRIX.name, version: BETRIX.version, slogan: BETRIX.slogan },
     status: "operational",
     uptime: process.uptime(),
-    endpoints: { dashboard: "/dashboard", api: "/api/v1", admin: "/admin", webhooks: "/webhook", payments: "/paypal", health: "/health", metrics: "/metrics" },
+    endpoints: { dashboard: "/dashboard", monitor: "/monitor.html", api: "/api/v1", admin: "/admin", webhooks: "/webhook", payments: "/paypal", health: "/health", metrics: "/metrics" },
     menu: BETRIX.menu?.main || []
   });
 });
@@ -740,14 +740,107 @@ app.get("/audit", authenticateAdmin, tierBasedRateLimiter, async (req, res) => {
 app.get("/pricing", (req, res) => res.json(formatResponse(true, { tiers: BETRIX.pricing })));
 
 // ============================================================================
+// MONITORING DASHBOARD (public, provides system health metrics)
+// ============================================================================
+app.get("/monitor", async (req, res) => {
+  try {
+    const startTime = Date.now();
+    
+    // Gather metrics in parallel
+    const [
+      uptime,
+      workerHeartbeat,
+      aiActive,
+      logCount,
+      queueLength,
+      activeConnections,
+      prefetchFailures,
+      prefetchLastUpdates
+    ] = await Promise.all([
+      Promise.resolve(process.uptime()),
+      redis.get('worker:heartbeat').catch(() => null),
+      redis.get('ai:active').catch(() => null),
+      redis.llen(LOG_STREAM_KEY).catch(() => 0),
+      redis.llen('telegram:updates').catch(() => 0),
+      Promise.resolve(activeConnections.size),
+      (async () => {
+        const types = ['rss', 'openligadb', 'scorebat', 'footballdata'];
+        const failures = {};
+        for (const t of types) {
+          const f = await redis.get(`prefetch:failures:${t}`).catch(() => null);
+          failures[t] = f ? Number(f) : 0;
+        }
+        return failures;
+      })(),
+      (async () => {
+        const types = ['rss', 'openligadb', 'scorebat', 'footballdata'];
+        const updates = {};
+        for (const t of types) {
+          const u = await redis.get(`prefetch:last:${t}`).catch(() => null);
+          updates[t] = u ? Number(u) : null;
+        }
+        return updates;
+      })()
+    ]);
+
+    const workerHealthy = workerHeartbeat && (Date.now() - Number(workerHeartbeat)) < 45000; // 45s tolerance
+    const responseTime = Date.now() - startTime;
+
+    res.json(formatResponse(true, {
+      status: 'operational',
+      uptime_seconds: Math.floor(uptime),
+      timestamp: new Date().toISOString(),
+      services: {
+        worker: {
+          healthy: workerHealthy,
+          heartbeat_age_ms: workerHeartbeat ? Date.now() - Number(workerHeartbeat) : null,
+          last_seen: workerHeartbeat ? new Date(Number(workerHeartbeat)).toISOString() : null
+        },
+        ai: {
+          active_provider: aiActive || 'unknown',
+          redis_key: 'ai:active'
+        },
+        websocket: {
+          connected_clients: activeConnections,
+          subscribed_types: ['prefetch:updates', 'prefetch:error']
+        }
+      },
+      prefetch: {
+        failures: prefetchFailures,
+        last_updates: Object.entries(prefetchLastUpdates).reduce((acc, [k, v]) => {
+          acc[k] = v ? {
+            timestamp: new Date(v).toISOString(),
+            age_seconds: Math.floor((Date.now() - v) / 1000)
+          } : null;
+          return acc;
+        }, {})
+      },
+      queue: {
+        pending_updates: queueLength,
+        logs_stored: logCount
+      },
+      performance: {
+        response_time_ms: responseTime,
+        redis_latency_ms: responseTime  // Approximation
+      },
+      version: BETRIX.version,
+      brand: BETRIX.name
+    }, 'System monitoring metrics'));
+  } catch (err) {
+    log('ERROR', 'MONITOR', 'Dashboard failed', { err: err.message });
+    return res.status(500).json(formatResponse(false, null, 'Monitor dashboard error'));
+  }
+});
+
+// ============================================================================
 // TELEGRAM WEBHOOK (secure header validation)
 // ============================================================================
 const validateTelegramRequest = (req, pathToken) => {
   if (TELEGRAM_WEBHOOK_SECRET) {
-    const header = req.headers["x-telegram-bot-api-secret-token"];
-    if (!header || header !== TELEGRAM_WEBHOOK_SECRET) return { ok: false, reason: "invalid_secret_header" };
+    const header = req.headers['x-telegram-bot-api-secret-token'];
+    if (!header || header !== TELEGRAM_WEBHOOK_SECRET) return { ok: false, reason: 'invalid_secret_header' };
   }
-  if (pathToken && TELEGRAM_TOKEN && pathToken !== TELEGRAM_TOKEN) return { ok: false, reason: "invalid_path_token" };
+  if (pathToken && TELEGRAM_TOKEN && pathToken !== TELEGRAM_TOKEN) return { ok: false, reason: 'invalid_path_token' };
   return { ok: true };
 };
 
