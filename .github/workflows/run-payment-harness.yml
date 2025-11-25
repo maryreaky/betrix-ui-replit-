@@ -1,0 +1,33 @@
+name: Run Payment Harness
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      - name: Install deps
+        run: npm ci
+      - name: Run payment harness
+        env:
+          REDIS_URL: ${{ secrets.REDIS_URL }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          ADMIN_TELEGRAM_ID: ${{ secrets.ADMIN_TELEGRAM_ID }}
+          PAYPAL_CLIENT_ID: ${{ secrets.PAYPAL_CLIENT_ID }}
+          PAYPAL_CLIENT_SECRET: ${{ secrets.PAYPAL_CLIENT_SECRET }}
+          PAYPAL_MODE: ${{ secrets.PAYPAL_MODE }}
+          MPESA_TILL: ${{ secrets.MPESA_TILL }}
+          TEST_METHOD: "PAYPAL"
+          TEST_TIER: "PLUS"
+          TEST_USER_ID: "9999"
+        run: |
+          node --version
+          npm --version
+          echo "Running payment harness (provider=$TEST_METHOD)"
+          node scripts/test-payment-harness.js
