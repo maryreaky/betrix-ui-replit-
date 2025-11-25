@@ -321,7 +321,7 @@ const redis = new Redis(REDIS_URL, {
     console.log(`[REDIS] Reconnection attempt ${times}, waiting ${delay}ms...`);
     return delay;
   },
-  maxRetriesPerRequest: 3,
+  maxRetriesPerRequest: null,
   enableReadyCheck: true,
   enableOfflineQueue: true,
   lazyConnect: false
