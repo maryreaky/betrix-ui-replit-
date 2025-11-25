@@ -2099,7 +2099,7 @@ console.log("[WEBHOOK] 🪝 Initializing webhook message handler...\n - worker.j
 async function handleUpdate(update) {
   try {
     console.log("[WEBHOOK] ✅ handleUpdate called - worker.js:2101");
-    console.log("[WEBHOOK] Update object keys: - worker.js:2102", Object.keys(update || {})");
+    console.log("[WEBHOOK] Update object keys: - worker.js:2102", Object.keys(update || {}));
     
     const msg = update.message;
     const cbq = update.callback_query;
