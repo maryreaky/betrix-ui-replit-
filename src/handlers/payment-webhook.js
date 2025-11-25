@@ -9,6 +9,20 @@ import fetch from 'node-fetch';
 
 const logger = new Logger('PaymentWebhook');
 
+// Send a concise admin alert when quick mapping lookup fails
+async function alertAdmin(bot, subject, details = {}) {
+  try {
+    const adminId = process.env.ADMIN_TELEGRAM_ID || process.env.TELEGRAM_ADMIN_ID || null;
+    if (!adminId) return;
+    if (!bot || typeof bot.sendMessage !== 'function') return;
+    const payload = JSON.stringify(details, Object.keys(details).slice(0, 20), 2);
+    const text = `⚠️ Payment mapping miss - ${subject}\n\n${payload}`;
+    // Best-effort notify admin
+    await bot.sendMessage(adminId, text);
+  } catch (e) {
+    logger.warn('Failed to send admin alert', e?.message || String(e));
+  }
+}
 /**
  * Handle M-Pesa STK Push callback
  */
@@ -68,6 +82,7 @@ export async function handleMpesaCallback(req, redis, bot) {
         // Resolve order by quick mappings only (phone or provider reference)
         if (!orderId) {
           logger.warn('No quick mapping found for M-Pesa payment', { amount, phoneNumber });
+          await alertAdmin(bot, 'M-Pesa mapping not found', { amount, phoneNumber, mpesaReceiptNumber, Body: Body?.stkCallback });
           return { success: false, message: 'Order mapping not found' };
         }
 
@@ -152,6 +167,7 @@ export async function handleSafaricomTillCallback(req, redis, bot) {
         // Require quick mapping (reference or transaction id). Do not scan.
         if (!orderId) {
           logger.warn('No quick mapping found for Till payment', { amount, transaction_id });
+          await alertAdmin(bot, 'Safaricom Till mapping not found', { amount, transaction_id, reference: req.body.reference, till_number });
           return { success: false, message: 'Order mapping not found' };
         }
 
@@ -255,6 +271,7 @@ export async function handlePayPalWebhook(req, redis, bot) {
         // expensive scans in production and avoids race conditions.
         if (!subscription) {
           logger.warn('PayPal webhook received but no mapped order found', { captureId: id });
+          await alertAdmin(bot, 'PayPal mapping not found', { captureId: id, possibleOrderIds });
           return { success: false, message: 'Order mapping not found' };
         }
 
@@ -299,6 +316,7 @@ export async function handleBinanceWebhook(req, redis, bot) {
           } catch (e) { logger.warn('verifyAndActivatePayment failed for mapped Binance order', e); subscription = null; }
         } else {
           logger.warn('No mapping found for Binance transaction', { transactionId });
+          await alertAdmin(bot, 'Binance mapping not found', { transactionId, totalFeeInUSD });
           return { success: false, message: 'Order mapping not found' };
         }
       } catch (e) { /* ignore */ }
