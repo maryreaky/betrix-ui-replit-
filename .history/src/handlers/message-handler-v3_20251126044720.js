@@ -16,7 +16,7 @@ import { createUserProfile, getUserProfile, updateUserProfile } from './data-mod
 const IntentPatterns = {
   // Feature access - MOST SPECIFIC PATTERNS FIRST (multi-word phrases)
   odds: /\b(show\s+odds|today.*match|fixture|live\s+odds|what.*play|game.*list|match.*list|upcoming.*match|next.*game)\b/i,
-  analyze: /\b(analyz|explain|breakdown|what.*happen|predict|what.*occur|why.*win|strategy)\w*/i,
+  analyze: /\b(analyz|explain|breakdown|what.*happen|predict|what.*occur|why.*win|strategy)\b/i,
   news: /\b(news|update|latest|what.*new|injury|lineup|transfer|alert|announce)\b/i,
   help: /\b(help|faq|how.*work|support|contact|troubleshoot|how.*do|guide|manual)\b/i,
   payment: /\b(pay|payment|subscribe|vvip|upgrade|premium|checkout|buy|cost|price|fee)\b/i,

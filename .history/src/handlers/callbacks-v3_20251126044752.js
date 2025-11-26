@@ -247,7 +247,7 @@ async function handleHelpCallback(data, chatId) {
 
   const handler = helpTopics[data];
   if (handler) {
-    return await handler();
+    return handler();
   }
 
   return {

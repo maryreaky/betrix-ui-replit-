@@ -14,24 +14,22 @@ import { createUserProfile, getUserProfile, updateUserProfile } from './data-mod
 // ============================================================================
 
 const IntentPatterns = {
-  // Feature access - MOST SPECIFIC PATTERNS FIRST (multi-word phrases)
-  odds: /\b(show\s+odds|today.*match|fixture|live\s+odds|what.*play|game.*list|match.*list|upcoming.*match|next.*game)\b/i,
-  analyze: /\b(analyz|explain|breakdown|what.*happen|predict|what.*occur|why.*win|strategy)\w*/i,
-  news: /\b(news|update|latest|what.*new|injury|lineup|transfer|alert|announce)\b/i,
-  help: /\b(help|faq|how.*work|support|contact|troubleshoot|how.*do|guide|manual)\b/i,
-  payment: /\b(pay|payment|subscribe|vvip|upgrade|premium|checkout|buy|cost|price|fee)\b/i,
-  sites: /\b(betting\s+site|bookmaker|bet.*site|where.*bet|open.*site|betting.*app|place.*bet.*site)\b/i,
-  menu: /\b(menu|main|home|dashboard|back|start|main.*menu)\b/i,
-  
+  // Signup flow
+  signup: /^(sign\s*up|join|register|create.*account|i.*want.*join|lets.*start)/i,
+  name_input: /^[a-z\s]{2,}$/i, // Simple name detection
+
+  // Feature access
+  odds: /(show\s*odds|today.*match|fixtures|live\s*odds|what.*today)/i,
+  analyze: /(analyz|explain|breakdown|what.*happen|predict)/i,
+  news: /(news|update|latest|what.*new|injury|lineup|transfer)/i,
+  help: /(help|faq|how.*work|support|contact|troubleshoot)/i,
+  payment: /(pay|payment|subscribe|vvip|upgrade|premium|checkout)/i,
+  sites: /(betting\s*site|bookmaker|bet.*site|where.*bet|open.*site)/i,
+  menu: /^(menu|main|home|dashboard|back)/i,
+
   // Betting actions
-  bet: /\b(bet|place.*bet|add.*slip|stake|wager|gambling)\b/i,
-  quick_bet: /\b(quick|rapid|fast|instant|one.*click)\b/i,
-  
-  // Signup flow (specific phrases only)
-  signup: /^(sign\s*up|signup|join|register|create.*account|i.*want.*join|lets.*start|make.*account|create.*profile)/i,
-  
-  // Catch-all for simple names LAST (strict pattern: ONLY letters and spaces, 2-50 chars, no keywords)
-  name_input: /^[a-z\s]{2,50}$/i
+  bet: /^(bet|place.*bet|add.*slip|stake)/i,
+  quick_bet: /^(quick|rapid|fast|instant)/i
 };
 
 /**
