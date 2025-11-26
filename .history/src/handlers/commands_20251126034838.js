@@ -19,7 +19,8 @@ import {
   formatStandings,
   formatProfile,
   formatNews,
-  
+  leagueMap,
+  sportEmojis
 } from './menu-system.js';
 import { canAccessFeature, TIERS } from './payment-handler.js';
 
@@ -49,7 +50,6 @@ function normalizeApiFootballFixture(f) {
     };
 
     return {
-      id: f.fixture?.id || f.id || f.fixture_id || null,
       home: home || (f.teams && f.teams.home && f.teams.home.name) || 'Home',
       away: away || (f.teams && f.teams.away && f.teams.away.name) || 'Away',
       status: status || 'LIVE',

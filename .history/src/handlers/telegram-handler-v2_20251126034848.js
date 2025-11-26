@@ -470,18 +470,6 @@ export async function handleCallbackQuery(callbackQuery, redis, services) {
       return handleHelpCallback(data, chatId, userId, redis);
     }
 
-    if (data.startsWith('league_')) {
-      return handleLeagueCallback(data, chatId, userId, redis, services);
-    }
-
-    if (data.startsWith('league_live_')) {
-      return handleLeagueLiveCallback(data, chatId, userId, redis, services);
-    }
-
-    if (data.startsWith('league_standings_')) {
-      return handleLeagueStandingsCallback(data, chatId, userId, redis, services);
-    }
-
     // Handle payment verification
     if (data.startsWith('verify_payment_')) {
       return handlePaymentVerification(data, chatId, userId, redis);
@@ -531,139 +519,18 @@ function handleMenuCallback(data, chatId, userId, redis) {
   };
 }
 
-async function handleLeagueCallback(data, chatId, userId, redis, services) {
-  const leagueId = data.replace('league_', '') || null;
-  const buttons = [
-    [{ text: '🔴 Live matches', callback_data: `league_live_${leagueId}` }],
-    [{ text: '📊 Standings', callback_data: `league_standings_${leagueId}` }],
-    [{ text: '🔙 Back', callback_data: 'menu_main' }]
-  ];
-
+/**
+ * Handle sport selection
+ */
+function handleSportCallback(data, chatId, userId, redis) {
+  const sport = data.replace('sport_', '');
   return {
     method: 'editMessageText',
     chat_id: chatId,
     message_id: undefined,
-    text: `League ${leagueId} — Choose an action:`,
-    parse_mode: 'Markdown',
-    reply_markup: { inline_keyboard: buttons }
+    text: `Loading ${sport} data...`,
+    parse_mode: 'Markdown'
   };
-}
-
-async function handleLeagueLiveCallback(data, chatId, userId, redis, services) {
-  const leagueId = data.replace('league_live_', '');
-  try {
-    let fixtures = [];
-    if (services && services.apiFootball && typeof services.apiFootball.getFixturesByLeague === 'function') {
-      const res = await services.apiFootball.getFixturesByLeague(leagueId, { live: true });
-      fixtures = res?.response || [];
-    }
-
-    const games = (fixtures || []).map(f => ({
-      id: f.fixture?.id || f.id || f.fixture_id || null,
-      home: f.teams?.home?.name || f.home || 'Home',
-      away: f.teams?.away?.name || f.away || 'Away',
-      status: f.fixture?.status?.short || f.status || 'LIVE',
-      minute: f.fixture?.status?.elapsed || null,
-      score: (f.goals || f.score) ? { home: f.goals?.home ?? f.score?.fulltime?.home ?? null, away: f.goals?.away ?? f.score?.fulltime?.away ?? null } : null
-    }));
-
-    const responseText = formatLiveGames(games, 'League');
-    return {
-      method: 'editMessageText',
-      chat_id: chatId,
-      message_id: undefined,
-      text: responseText,
-      parse_mode: 'Markdown',
-      reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_main' }]] }
-    };
-  } catch (err) {
-    logger.warn('handleLeagueLiveCallback failed', err);
-    return {
-      method: 'editMessageText',
-      chat_id: chatId,
-      message_id: undefined,
-      text: `Unable to fetch live matches for league ${leagueId}`,
-      parse_mode: 'Markdown'
-    };
-  }
-}
-
-async function handleLeagueStandingsCallback(data, chatId, userId, redis, services) {
-  const leagueId = data.replace('league_standings_', '');
-  try {
-    let standings = null;
-    if (services && services.apiFootball && typeof services.apiFootball.getStandings === 'function') {
-      const res = await services.apiFootball.getStandings(leagueId, new Date().getFullYear());
-      standings = res?.response?.[0] || null;
-    }
-
-    const response = formatStandings(standings, `League ${leagueId}`);
-    return {
-      method: 'editMessageText',
-      chat_id: chatId,
-      message_id: undefined,
-      text: response,
-      parse_mode: 'Markdown',
-      reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_main' }]] }
-    };
-  } catch (err) {
-    logger.warn('handleLeagueStandingsCallback failed', err);
-    return {
-      method: 'editMessageText',
-      chat_id: chatId,
-      message_id: undefined,
-      text: `Unable to fetch standings for league ${leagueId}`,
-      parse_mode: 'Markdown'
-    };
-  }
-}
-
-/**
- * Handle sport selection
- */
-async function handleSportCallback(data, chatId, userId, redis, services) {
-  const sportKey = data.replace('sport_', '');
-  const sportName = sportKey.charAt(0).toUpperCase() + sportKey.slice(1);
-
-  // Try to fetch popular leagues for this sport
-  try {
-    let leagues = [];
-    if (services && services.apiFootball && typeof services.apiFootball.getLeagues === 'function') {
-      const res = await services.apiFootball.getLeagues(sportKey);
-      leagues = (res?.response || []).slice(0, 6).map(l => ({ id: l.league?.id || l.id, name: l.league?.name || l.name }));
-    }
-
-    // Fallback static list
-    if (!leagues || leagues.length === 0) {
-      leagues = [
-        { id: '39', name: 'Premier League' },
-        { id: '140', name: 'La Liga' },
-        { id: '135', name: 'Serie A' },
-        { id: '61', name: 'Ligue 1' }
-      ];
-    }
-
-    const keyboard = leagues.map(l => [{ text: `${l.name}`, callback_data: `league_${l.id}` }]);
-    keyboard.push([{ text: '🔙 Back', callback_data: 'menu_main' }]);
-
-    return {
-      method: 'editMessageText',
-      chat_id: chatId,
-      message_id: undefined,
-      text: `*${sportName}* — Select a league to view live matches and standings:`,
-      parse_mode: 'Markdown',
-      reply_markup: { inline_keyboard: keyboard }
-    };
-  } catch (err) {
-    logger.warn('handleSportCallback failed', err);
-    return {
-      method: 'editMessageText',
-      chat_id: chatId,
-      message_id: undefined,
-      text: `Loading ${sportName} data...`,
-      parse_mode: 'Markdown'
-    };
-  }
 }
 
 /**
@@ -903,51 +770,17 @@ async function handlePaymentMethodSelection(data, chatId, userId, redis, service
     // Get payment instructions
     const instructions = await getPaymentInstructions(redis, order.orderId, paymentMethod);
 
-    // Build step-by-step text
-    let instrText = '';
-    if (instructions) {
-      // Use provided descriptive text if available
-      if (instructions.description) instrText += `*${instructions.description}*\n\n`;
-
-      // Steps may be in .steps or .manualSteps
-      const steps = instructions.steps || instructions.manualSteps || [];
-      if (Array.isArray(steps) && steps.length > 0) {
-        instrText += 'Follow these steps:\n';
-        for (let i = 0; i < steps.length; i++) {
-          instrText += `${i + 1}. ${steps[i]}\n`;
-        }
-        instrText += '\n';
-      }
-
-      // Additional helper fields
-      if (instructions.tillNumber) instrText += `Till: *${instructions.tillNumber}*\n`;
-      if (instructions.reference) instrText += `Reference: \\`${instructions.reference}\\`\n`;
-      if (instructions.checkoutUrl) instrText += `Open the payment link to continue.`;
-    } else {
-      instrText = `Please follow the provider instructions to complete payment for order ${order.orderId}.`;
-    }
-
-    // Build buttons: provider-specific CTAs and common verification
-    const keyboard = [];
-
-    if (instructions && instructions.checkoutUrl) {
-      keyboard.push([{ text: `${PAYMENT_PROVIDERS[paymentMethod]?.symbol || '💳'} Pay with ${PAYMENT_PROVIDERS[paymentMethod]?.name || paymentMethod}`, url: instructions.checkoutUrl }]);
-    }
-
-    if (instructions && instructions.qrCode) {
-      keyboard.push([{ text: '🔎 View QR', url: instructions.qrCode }]);
-    }
-
-    // Always include verify and change method
-    keyboard.push([{ text: '✅ I have paid', callback_data: `verify_payment_${order.orderId}` }]);
-    keyboard.push([{ text: '🔙 Change method', callback_data: 'menu_vvip' }]);
-
     return {
       method: 'sendMessage',
       chat_id: chatId,
-      text: instrText,
-      parse_mode: 'Markdown',
-      reply_markup: { inline_keyboard: keyboard }
+      text: instructions.text,
+      parse_mode: instructions.parseMode || 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '✅ I have paid', callback_data: `verify_payment_${order.orderId}` }],
+          [{ text: '🔙 Change method', callback_data: 'menu_vvip' }]
+        ]
+      }
     };
   } catch (error) {
     logger.error('Payment method selection error:', error);

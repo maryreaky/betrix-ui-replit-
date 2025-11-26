@@ -903,51 +903,17 @@ async function handlePaymentMethodSelection(data, chatId, userId, redis, service
     // Get payment instructions
     const instructions = await getPaymentInstructions(redis, order.orderId, paymentMethod);
 
-    // Build step-by-step text
-    let instrText = '';
-    if (instructions) {
-      // Use provided descriptive text if available
-      if (instructions.description) instrText += `*${instructions.description}*\n\n`;
-
-      // Steps may be in .steps or .manualSteps
-      const steps = instructions.steps || instructions.manualSteps || [];
-      if (Array.isArray(steps) && steps.length > 0) {
-        instrText += 'Follow these steps:\n';
-        for (let i = 0; i < steps.length; i++) {
-          instrText += `${i + 1}. ${steps[i]}\n`;
-        }
-        instrText += '\n';
-      }
-
-      // Additional helper fields
-      if (instructions.tillNumber) instrText += `Till: *${instructions.tillNumber}*\n`;
-      if (instructions.reference) instrText += `Reference: \\`${instructions.reference}\\`\n`;
-      if (instructions.checkoutUrl) instrText += `Open the payment link to continue.`;
-    } else {
-      instrText = `Please follow the provider instructions to complete payment for order ${order.orderId}.`;
-    }
-
-    // Build buttons: provider-specific CTAs and common verification
-    const keyboard = [];
-
-    if (instructions && instructions.checkoutUrl) {
-      keyboard.push([{ text: `${PAYMENT_PROVIDERS[paymentMethod]?.symbol || '💳'} Pay with ${PAYMENT_PROVIDERS[paymentMethod]?.name || paymentMethod}`, url: instructions.checkoutUrl }]);
-    }
-
-    if (instructions && instructions.qrCode) {
-      keyboard.push([{ text: '🔎 View QR', url: instructions.qrCode }]);
-    }
-
-    // Always include verify and change method
-    keyboard.push([{ text: '✅ I have paid', callback_data: `verify_payment_${order.orderId}` }]);
-    keyboard.push([{ text: '🔙 Change method', callback_data: 'menu_vvip' }]);
-
     return {
       method: 'sendMessage',
       chat_id: chatId,
-      text: instrText,
-      parse_mode: 'Markdown',
-      reply_markup: { inline_keyboard: keyboard }
+      text: instructions.text,
+      parse_mode: instructions.parseMode || 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '✅ I have paid', callback_data: `verify_payment_${order.orderId}` }],
+          [{ text: '🔙 Change method', callback_data: 'menu_vvip' }]
+        ]
+      }
     };
   } catch (error) {
     logger.error('Payment method selection error:', error);

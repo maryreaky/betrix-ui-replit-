@@ -19,49 +19,12 @@ import {
   formatStandings,
   formatProfile,
   formatNews,
-  
+  leagueMap,
+  sportEmojis
 } from './menu-system.js';
 import { canAccessFeature, TIERS } from './payment-handler.js';
 
 const logger = new Logger('Commands');
-
-/**
- * Normalize an API-Football fixture (or similar) into a small shape used by formatLiveGames
- * Expected output: { home, away, status, minute, score: { home, away }, tip }
- */
-function normalizeApiFootballFixture(f) {
-  try {
-    // Support multiple possible shapes
-    const teams = f.teams || f.teams || {};
-    const home = (teams.home && teams.home.name) || f.home || f.home_team || (f.teams && f.teams.home && f.teams.home.name) || null;
-    const away = (teams.away && teams.away.name) || f.away || f.away_team || (f.teams && f.teams.away && f.teams.away.name) || null;
-
-    // Status + minute
-    const statusObj = f.fixture?.status || f.status || {};
-    const status = statusObj.short || statusObj.long || statusObj.description || (statusObj.elapsed ? 'LIVE' : (statusObj.status || 'UNK'));
-    const minute = statusObj.elapsed || f.minute || null;
-
-    // Score extraction
-    const scores = f.goals || f.score || f.result || {};
-    const score = {
-      home: (scores.home != null ? scores.home : (scores.fulltime && scores.fulltime.home) || (scores.full && scores[0] && scores[0].home) || null),
-      away: (scores.away != null ? scores.away : (scores.fulltime && scores.fulltime.away) || (scores.full && scores[0] && scores[0].away) || null)
-    };
-
-    return {
-      id: f.fixture?.id || f.id || f.fixture_id || null,
-      home: home || (f.teams && f.teams.home && f.teams.home.name) || 'Home',
-      away: away || (f.teams && f.teams.away && f.teams.away.name) || 'Away',
-      status: status || 'LIVE',
-      minute: minute || null,
-      score: (score.home != null || score.away != null) ? score : null,
-      tip: f.prediction?.summary || f.tip || null
-    };
-  } catch (err) {
-    logger.warn('normalizeApiFootballFixture failed', err?.message || err);
-    return null;
-  }
-}
 
 // League IDs for major football leagues (API-Football)
 const LEAGUE_IDS = {

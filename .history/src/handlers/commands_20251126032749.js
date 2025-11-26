@@ -19,49 +19,12 @@ import {
   formatStandings,
   formatProfile,
   formatNews,
-  
+  leagueMap,
+  sportEmojis
 } from './menu-system.js';
 import { canAccessFeature, TIERS } from './payment-handler.js';
 
 const logger = new Logger('Commands');
-
-/**
- * Normalize an API-Football fixture (or similar) into a small shape used by formatLiveGames
- * Expected output: { home, away, status, minute, score: { home, away }, tip }
- */
-function normalizeApiFootballFixture(f) {
-  try {
-    // Support multiple possible shapes
-    const teams = f.teams || f.teams || {};
-    const home = (teams.home && teams.home.name) || f.home || f.home_team || (f.teams && f.teams.home && f.teams.home.name) || null;
-    const away = (teams.away && teams.away.name) || f.away || f.away_team || (f.teams && f.teams.away && f.teams.away.name) || null;
-
-    // Status + minute
-    const statusObj = f.fixture?.status || f.status || {};
-    const status = statusObj.short || statusObj.long || statusObj.description || (statusObj.elapsed ? 'LIVE' : (statusObj.status || 'UNK'));
-    const minute = statusObj.elapsed || f.minute || null;
-
-    // Score extraction
-    const scores = f.goals || f.score || f.result || {};
-    const score = {
-      home: (scores.home != null ? scores.home : (scores.fulltime && scores.fulltime.home) || (scores.full && scores[0] && scores[0].home) || null),
-      away: (scores.away != null ? scores.away : (scores.fulltime && scores.fulltime.away) || (scores.full && scores[0] && scores[0].away) || null)
-    };
-
-    return {
-      id: f.fixture?.id || f.id || f.fixture_id || null,
-      home: home || (f.teams && f.teams.home && f.teams.home.name) || 'Home',
-      away: away || (f.teams && f.teams.away && f.teams.away.name) || 'Away',
-      status: status || 'LIVE',
-      minute: minute || null,
-      score: (score.home != null || score.away != null) ? score : null,
-      tip: f.prediction?.summary || f.tip || null
-    };
-  } catch (err) {
-    logger.warn('normalizeApiFootballFixture failed', err?.message || err);
-    return null;
-  }
-}
 
 // League IDs for major football leagues (API-Football)
 const LEAGUE_IDS = {
@@ -242,12 +205,9 @@ export async function handleLive(chatId, userId, sport, redis, services) {
     try {
       if (services && services.apiFootball && typeof services.apiFootball.getLive === 'function') {
         const response = await services.apiFootball.getLive();
-        const raw = response?.response || [];
-        // Normalize api-football fixtures into the shape expected by formatLiveGames
-        games = raw.map(f => normalizeApiFootballFixture(f)).filter(Boolean);
+        games = response?.response || [];
       } else if (services && services.api && typeof services.api.getLive === 'function') {
-        const raw = await services.api.getLive();
-        games = (raw || []).map(f => normalizeApiFootballFixture(f)).filter(Boolean);
+        games = await services.api.getLive();
       }
     } catch (e) {
       logger.warn('Failed to fetch live matches', e);
@@ -308,62 +268,29 @@ export async function handleOdds(chatId, userId, fixtureId, redis, services) {
   logger.info('handleOdds', { userId, fixtureId });
   
   try {
-    // If no fixture ID provided, show selector
-    if (!fixtureId) {
-      return {
-        chat_id: chatId,
-        text: `🎲 *Betting Odds*\n\nTo view odds for a specific match:\n\n\`/odds [fixture-id]\`\n\nExample: \`/odds 123456\`\n\n💡 Use /live to find fixture IDs.`,
-        reply_markup: {
-          inline_keyboard: [
-            [{ text: '🔴 Live Matches', callback_data: 'menu_live' }],
-            [{ text: '🔙 Back', callback_data: 'menu_main' }]
-          ]
-        },
-        parse_mode: 'Markdown'
-      };
-    }
-
     const user = await redis.hgetall(`user:${userId}`);
     const tier = user?.tier || 'FREE';
     
-    // VVIP-only detailed odds
-    let odds = null;
-    try {
-      if (services && services.apiFootball && typeof services.apiFootball.getOdds === 'function') {
-        const response = await services.apiFootball.getOdds(fixtureId);
-        odds = response?.response?.[0] || null;
-      }
-    } catch (e) {
-      logger.warn('Failed to fetch odds', e);
+    if (!canAccessFeature('odds', tier)) {
+      return {
+        chat_id: chatId,
+        text: `💰 Advanced odds require VVIP.\n\nUpgrade: /vvip`,
+        parse_mode: 'Markdown'
+      };
     }
     
-    const formatted = formatOdds(odds, fixtureId);
-    
-    // Append tier message if free
-    let text = formatted;
-    if (tier === 'FREE') {
-      text += '\n\n💎 *Detailed odds analysis* requires VVIP. Upgrade with /vvip';
-    }
+    const formatted = formatOdds({}, fixtureId);
     
     return {
       chat_id: chatId,
-      text: text,
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: '🔴 Live', callback_data: 'menu_live' },
-            { text: '💎 VVIP', callback_data: 'menu_vvip' }
-          ],
-          [{ text: '🔙 Back', callback_data: 'menu_main' }]
-        ]
-      },
+      text: formatted,
       parse_mode: 'Markdown'
     };
   } catch (err) {
     logger.error('handleOdds error', err);
     return {
       chat_id: chatId,
-      text: '❌ Error fetching odds. Please try again.',
+      text: '❌ Error fetching odds',
       parse_mode: 'Markdown'
     };
   }
@@ -376,68 +303,18 @@ export async function handleStandings(chatId, userId, league, redis, services) {
   logger.info('handleStandings', { userId, league });
   
   try {
-    // If no league provided, show selector
-    if (!league) {
-      return {
-        chat_id: chatId,
-        text: `🏆 *League Standings*\n\nSelect a league to view the current standings:`,
-        reply_markup: {
-          inline_keyboard: [
-            [
-              { text: '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League', callback_data: 'league_39' },
-              { text: '🇪🇸 La Liga', callback_data: 'league_140' }
-            ],
-            [
-              { text: '🇮🇹 Serie A', callback_data: 'league_135' },
-              { text: '🇫🇷 Ligue 1', callback_data: 'league_61' }
-            ],
-            [
-              { text: '🇩🇪 Bundesliga', callback_data: 'league_78' },
-              { text: '🏆 Champions League', callback_data: 'league_1' }
-            ],
-            [{ text: '🔙 Back', callback_data: 'menu_main' }]
-          ]
-        },
-        parse_mode: 'Markdown'
-      };
-    }
-
-    let standings = null;
-    try {
-      // Try to get standings from API-Football
-      // League param could be league ID (39) or league name
-      const leagueId = LEAGUE_IDS[league.toLowerCase()] || parseInt(league, 10);
-      const season = new Date().getFullYear();
-      
-      if (services && services.apiFootball && typeof services.apiFootball.getStandings === 'function') {
-        const response = await services.apiFootball.getStandings(leagueId, season);
-        standings = response?.response?.[0] || null;
-      }
-    } catch (e) {
-      logger.warn('Failed to fetch standings', e);
-    }
-    
-    const formatted = formatStandings(standings, league || 'Premier League');
+    const formatted = formatStandings({}, league);
     
     return {
       chat_id: chatId,
       text: formatted,
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: '🔄 Refresh', callback_data: 'menu_standings' },
-            { text: '🔴 Live', callback_data: 'menu_live' }
-          ],
-          [{ text: '🔙 Back', callback_data: 'menu_main' }]
-        ]
-      },
       parse_mode: 'Markdown'
     };
   } catch (err) {
     logger.error('handleStandings error', err);
     return {
       chat_id: chatId,
-      text: '❌ Error fetching standings. Please try again.',
+      text: '❌ Error fetching standings',
       parse_mode: 'Markdown'
     };
   }

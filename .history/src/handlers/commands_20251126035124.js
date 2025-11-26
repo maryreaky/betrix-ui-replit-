@@ -19,7 +19,8 @@ import {
   formatStandings,
   formatProfile,
   formatNews,
-  
+  leagueMap,
+  sportEmojis
 } from './menu-system.js';
 import { canAccessFeature, TIERS } from './payment-handler.js';
 
