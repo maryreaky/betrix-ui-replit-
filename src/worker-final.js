@@ -30,6 +30,7 @@ import { AdminDashboard } from "./admin/dashboard.js";
 import { AnalyticsService } from "./services/analytics.js";
 import { RateLimiter } from "./middleware/rate-limiter.js";
 import { ContextManager } from "./middleware/context-manager.js";
+import v2Handler from "./handlers/telegram-handler-v2.js";
 
 const logger = new Logger("FinalWorker");
 
@@ -353,16 +354,32 @@ async function handleCommand(chatId, userId, cmd, args, fullText) {
     // Basic commands
     const basicCommands = {
       "/start": () => basicHandlers.start(chatId, userId),
-      "/menu": () => basicHandlers.menu(chatId, userId),
+      "/menu": async () => {
+        const services = { openLiga, footballData: footballDataService, rss: rssAggregator, scrapers, cache };
+        const msg = await v2Handler.handleCommand(chatId, userId, '/menu', [], telegram, redis, services);
+        if (msg && msg.method === 'sendMessage') await telegram.sendMessage(chatId, msg.text, msg.reply_markup);
+      },
       "/help": () => basicHandlers.help(chatId),
       "/about": () => basicHandlers.about(chatId),
-      "/live": () => basicHandlers.live(chatId, userId),
+      "/live": async () => {
+        const services = { openLiga, footballData: footballDataService, rss: rssAggregator, scrapers, cache };
+        const msg = await v2Handler.handleCommand(chatId, userId, '/live', [], telegram, redis, services);
+        if (msg && msg.method === 'sendMessage') await telegram.sendMessage(chatId, msg.text, msg.reply_markup);
+      },
       "/news": () => basicHandlers.news(chatId),
       "/highlights": () => basicHandlers.highlights(chatId),
-      "/standings": () => basicHandlers.standings(chatId, args[0]),
+      "/standings": async () => {
+        const services = { openLiga, footballData: footballDataService, rss: rssAggregator, scrapers, cache };
+        const msg = await v2Handler.handleCommand(chatId, userId, '/standings', args, telegram, redis, services);
+        if (msg && msg.method === 'sendMessage') await telegram.sendMessage(chatId, msg.text, msg.reply_markup);
+      },
       "/league": () => basicHandlers.league(chatId, args.join(" ")),
       "/predict": () => basicHandlers.predict(chatId, args.join(" ")),
-      "/odds": () => basicHandlers.odds(chatId, args[0]),
+      "/odds": async () => {
+        const services = { openLiga, footballData: footballDataService, rss: rssAggregator, scrapers, cache };
+        const msg = await v2Handler.handleCommand(chatId, userId, '/odds', args, telegram, redis, services);
+        if (msg && msg.method === 'sendMessage') await telegram.sendMessage(chatId, msg.text, msg.reply_markup);
+      },
       "/tips": () => basicHandlers.tips(chatId),
       "/pricing": () => basicHandlers.pricing(chatId),
       "/status": () => basicHandlers.status(chatId, userId),
