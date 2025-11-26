@@ -100,33 +100,36 @@ export const subscriptionMenu = {
 • 💳 No ads
 
 💰 *Tier Pricing (KES):*
-┌─────────────────────────┐
-│ Free        → Community │
-│ Pro    → KES 899/month  │
-│ VVIP   → KES 2,699/mo   │ ⭐ Most Popular
-│ Plus   → KES 8,999/mo   │ 💎 Premium
-└─────────────────────────┘
+┌────────────────────────────────┐
+│ Free        → Community access │
+│ Pro    → KES 899/month  📊      │
+│ VVIP   → KES 2,699/month ⭐    │ Most Popular
+│ Plus   → KES 8,999/month 💎    │ Premium+VIP
+└────────────────────────────────┘
 
-🏪 *Payment Methods:*
-${TILL_NUMBER ? `🏪 Safaricom Till #${TILL_NUMBER}` : '🏪 Safaricom Till'} (Instant)
-📱 M-Pesa (STK Push)
-💳 PayPal (International)
-₿ Binance Pay / Bitcoin
-🏦 Bank Transfer (SWIFT)
+🏪 *Payment Methods Available:*
+${TILL_NUMBER ? `🏪 Safaricom Till #${TILL_NUMBER} - Instant (KES only)` : '🏪 Safaricom Till - Instant (KES)'}
+📱 M-Pesa STK - Push & confirm
+💳 PayPal - International cards
+₿ Binance Pay - Crypto options
+🏦 Bank Transfer - SWIFT (EUR/USD)
 
-*Choose Your Plan:*`,
+*Choose Your Plan:*
+(Payment will be processed after selection)`,
   
   reply_markup: {
     inline_keyboard: [
       [
-        { text: '📊 Pro Tier', callback_data: 'sub_pro' },
-        { text: '👑 VVIP', callback_data: 'sub_vvip' }
+        { text: '📊 Pro (KES 899)', callback_data: 'sub_pro' }
       ],
       [
-        { text: '💎 BETRIX Plus', callback_data: 'sub_plus' }
+        { text: '👑 VVIP (KES 2,699) - POPULAR ⭐', callback_data: 'sub_vvip' }
       ],
       [
-        { text: '🔙 Back', callback_data: 'menu_main' }
+        { text: '💎 BETRIX Plus (KES 8,999)', callback_data: 'sub_plus' }
+      ],
+      [
+        { text: '🔙 Back to Menu', callback_data: 'menu_main' }
       ]
     ]
   }

@@ -220,24 +220,46 @@ async function handlePaymentCallback(data, chatId, userId, redis, services) {
     // Get payment instructions
     const instructions = await getPaymentInstructions(order, method);
 
-    // Build confirmation text
+    // Build comprehensive confirmation screen
     let confirmText = `✅ *Payment Order Created*
 
-📋 Order ID: \`${order.orderId}\`
-⭐ Tier: ${tier}
-💰 Amount: KES ${getTierAmount(tier)}
+📋 *Order Details:*
+Order ID: \`${order.orderId}\`
+User ID: \`${userId}\`
+Tier: *${getTierDisplayName(tier)}*
+Amount: *KES ${getTierAmount(tier)}*
+Status: ⏳ Pending Payment
 
-*Payment Method: ${getMethodName(method)}*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💳 *Payment Method: ${getMethodName(method)}*
 
 ${instructions.text}
 
-⏳ After payment, click "Confirm Payment" below.`;
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-    // Build keyboard with confirmation button
+⏱️ *Next Steps:*
+1️⃣ Send payment using the details above
+2️⃣ Wait for confirmation (usually instant)
+3️⃣ Click "✅ Confirm Payment Sent" when done
+
+❗ *Important:*
+• Screenshot your payment confirmation for support
+• Payment may take 5-10 minutes to appear
+• Check "Check Status" to verify payment
+
+*Questions?* Contact support@betrix.app`;
+
+    // Build keyboard with confirmation + status check
     const keyboard = {
       inline_keyboard: [
-        [{ text: '✅ Confirm Payment Sent', callback_data: `verify_${order.orderId}` }],
-        [{ text: '❌ Cancel', callback_data: 'menu_vvip' }]
+        [
+          { text: '✅ Confirm Payment Sent', callback_data: `verify_${order.orderId}` },
+          { text: '🔄 Check Status', callback_data: `status_${order.orderId}` }
+        ],
+        [
+          { text: '❌ Cancel Order', callback_data: 'menu_vvip' }
+        ]
       ]
     };
 
@@ -252,7 +274,7 @@ ${instructions.text}
     logger.error('handlePaymentCallback error', err);
     return {
       chat_id: chatId,
-      text: `❌ Payment error: ${err.message}`,
+      text: `❌ Payment error: ${err.message}\n\nTry again or contact support`,
       parse_mode: 'Markdown'
     };
   }
@@ -377,6 +399,16 @@ function getTierAmount(tier) {
     'FREE': 0
   };
   return amounts[tier] || 2699;
+}
+
+function getTierDisplayName(tier) {
+  const names = {
+    'PRO': 'Pro Tier 📊',
+    'VVIP': 'VVIP Tier 👑',
+    'PLUS': 'BETRIX Plus 💎',
+    'FREE': 'Free Tier'
+  };
+  return names[tier] || tier;
 }
 
 function getMethodName(method) {
