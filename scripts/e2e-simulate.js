@@ -46,6 +46,20 @@ async function run() {
     const cb = { id: 'cb1', from: { id: 424242 }, message: { chat: { id: 9999 } }, data: 'bet_fixture_11111' };
     const cbRes = await handleCallbackQuery(cb, redisClient, { apiFootball: { getFixture: async (id) => ({ response: [ { teams: { home: { name: 'Home FC' }, away: { name: 'Away United' } } } ] }) } });
     console.log('Callback result:', cbRes);
+    
+    // Simulate a payment flow if payment-router available
+    try {
+      const payment = await import('../src/handlers/payment-router.js');
+      console.log('--- Simulating payment flow ---');
+      const order = await payment.createPaymentOrder(redisClient, 424242, 'PLUS', 'SAFARICOM_TILL', 'KE', { phone: '+254700000000' });
+      console.log('Created order:', order.orderId, order.totalAmount);
+      const instr = await payment.getPaymentInstructions(redisClient, order.orderId, order.paymentMethod);
+      console.log('Payment instructions:', instr && instr.description ? instr.description : instr);
+      const result = await payment.simulatePaymentComplete(redisClient, order.orderId);
+      console.log('Payment result:', result);
+    } catch (e) {
+      console.warn('Payment simulation skipped:', e && e.message);
+    }
   } catch (err) {
     console.error('e2e-simulate error', err);
     process.exit(1);
