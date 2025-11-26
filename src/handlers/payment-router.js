@@ -334,7 +334,17 @@ function paypalClient() {
 
 async function createPayPalOrder(orderData) {
   try {
-    const client = paypalClient();
+    let client;
+    try {
+      client = paypalClient();
+    } catch (credErr) {
+      // If PayPal credentials are missing and we're in demo mode, return a mock approval URL
+      if (process.env.ENABLE_DEMO === '1' || process.env.MOCK_PAYMENTS === '1') {
+        const mockId = `MOCKPAY-${Date.now()}`;
+        return { id: mockId, approvalUrl: `${process.env.PUBLIC_URL || 'https://betrix.app'}/mock-pay/${mockId}` };
+      }
+      throw credErr;
+    }
     const request = new paypal.orders.OrdersCreateRequest();
     request.prefer('return=representation');
 
@@ -527,6 +537,15 @@ export async function verifyAndActivatePayment(redis, orderId, transactionId) {
     logger.error('Payment verification failed', err);
     throw err;
   }
+}
+
+/**
+ * Simulate a payment completion for testing/demo runs
+ * This will mark the order as completed and activate the subscription
+ */
+export async function simulatePaymentComplete(redis, orderId) {
+  const txId = `SIMTX-${Date.now()}`;
+  return await verifyAndActivatePayment(redis, orderId, txId);
 }
 
 /**
