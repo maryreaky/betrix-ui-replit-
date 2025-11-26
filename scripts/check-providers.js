@@ -67,9 +67,9 @@ async function checkPayPal() {
 }
 
 async function checkApiFootball() {
-  const key = process.env.API_FOOTBALL_KEY;
-  const base = process.env.API_FOOTBALL_BASE || 'https://v3.football.api-sports.io';
-  if (!key) return { ok: false, reason: 'API_FOOTBALL_KEY missing' };
+  const key = process.env.API_FOOTBALL_KEY || process.env.API_SPORTS_KEY;
+  const base = process.env.API_FOOTBALL_BASE || process.env.API_SPORTS_BASE || 'https://v3.football.api-sports.io';
+  if (!key) return { ok: false, reason: 'API_FOOTBALL_KEY/API_SPORTS_KEY missing' };
   try {
     const url = `${base}/v3/timezone`;
     const res = await fetchWithTimeout(url, { headers: { 'x-apisports-key': key } }, 7000);
@@ -82,9 +82,9 @@ async function checkApiFootball() {
 }
 
 async function checkAllSports() {
-  const key = process.env.ALLSPORTS_API || process.env.ALLSPORTS_API_KEY;
+  const key = process.env.ALLSPORTS_API || process.env.ALLSPORTS_API_KEY || process.env.RAPIDAPI_KEY;
   const host = process.env.ALLSPORTS_HOST || 'allsportsapi.p.rapidapi.com';
-  if (!key) return { ok: false, reason: 'ALLSPORTS_API missing' };
+  if (!key) return { ok: false, reason: 'ALLSPORTS_API/RAPIDAPI_KEY missing' };
   try {
     const url = `https://${host}/`;
     const res = await fetchWithTimeout(url, { headers: { 'x-rapidapi-key': key, 'x-rapidapi-host': host } }, 7000);
