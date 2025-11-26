@@ -190,7 +190,16 @@ export async function handleMessage(update, redis, services) {
  * Handle slash commands
  */
 async function handleCommand(text, chatId, userId, redis, services) {
-  const command = text.split(' ')[0].toLowerCase();
+  // Defensive: ensure `text` is a string to avoid runtime TypeErrors
+  if (text === undefined || text === null) text = '';
+  if (typeof text !== 'string') {
+    try {
+      text = String(text);
+    } catch (e) {
+      text = '';
+    }
+  }
+  const command = (text || '').split(' ')[0].toLowerCase();
 
   switch (command) {
     case '/start':
