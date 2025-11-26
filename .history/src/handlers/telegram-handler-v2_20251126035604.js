@@ -578,24 +578,13 @@ async function handleLeagueLiveCallback(data, chatId, userId, redis, services) {
     }));
 
     const responseText = formatLiveGames(games, 'League');
-
-    // Build inline keyboard with quick bet buttons for top 3 fixtures
-    const keyboard = [];
-    for (let i = 0; i < Math.min(games.length, 3); i++) {
-      const f = games[i];
-      if (f && f.id) {
-        keyboard.push([{ text: `Quick Bet: ${f.home} vs ${f.away}`, callback_data: `bet_fixture_${f.id}` }]);
-      }
-    }
-    keyboard.push([{ text: '🔙 Back', callback_data: 'menu_main' }]);
-
     return {
       method: 'editMessageText',
       chat_id: chatId,
       message_id: undefined,
       text: responseText,
       parse_mode: 'Markdown',
-      reply_markup: { inline_keyboard: keyboard }
+      reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_main' }]] }
     };
   } catch (err) {
     logger.warn('handleLeagueLiveCallback failed', err);
@@ -636,99 +625,6 @@ async function handleLeagueStandingsCallback(data, chatId, userId, redis, servic
       text: `Unable to fetch standings for league ${leagueId}`,
       parse_mode: 'Markdown'
     };
-  }
-}
-
-// ----------------------
-// Betslip helpers
-// ----------------------
-async function createBetslip(redis, userId, fixtureId, fixtureText) {
-  const id = `BETS${userId}${Date.now()}`;
-  const bet = {
-    id,
-    userId,
-    fixtureId,
-    fixtureText,
-    stake: 100,
-    selection: 'home',
-    createdAt: new Date().toISOString()
-  };
-  // store for 1 hour
-  await redis.setex(`betslip:${id}`, 3600, JSON.stringify(bet));
-  return bet;
-}
-
-async function handleBetCreate(data, chatId, userId, redis, services) {
-  try {
-    const fixtureId = data.replace('bet_fixture_', '');
-
-    // Try to resolve fixture info via apiFootball if available
-    let fixtureText = `Fixture ${fixtureId}`;
-    try {
-      if (services && services.apiFootball && typeof services.apiFootball.getFixture === 'function') {
-        const res = await services.apiFootball.getFixture(fixtureId);
-        const f = res?.response?.[0];
-        if (f) fixtureText = `${f.teams?.home?.name || 'Home'} vs ${f.teams?.away?.name || 'Away'}`;
-      }
-    } catch (e) {
-      logger.warn('Could not resolve fixture details', e);
-    }
-
-    const bet = await createBetslip(redis, userId, fixtureId, fixtureText);
-
-    const text = `🧾 *Betslip*\n\nFixture: *${bet.fixtureText}*\nStake: KES ${bet.stake}\nSelection: *${bet.selection}*\n\nTap to confirm your bet.`;
-
-    return {
-      method: 'sendMessage',
-      chat_id: chatId,
-      text,
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '✅ Place Bet', callback_data: `place_bet_${bet.id}` }],
-          [{ text: '✏️ Change Stake', callback_data: `edit_bet_${bet.id}` }],
-          [{ text: '🔙 Back', callback_data: 'menu_live' }]
-        ]
-      }
-    };
-  } catch (err) {
-    logger.error('handleBetCreate error', err);
-    return {
-      method: 'sendMessage',
-      chat_id: chatId,
-      text: '❌ Failed to create betslip. Try again later.',
-      parse_mode: 'Markdown'
-    };
-  }
-}
-
-async function handlePlaceBet(data, chatId, userId, redis) {
-  try {
-    const betId = data.replace('place_bet_', '');
-    const raw = await redis.get(`betslip:${betId}`);
-    if (!raw) {
-      return { method: 'sendMessage', chat_id: chatId, text: '⚠️ Betslip expired or not found.', parse_mode: 'Markdown' };
-    }
-    const bet = JSON.parse(raw);
-
-    // For free users, we mock placement and store in user's bets history
-    const txId = `BTX${Date.now()}`;
-    await redis.rpush(`user:${userId}:bets`, JSON.stringify({ ...bet, placedAt: new Date().toISOString(), txId }));
-    // remove betslip
-    await redis.del(`betslip:${betId}`);
-
-    const text = `✅ Bet placed!\n\nFixture: *${bet.fixtureText}*\nStake: KES ${bet.stake}\nSelection: *${bet.selection}*\nTransaction: \\`${txId}\\`\n\nGood luck!`;
-
-    return {
-      method: 'sendMessage',
-      chat_id: chatId,
-      text,
-      parse_mode: 'Markdown',
-      reply_markup: { inline_keyboard: [[{ text: '🎯 My Bets', callback_data: 'profile_bets' }, { text: '🔙 Main Menu', callback_data: 'menu_main' }]] }
-    };
-  } catch (err) {
-    logger.error('handlePlaceBet error', err);
-    return { method: 'sendMessage', chat_id: chatId, text: '❌ Failed to place bet.', parse_mode: 'Markdown' };
   }
 }
 
