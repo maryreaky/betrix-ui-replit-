@@ -40,6 +40,58 @@ import {
 
 const logger = new Logger('TelegramHandler');
 
+// -------------------------
+// Data normalization helpers
+// -------------------------
+function normalizeOpenLigaMatch(item) {
+  // OpenLigaDB match object -> { home, away, score, time, odds }
+  try {
+    const home = item.Team1?.TeamName || item.Team1?.name || (item.team1 && item.team1.name) || 'Home';
+    const away = item.Team2?.TeamName || item.Team2?.name || (item.team2 && item.team2.name) || 'Away';
+    const scoreHome = item.MatchResults && item.MatchResults[0] ? item.MatchResults[0].PointsTeam1 : (item.goals?.home ?? null);
+    const scoreAway = item.MatchResults && item.MatchResults[0] ? item.MatchResults[0].PointsTeam2 : (item.goals?.away ?? null);
+    const score = (scoreHome != null && scoreAway != null) ? `${scoreHome}-${scoreAway}` : null;
+    const time = item.MatchDateTime ? new Date(item.MatchDateTime).toLocaleTimeString() : (item.MatchIsFinished ? 'FT' : null);
+    return { home, away, score, time, odds: null };
+  } catch (e) {
+    return { home: 'Home', away: 'Away', score: null, time: null, odds: null };
+  }
+}
+
+function normalizeFootballDataFixture(fx) {
+  // footballData fixtures -> { home, away, homeOdds, drawOdds, awayOdds, prediction, value }
+  try {
+    const home = fx.home || fx.home_team || fx.teams?.home || fx.teams?.home?.name || fx.home?.name || 'Home';
+    const away = fx.away || fx.away_team || fx.teams?.away || fx.teams?.away?.name || fx.away?.name || 'Away';
+    // attempt to pick odds from common fields
+    const market = fx.odds || fx.bookmakers?.[0] || fx.markets?.[0] || {};
+    const values = market.values || market.bets?.[0]?.values || [];
+    const homeOdds = values[0]?.odd || fx.homeOdds || fx.odds?.home || '-';
+    const drawOdds = values[1]?.odd || fx.drawOdds || fx.odds?.draw || '-';
+    const awayOdds = values[2]?.odd || fx.awayOdds || fx.odds?.away || '-';
+    return { home, away, homeOdds, drawOdds, awayOdds, prediction: fx.prediction || null, value: fx.value || null };
+  } catch (e) {
+    return { home: 'Home', away: 'Away', homeOdds: '-', drawOdds: '-', awayOdds: '-', prediction: null, value: null };
+  }
+}
+
+function normalizeStandingsOpenLiga(table) {
+  // Convert OpenLiga standings rows into { name, played, won, drawn, lost, goalDiff, points }
+  try {
+    return (table || []).map(t => ({
+      name: t.TeamName || t.team?.name || t.name || 'Team',
+      played: t.PlayedGames || t.played || t.matches || 0,
+      won: t.Wins || t.won || 0,
+      drawn: t.Draws || t.drawn || 0,
+      lost: t.Losses || t.lost || 0,
+      goalDiff: (t.GoalsFor || t.goalsFor || 0) - (t.GoalsAgainst || t.goalsAgainst || 0) || 0,
+      points: t.Points || t.points || 0
+    }));
+  } catch (e) {
+    return [];
+  }
+}
+
 /**
  * Handle incoming Telegram message
  */
@@ -182,17 +234,55 @@ async function handleNaturalLanguage(text, chatId, userId, redis, services) {
  */
 async function handleLiveGames(chatId, userId, redis, services, query = {}) {
   try {
-    const { openLiga, rss } = services;
+    const { openLiga, rss, footballData } = services;
 
-    // Get live matches from cache
-    let games = [];
+    // Get live matches from available services and normalize
+    let gamesRaw = [];
     if (openLiga) {
       try {
-        const recent = await openLiga.getRecentMatches(query.sport || 'bl1', new Date().getFullYear(), 5);
-        games = recent.slice(0, 5);
+        const recent = await openLiga.getRecentMatches(query.sport || 'BL1', new Date().getFullYear(), 5).catch(() => []);
+        gamesRaw = gamesRaw.concat(recent || []);
       } catch (e) {
-        logger.warn('Failed to fetch live games', e);
+        logger.warn('Failed to fetch live games from openLiga', e);
       }
+    }
+    // fallback to footballData or scorebat if available
+    if (footballData && gamesRaw.length === 0) {
+      try {
+        const fd = await footballData.fixturesFromCsv(query.sport || 'E0', String(new Date().getFullYear()));
+        const fixtures = (fd && fd.fixtures) ? fd.fixtures : [];
+        gamesRaw = gamesRaw.concat(fixtures.slice(0, 5));
+      } catch (e) {
+        logger.warn('Failed to fetch live games from footballData', e);
+      }
+    }
+
+    // Normalize into simplified game objects
+    const games = gamesRaw.slice(0, 10).map(it => {
+      // detect source shape
+      if (it && (it.Team1 || it.MatchDateTime)) return normalizeOpenLigaMatch(it);
+      return normalizeFootballDataFixture(it);
+    }).slice(0, 5);
+
+    // Demo fallback when no providers available (useful for local/e2e)
+    const enableDemo = process.env.ENABLE_DEMO === '1' || process.env.NODE_ENV !== 'production';
+    if ((games == null || games.length === 0) && enableDemo) {
+      // provide a small set of sample matches so menus are meaningful
+      const demoGames = [
+        { home: 'Home FC', away: 'Away United', score: '1-0', time: '45\'', odds: null },
+        { home: 'City Rangers', away: 'Town Albion', score: null, time: '12\'', odds: null }
+      ];
+      return {
+        chat_id: chatId,
+        text: formatLiveGames(demoGames, query.sport || 'Football'),
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '📊 Get Odds', callback_data: 'menu_odds' }],
+            [{ text: '🔙 Main Menu', callback_data: 'menu_main' }]
+          ]
+        }
+      };
     }
 
     const response = formatLiveGames(games, query.sport || 'Football');
@@ -240,18 +330,30 @@ async function handleOdds(chatId, userId, redis, services, query = {}) {
       };
     }
 
-    // Fetch odds from services
-    let matches = [];
+    // Fetch odds from services and normalize
+    let matchesRaw = [];
     if (services.footballData) {
       try {
-        const fixtures = await services.footballData.fixturesFromCsv('E0', '2425');
-        matches = fixtures.slice(0, 8);
+        const fd = await services.footballData.fixturesFromCsv(query.comp || 'E0', query.season || String(new Date().getFullYear()));
+        matchesRaw = (fd && fd.fixtures) ? fd.fixtures.slice(0, 12) : [];
       } catch (e) {
-        logger.warn('Failed to fetch odds', e);
+        logger.warn('Failed to fetch odds from footballData', e);
       }
     }
 
-    const response = formatOdds(matches);
+    const matches = matchesRaw.map(m => normalizeFootballDataFixture(m)).slice(0, 8);
+
+    // Demo fallback when no provider data and running locally/dev
+    const enableDemo = process.env.ENABLE_DEMO === '1' || process.env.NODE_ENV !== 'production';
+    let finalMatches = matches;
+    if ((finalMatches == null || finalMatches.length === 0) && enableDemo) {
+      finalMatches = [
+        { home: 'Home FC', away: 'Away United', homeOdds: '1.85', drawOdds: '3.40', awayOdds: '4.20' },
+        { home: 'City Rangers', away: 'Town Albion', homeOdds: '2.10', drawOdds: '3.10', awayOdds: '3.60' }
+      ];
+    }
+
+    const response = formatOdds(finalMatches);
 
     return {
       chat_id: chatId,
@@ -281,17 +383,25 @@ async function handleStandings(chatId, userId, redis, services, query = {}) {
   try {
     const { openLiga } = services;
 
-    let standings = [];
+    let standingsRaw = [];
     if (openLiga) {
       try {
         const league = query.league || 'BL1';
-        standings = await openLiga.getStandings(league) || [];
+        standingsRaw = await openLiga.getStandings(league) || [];
       } catch (e) {
-        logger.warn('Failed to fetch standings', e);
+        logger.warn('Failed to fetch standings from openLiga', e);
       }
     }
 
-    const response = formatStandings(query.league || 'Premier League', standings);
+    const standings = normalizeStandingsOpenLiga(standingsRaw || []);
+    // Demo fallback for standings when providers missing
+    const enableDemo = process.env.ENABLE_DEMO === '1' || process.env.NODE_ENV !== 'production';
+    const finalStandings = (standings && standings.length) ? standings : (enableDemo ? [
+      { name: 'Home FC', played: 12, won: 8, drawn: 2, lost: 2, goalDiff: 12, points: 26 },
+      { name: 'Away United', played: 12, won: 7, drawn: 3, lost: 2, goalDiff: 8, points: 24 }
+    ] : []);
+
+    const response = formatStandings(query.league || 'Premier League', finalStandings);
 
     return {
       chat_id: chatId,
