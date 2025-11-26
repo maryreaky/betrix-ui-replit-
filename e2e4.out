@@ -1,0 +1,27 @@
+--- Running /live simulation ---
+[2025-11-26T17:42:20.838Z] [INFO] [TelegramHandler] Message received { userId: 424242, chatId: 9999, text: '/live' }
+Message result: {
+  chat_id: 9999,
+  text: '🌀 *BETRIX* - Premium Sports Analytics\n' +
+    '\n' +
+    '*No live football matches right now.*\n' +
+    '\n' +
+    'Check back later for exciting matchups! ⚽',
+  parse_mode: 'Markdown',
+  reply_markup: { inline_keyboard: [ [Array], [Array] ] }
+}
+--- Simulating bet callback ---
+[2025-11-26T17:42:20.845Z] [INFO] [TelegramHandler] Callback query { userId: 424242, data: 'bet_fixture_11111' }
+Callback result: {
+  method: 'sendMessage',
+  chat_id: 9999,
+  text: '🧾 *Betslip*\n' +
+    '\n' +
+    'Fixture: *Home FC vs Away United*\n' +
+    'Stake: KES 100\n' +
+    'Selection: *home*\n' +
+    '\n' +
+    'Tap to confirm your bet.',
+  parse_mode: 'Markdown',
+  reply_markup: { inline_keyboard: [ [Array], [Array], [Array] ] }
+}

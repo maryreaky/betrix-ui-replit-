@@ -1,0 +1,238 @@
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[e2e-simulate] Redis unavailable or auth failed, using MockRedis: NOAUTH Authentication required.
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
+[ioredis] Unhandled error event: ReplyError: NOAUTH Authentication required.
+    at parseError (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:179:12)
+    at parseType (D:\betrix-ui (1)\betrix-ui\node_modules\redis-parser\lib\parser.js:302:14)
