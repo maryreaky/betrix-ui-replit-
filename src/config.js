@@ -12,8 +12,8 @@ const CONFIG = {
 
   // APIs
   API_FOOTBALL: {
-    BASE: process.env.API_FOOTBALL_BASE || "https://api-football-v3.p.rapidapi.com",
-    KEY: process.env.API_FOOTBALL_KEY,
+    BASE: process.env.API_FOOTBALL_BASE || process.env.API_SPORTS_BASE || "https://api-football-v3.p.rapidapi.com",
+    KEY: process.env.API_FOOTBALL_KEY || process.env.API_SPORTS_KEY,
   },
 
   // AllSports API (RapidAPI)
@@ -143,8 +143,15 @@ const CONFIG = {
  * Validate required configuration
  */
 function validateConfig() {
-  const required = ["REDIS_URL", "TELEGRAM_TOKEN", "API_FOOTBALL_KEY"];
+  const required = ["REDIS_URL", "TELEGRAM_TOKEN"];
   const missing = required.filter(k => !process.env[k]);
+  
+  // Accept either API_FOOTBALL_KEY or API_SPORTS_KEY
+  const hasApiFootballKey = process.env.API_FOOTBALL_KEY || process.env.API_SPORTS_KEY;
+  if (!hasApiFootballKey) {
+    missing.push("API_FOOTBALL_KEY (or API_SPORTS_KEY)");
+  }
+  
   if (missing.length > 0) {
     throw new Error(`Missing required env vars: ${missing.join(", ")}`);
   }
