@@ -2517,7 +2517,7 @@ app.post('/pay/capture', express.json(), async (req, res) => {
     const { provider = 'PAYPAL', providerRef } = req.body || {};
     if (!providerRef) return res.status(400).json({ ok: false, message: 'missing providerRef' });
 
-    const redisClient = getRedis();
+    const redisClient = new Redis(process.env.REDIS_URL);
     const orderId = await redisClient.get(`payment:by_provider_ref:${provider}:${providerRef}`);
     if (!orderId) return res.status(404).json({ ok: false, message: 'order_not_found' });
 

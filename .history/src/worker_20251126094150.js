@@ -317,7 +317,7 @@ console.log("[CONSTANTS] ✅ All constants initialized successfully\n - worker.j
 
 console.log("[REDIS] 🔗 Initializing Redis connection pool...\n - worker.js:315");
 
-const redis = getRedis({
+const redis = new Redis(REDIS_URL, {
   retryStrategy: (times) => {
     const delay = Math.min(times * 50, 2000);
     console.log(`[REDIS] Reconnection attempt ${times}, waiting ${delay}ms... - worker.js:320`);
@@ -329,16 +329,14 @@ const redis = getRedis({
   lazyConnect: false
 });
 
-// Event handlers for Redis connection (some instances may be MockRedis which may not emit)
-if (redis && typeof redis.on === 'function') {
-  redis.on("error", (err) => {
-    console.error("[REDIS] ❌ Connection error: - worker.js:331", err && err.message ? err.message : err);
-  });
+// Event handlers for Redis connection
+redis.on("error", (err) => {
+  console.error("[REDIS] ❌ Connection error: - worker.js:331", err.message);
+});
 
-  redis.on("connect", () => {
-    console.log("[REDIS] ✅ Successfully connected to Redis - worker.js:335");
-  });
-}
+redis.on("connect", () => {
+  console.log("[REDIS] ✅ Successfully connected to Redis - worker.js:335");
+});
 
 redis.on("ready", () => {
   console.log("[REDIS] ✅ Redis client ready to serve requests\n - worker.js:339");
@@ -2517,7 +2515,7 @@ app.post('/pay/capture', express.json(), async (req, res) => {
     const { provider = 'PAYPAL', providerRef } = req.body || {};
     if (!providerRef) return res.status(400).json({ ok: false, message: 'missing providerRef' });
 
-    const redisClient = getRedis();
+    const redisClient = new Redis(process.env.REDIS_URL);
     const orderId = await redisClient.get(`payment:by_provider_ref:${provider}:${providerRef}`);
     if (!orderId) return res.status(404).json({ ok: false, message: 'order_not_found' });
 

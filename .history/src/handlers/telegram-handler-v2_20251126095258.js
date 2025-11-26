@@ -1285,6 +1285,174 @@ async function handlePaymentMethodSelection(data, chatId, userId, redis, service
 }
 
 /**
+ * Handle profile callbacks (profile_stats, profile_bets, profile_favorites, profile_settings)
+ */
+async function handleProfileCallback(data, chatId, userId, redis) {
+  try {
+    if (data === 'profile_stats') {
+      const user = await redis.hgetall(`user:${userId}`) || {};
+      const sub = await getUserSubscription(redis, userId);
+      
+      return {
+        method: 'editMessageText',
+        chat_id: chatId,
+        message_id: undefined,
+        text: formatProfile({
+          name: user.name || 'BETRIX User',
+          tier: sub.tier || 'FREE',
+          joinDate: user.joinDate || new Date().toLocaleDateString(),
+          predictions: user.predictions || 0,
+          winRate: user.winRate || '0',
+          points: user.points || 0,
+          referralCode: user.referralCode || `USER${userId}`,
+          referrals: user.referrals || 0,
+          bonusPoints: user.bonusPoints || 0
+        }),
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_profile' }]] }
+      };
+    }
+
+    if (data === 'profile_bets') {
+      const bets = await redis.lrange(`user:${userId}:bets`, 0, 4) || [];
+      const betList = bets.length > 0 
+        ? `Recent bets:\n${bets.map((b, i) => `${i + 1}. ${b}`).join('\n')}`
+        : 'No bets placed yet. Start by selecting a match!';
+      
+      return {
+        method: 'editMessageText',
+        chat_id: chatId,
+        message_id: undefined,
+        text: `💰 *My Bets*\n\n${betList}\n\n_Tap a bet to view details_`,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_profile' }]] }
+      };
+    }
+
+    if (data === 'profile_favorites') {
+      const favs = await redis.smembers(`user:${userId}:favorites`) || [];
+      const favList = favs.length > 0
+        ? `Your favorite teams:\n${favs.map((f, i) => `${i + 1}. ${f}`).join('\n')}`
+        : 'No favorites yet. Add teams to track them!';
+      
+      return {
+        method: 'editMessageText',
+        chat_id: chatId,
+        message_id: undefined,
+        text: `⭐ *My Favorites*\n\n${favList}`,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_profile' }]] }
+      };
+    }
+
+    if (data === 'profile_settings') {
+      return {
+        method: 'editMessageText',
+        chat_id: chatId,
+        message_id: undefined,
+        text: `🔧 *Account Settings*\n\n• Notifications: ✅ Enabled\n• Language: 🌐 English\n• Timezone: 🕐 UTC+3\n\n_Settings panel coming soon!_`,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_profile' }]] }
+      };
+    }
+
+    return null;
+  } catch (err) {
+    logger.error('Profile callback error', err);
+    return null;
+  }
+}
+
+/**
+ * Handle help callbacks (help_faq, help_demo, help_contact)
+ */
+async function handleHelpCallback(data, chatId, userId, redis) {
+  try {
+    if (data === 'help_faq') {
+      return {
+        method: 'editMessageText',
+        chat_id: chatId,
+        message_id: undefined,
+        text: `❓ *Frequently Asked Questions*
+
+*Q: How do I place a bet?*
+A: Tap ⚽ Live Games → Select sport → Choose a match → Tap "Quick Bet"
+
+*Q: What are the subscription tiers?*
+A: Free (basic), Pro (KES 899/mo), VVIP (KES 2,699/mo), Plus (KES 8,999/mo)
+
+*Q: How do I make a payment?*
+A: Go to 💰 Subscribe → Pick your plan → Choose payment method
+
+*Q: What's the referral code for?*
+A: Share your code with friends. When they sign up, you both earn bonuses!
+
+*Q: Is BETRIX available 24/7?*
+A: Yes! Bet anytime, live analysis every day.
+
+*Need more help?*
+Contact: support@betrix.app`,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_help' }]] }
+      };
+    }
+
+    if (data === 'help_demo') {
+      return {
+        method: 'editMessageText',
+        chat_id: chatId,
+        message_id: undefined,
+        text: `🎮 *Try the Demo*
+
+Let's walk through a real example:
+
+*Step 1:* Tap ⚽ Live Games
+*Step 2:* Select ⚽ Football
+*Step 3:* Choose Premier League
+*Step 4:* You'll see live matches
+*Step 5:* Tap a match → "Quick Bet"
+*Step 6:* Enter your stake
+*Step 7:* Confirm bet
+
+💡 *Pro Tip:* Use VVIP for advanced predictions with 85%+ accuracy!
+
+Ready? Tap "Back" and start! 🚀`,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_help' }]] }
+      };
+    }
+
+    if (data === 'help_contact') {
+      return {
+        method: 'editMessageText',
+        chat_id: chatId,
+        message_id: undefined,
+        text: `📧 *Contact Support*
+
+We're here to help! Reach out:
+
+📧 *Email:* support@betrix.app
+💬 *WhatsApp:* +254 700 123456
+🐦 *Twitter:* @BETRIXApp
+📱 *Telegram:* @BETRIXSupport
+
+*Response time:* Usually within 2 hours
+
+*For billing issues:* billing@betrix.app
+*For technical support:* tech@betrix.app`,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_help' }]] }
+      };
+    }
+
+    return null;
+  } catch (err) {
+    logger.error('Help callback error', err);
+    return null;
+  }
+}
+
+/**
  * Handle payment verification when user confirms payment
  */
 async function handlePaymentVerification(data, chatId, userId, redis) {

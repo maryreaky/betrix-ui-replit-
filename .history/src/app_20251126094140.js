@@ -217,7 +217,7 @@ const handleWebSocketMessage = (ws, data, clientId) => {
 // PUB/SUB: prefetch updates -> broadcast to WebSocket clients
 // ============================================================================
 try {
-  const sub = getRedis();
+  const sub = new Redis(REDIS_URL);
   sub.subscribe('prefetch:updates', 'prefetch:error').then(() => {
     log('INFO', 'PREFETCH', 'Subscribed to prefetch channels');
   }).catch(()=>{});
