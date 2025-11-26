@@ -75,6 +75,52 @@ function normalizeFootballDataFixture(fx) {
   }
 }
 
+function normalizeApiFootballFixture(fx) {
+  // api-football fixture shape -> { home, away, homeOdds, drawOdds, awayOdds }
+  try {
+    const home = fx.teams?.home?.name || fx.home?.name || fx.home || 'Home';
+    const away = fx.teams?.away?.name || fx.away?.name || fx.away || 'Away';
+    // odds are often under "odds" -> bookmakers -> bets
+    let homeOdds = '-';
+    let drawOdds = '-';
+    let awayOdds = '-';
+    if (fx.odds && Array.isArray(fx.odds)) {
+      const bk = fx.odds[0];
+      if (bk && bk.bookmakers) {
+        const market = bk.bookmakers[0];
+        const vals = market?.bets?.[0]?.values || market?.values || [];
+        homeOdds = vals[0]?.odd || homeOdds;
+        drawOdds = vals[1]?.odd || drawOdds;
+        awayOdds = vals[2]?.odd || awayOdds;
+      }
+    }
+    // older api-football responses put odds under "odds" -> "home/away/draw"
+    if (fx.homeOdds || fx.odds?.home) homeOdds = fx.homeOdds || fx.odds?.home || homeOdds;
+    if (fx.drawOdds || fx.odds?.draw) drawOdds = fx.drawOdds || fx.odds?.draw || drawOdds;
+    if (fx.awayOdds || fx.odds?.away) awayOdds = fx.awayOdds || fx.odds?.away || awayOdds;
+
+    return { home, away, homeOdds, drawOdds, awayOdds, prediction: fx.prediction || null };
+  } catch (e) {
+    return { home: 'Home', away: 'Away', homeOdds: '-', drawOdds: '-', awayOdds: '-' };
+  }
+}
+
+function normalizeAllSportsMatch(it) {
+  // RapidAPI / AllSports compact event format
+  try {
+    const home = it.home_team?.name || it.homeTeam || it.home || it.team1 || 'Home';
+    const away = it.away_team?.name || it.awayTeam || it.away || it.team2 || 'Away';
+    const score = (it.home_score != null && it.away_score != null) ? `${it.home_score}-${it.away_score}` : null;
+    const time = it.minute || it.status || null;
+    const homeOdds = it.odds?.home || it.bookmakers?.[0]?.odds?.home || '-';
+    const drawOdds = it.odds?.draw || it.bookmakers?.[0]?.odds?.draw || '-';
+    const awayOdds = it.odds?.away || it.bookmakers?.[0]?.odds?.away || '-';
+    return { home, away, score, time, homeOdds, drawOdds, awayOdds };
+  } catch (e) {
+    return { home: 'Home', away: 'Away', score: null, time: null, homeOdds: '-', drawOdds: '-', awayOdds: '-' };
+  }
+}
+
 function normalizeStandingsOpenLiga(table) {
   // Convert OpenLiga standings rows into { name, played, won, drawn, lost, goalDiff, points }
   try {
@@ -259,8 +305,11 @@ async function handleLiveGames(chatId, userId, redis, services, query = {}) {
 
     // Normalize into simplified game objects
     const games = gamesRaw.slice(0, 10).map(it => {
-      // detect source shape
-      if (it && (it.Team1 || it.MatchDateTime)) return normalizeOpenLigaMatch(it);
+      // detect source shape and pick normalizer
+      if (!it) return { home: 'Home', away: 'Away', score: null, time: null };
+      if (it.Team1 || it.MatchDateTime) return normalizeOpenLigaMatch(it);
+      if (it.fixture || it.teams || it.league) return normalizeApiFootballFixture(it);
+      if (it.home_team || it.away_team || it.eventName) return normalizeAllSportsMatch(it);
       return normalizeFootballDataFixture(it);
     }).slice(0, 5);
 
@@ -341,7 +390,12 @@ async function handleOdds(chatId, userId, redis, services, query = {}) {
       }
     }
 
-    const matches = matchesRaw.map(m => normalizeFootballDataFixture(m)).slice(0, 8);
+    const matches = matchesRaw.map(m => {
+      if (!m) return { home: 'Home', away: 'Away', homeOdds: '-', drawOdds: '-', awayOdds: '-' };
+      if (m.fixture || m.teams || m.league) return normalizeApiFootballFixture(m);
+      if (m.home_team || m.away_team || m.eventName) return normalizeAllSportsMatch(m);
+      return normalizeFootballDataFixture(m);
+    }).slice(0, 8);
 
     // Demo fallback when no provider data and running locally/dev
     const enableDemo = process.env.ENABLE_DEMO === '1' || process.env.NODE_ENV !== 'production';
