@@ -14,28 +14,28 @@ import { createUserProfile, getUserProfile, updateUserProfile } from './data-mod
 // ============================================================================
 
 const IntentPatterns = {
+  // Feature access - MORE SPECIFIC FIRST
+  odds: /(show\s*odds|today.*match|fixtures|live\s*odds|what.*today)/i,
+  analyze: /(analyz|explain|breakdown|what.*happen|predict)/i,
+  news: /(news|update|latest|what.*new|injury|lineup|transfer)/i,
+  help: /(help|faq|how.*work|support|contact|troubleshoot)/i,
+  payment: /(pay|payment|subscribe|vvip|upgrade|premium|checkout)/i,
+  sites: /(betting\s*site|bookmaker|bet.*site|where.*bet|open.*site)/i,
+  menu: /^(menu|main|home|dashboard|back)/i,
+  bet: /^(bet|place.*bet|add.*slip|stake)/i,
+  quick_bet: /^(quick|rapid|fast|instant)/i,
+  
   // Signup flow
   signup: /^(sign\s*up|join|register|create.*account|i.*want.*join|lets.*start)/i,
-  name_input: /^[a-z\s]{2,}$/i, // Simple name detection
-
-  // Feature access
-  odds: /^(show\s*odds|today.*match|fixtures|live\s*odds|what.*today)/i,
-  analyze: /^(analyz|explain|breakdown|what.*happen|predict)/i,
-  news: /^(news|update|latest|what.*new|injury|lineup|transfer)/i,
-  help: /^(help|faq|how.*work|support|contact|troubleshoot)/i,
-  payment: /^(pay|payment|subscribe|vvip|upgrade|premium|checkout)/i,
-  sites: /^(betting\s*site|bookmaker|bet.*site|where.*bet|open.*site)/i,
-  menu: /^(menu|main|home|dashboard|back)/i,
-
-  // Betting actions
-  bet: /^(bet|place.*bet|add.*slip|stake)/i,
-  quick_bet: /^(quick|rapid|fast|instant)/i
+  
+  // Catch-all for simple names (LAST)
+  name_input: /^[a-z\s]{2,}$/i
 };
 
 /**
  * Classify user message intent
  */
-function classifyIntent(text) {
+export function classifyIntent(text) {
   const msg = text.trim().toLowerCase();
 
   for (const [intent, pattern] of Object.entries(IntentPatterns)) {
@@ -307,6 +307,5 @@ export {
   handleSignupCountry,
   handleSignupAge,
   handleIntent,
-  classifyIntent,
   parseMessage
 };
