@@ -48,6 +48,10 @@ export async function handleCallback(data, chatId, userId, redis, services) {
     if (data.startsWith('pay_')) {
       return await handlePaymentCallback(data, chatId, userId, redis, services);
     }
+
+    if (data.startsWith('news_')) {
+      return await handleNewsArticleCallback(data, chatId, userId, redis, services);
+    }
     
     if (data.startsWith('profile_')) {
       return handleProfileCallback(data, chatId, userId, redis);
@@ -217,8 +221,30 @@ async function handlePaymentCallback(data, chatId, userId, redis, services) {
       };
     }
 
-    // Get payment instructions
-    const instructions = await getPaymentInstructions(order, method);
+      // Get payment instructions (use redis + orderId signature)
+      const instructions = await getPaymentInstructions(redis, order.orderId, method);
+
+      // Normalize instructions into a markdown-friendly block
+      let instructionsText = '';
+      try {
+        if (!instructions) {
+          instructionsText = '_No instructions available for this method._';
+        } else if (instructions.checkoutUrl) {
+          // PayPal or similar
+          instructionsText = `${instructions.description || ''}\n\n[🔗 Click to Pay](${instructions.checkoutUrl})`;
+        } else if (instructions.tillNumber) {
+          // Safaricom till
+          instructionsText = `${instructions.description || ''}\n\nTill: \`${instructions.tillNumber}\`\nRef: \`${instructions.reference}\`\nAmount: *${instructions.amount} ${instructions.currency || 'KES'}*`;
+        } else if (instructions.steps && Array.isArray(instructions.steps)) {
+          instructionsText = `${instructions.description || ''}\n\n` + instructions.steps.map((s, i) => `${i + 1}. ${s}`).join('\n');
+        } else {
+          // Fallback: stringify
+          instructionsText = JSON.stringify(instructions, null, 2);
+        }
+      } catch (e) {
+        logger.warn('Failed to render payment instructions', e);
+        instructionsText = instructions && typeof instructions === 'string' ? instructions : '_Unable to build payment instructions_';
+      }
 
     // Build comprehensive confirmation screen
     let confirmText = `✅ *Payment Order Created*
@@ -383,6 +409,61 @@ Hours: 9 AM - 6 PM EAT`
     chat_id: chatId,
     text: content,
     reply_markup: helpMenu.reply_markup,
+    parse_mode: 'Markdown'
+  };
+}
+
+// ============================================================================
+// NEWS ARTICLE CALLBACK (news_<index>)
+// ============================================================================
+
+async function handleNewsArticleCallback(data, chatId, userId, redis, services) {
+  logger.info('handleNewsArticleCallback', { data, userId });
+
+  const parts = data.split('_');
+  const idx = Number(parts[1]);
+
+  // Try to fetch articles from services
+  let articles = [];
+  try {
+    if (services && services.api) {
+      if (typeof services.api.fetchNews === 'function') {
+        articles = await services.api.fetchNews();
+      } else if (typeof services.api.get === 'function') {
+        const res = await services.api.get('/news');
+        articles = res?.data || res || [];
+      }
+    }
+  } catch (e) {
+    logger.warn('Failed to fetch news in callback', e);
+  }
+
+  const article = Array.isArray(articles) && articles[idx] ? articles[idx] : null;
+
+  if (!article) {
+    return {
+      method: 'editMessageText',
+      chat_id: chatId,
+      text: '📰 Article not available. Try /news to refresh.',
+      reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_news' }]] },
+      parse_mode: 'Markdown'
+    };
+  }
+
+  const text = `📰 *${article.title || 'Article'}*\n\n${article.summary || article.description || article.content || 'Read more at the source.'}\n\n🔗 [Open in browser](${article.url || '#'})`;
+
+  const keyboard = {
+    inline_keyboard: [
+      [{ text: 'Open in Browser', url: article.url || undefined }],
+      [{ text: '🔙 Back to News', callback_data: 'menu_news' }]
+    ]
+  };
+
+  return {
+    method: 'editMessageText',
+    chat_id: chatId,
+    text,
+    reply_markup: keyboard,
     parse_mode: 'Markdown'
   };
 }

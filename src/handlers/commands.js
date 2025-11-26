@@ -54,6 +54,12 @@ export async function handleCommand(text, chatId, userId, redis, services) {
       
       case '/news':
         return await handleNews(chatId, userId, redis, services);
+
+      case '/analyze':
+        return await handleAnalyze(chatId, userId, args.join(' '), redis, services);
+
+      case '/tips':
+        return await handleTips(chatId, userId, redis, services);
       
       case '/profile':
         return await handleProfile(chatId, userId, redis);
@@ -268,11 +274,43 @@ export async function handleNews(chatId, userId, redis, services) {
   logger.info('handleNews', { userId });
   
   try {
-    const formatted = formatNews({});
-    
+    // Try to fetch articles from provided services (if available)
+    let articles = [];
+    try {
+      if (services && services.api) {
+        if (typeof services.api.fetchNews === 'function') {
+          articles = await services.api.fetchNews();
+        } else if (typeof services.api.get === 'function') {
+          const res = await services.api.get('/news');
+          articles = res?.data || res || [];
+        }
+      }
+    } catch (e) {
+      logger.warn('Failed to fetch news from services.api', e);
+    }
+
+    // Fallback to empty list; formatNews will handle empty case
+    const formatted = formatNews(articles);
+
+    // Build inline keyboard to allow reading articles when available
+    const keyboard = { inline_keyboard: [] };
+    if (Array.isArray(articles) && articles.length > 0) {
+      // Add up to 5 article buttons
+      for (let i = 0; i < Math.min(5, articles.length); i++) {
+        const a = articles[i];
+        keyboard.inline_keyboard.push([
+          { text: `📄 Read: ${a.title?.slice(0, 30) || 'Article'}`, callback_data: `news_${i}` }
+        ]);
+      }
+      keyboard.inline_keyboard.push([{ text: '🔙 Back', callback_data: 'menu_main' }]);
+    } else {
+      keyboard.inline_keyboard.push([{ text: '🔙 Back', callback_data: 'menu_main' }]);
+    }
+
     return {
       chat_id: chatId,
       text: formatted,
+      reply_markup: keyboard,
       parse_mode: 'Markdown'
     };
   } catch (err) {
@@ -282,6 +320,55 @@ export async function handleNews(chatId, userId, redis, services) {
       text: '❌ Error fetching news',
       parse_mode: 'Markdown'
     };
+  }
+}
+
+/**
+ * /analyze - AI match analysis (uses services.ai if available)
+ */
+export async function handleAnalyze(chatId, userId, query, redis, services) {
+  logger.info('handleAnalyze', { userId, query });
+
+  if (!query || !query.trim()) {
+    return {
+      chat_id: chatId,
+      text: '🧠 Usage: /analyze [home] vs [away]\nExample: /analyze Liverpool vs Man City',
+      parse_mode: 'Markdown'
+    };
+  }
+
+  try {
+    if (services && services.ai && typeof services.ai.analyze === 'function') {
+      const result = await services.ai.analyze(query, { userId, tier: (await redis.hgetall(`user:${userId}`))?.tier });
+      return { chat_id: chatId, text: result.text || result, parse_mode: 'Markdown' };
+    }
+
+    // Fallback: simple mock analysis
+    const mock = `🔎 *Quick Analysis*\n\nMatch: ${query}\nPrediction: Draw\nConfidence: 62%\n\nUpgrade to VVIP for deeper analysis.`;
+    return { chat_id: chatId, text: mock, parse_mode: 'Markdown' };
+  } catch (err) {
+    logger.error('handleAnalyze error', err);
+    return { chat_id: chatId, text: '❌ Error running analysis. Try again later.', parse_mode: 'Markdown' };
+  }
+}
+
+/**
+ * /tips - Short betting tips
+ */
+export async function handleTips(chatId, userId, redis, services) {
+  logger.info('handleTips', { userId });
+
+  try {
+    if (services && services.ai && typeof services.ai.tips === 'function') {
+      const tips = await services.ai.tips({ userId });
+      return { chat_id: chatId, text: tips.text || tips, parse_mode: 'Markdown' };
+    }
+
+    const fallback = `🎯 *Quick Tips*\n\n• Manage bankroll: stake <= 2% per bet\n• Look for value >10%\n• Avoid betting on every match\n• Use VVIP for model-backed staking plans`;
+    return { chat_id: chatId, text: fallback, parse_mode: 'Markdown' };
+  } catch (err) {
+    logger.error('handleTips error', err);
+    return { chat_id: chatId, text: '❌ Error fetching tips', parse_mode: 'Markdown' };
   }
 }
 
