@@ -770,6 +770,11 @@ export async function handleCallbackQuery(callbackQuery, redis, services) {
     logger.info('Callback query', { userId, data });
 
     // Route callback
+    if (data === 'menu_live') {
+      // Special case: menu_live should show live matches, not sport selection
+      return handleLiveMenuCallback(chatId, userId, redis, services);
+    }
+
     if (data.startsWith('menu_')) {
       return handleMenuCallback(data, chatId, userId, redis);
     }
@@ -907,6 +912,90 @@ function handleMenuCallback(data, chatId, userId, redis) {
   };
 }
 
+/**
+ * Handle "Live Games" menu - show live matches across popular leagues
+ */
+async function handleLiveMenuCallback(chatId, userId, redis, services) {
+  try {
+    let allLiveMatches = [];
+    const popularLeagues = ['39', '140', '135', '61', '78', '2', '3']; // Popular football leagues
+
+    // Fetch live matches from popular leagues in parallel
+    if (services && services.sportsAggregator) {
+      try {
+        const matchesPerLeague = await Promise.all(
+          popularLeagues.map(lid => 
+            services.sportsAggregator.getLiveMatches(lid).catch(() => [])
+          )
+        );
+        allLiveMatches = matchesPerLeague.flat();
+      } catch (e) {
+        logger.warn('Failed to fetch live matches across leagues', e);
+      }
+    }
+
+    // If no live matches found, show message with fallback to league selection
+    if (!allLiveMatches || allLiveMatches.length === 0) {
+      return {
+        method: 'editMessageText',
+        chat_id: chatId,
+        message_id: undefined,
+        text: '🔴 *No Live Matches Right Now*\n\nNo games are currently live. Would you like to browse by league instead?',
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '⚽ Browse by League', callback_data: 'sport_football' },
+              { text: '🔙 Back', callback_data: 'menu_main' }
+            ]
+          ]
+        }
+      };
+    }
+
+    // Limit to top 10 live matches
+    const limited = allLiveMatches.slice(0, 10);
+    const matchText = limited.map((m, i) => {
+      const score = (m.homeScore !== null && m.awayScore !== null) ? `${m.homeScore}-${m.awayScore}` : '─';
+      const status = m.status === 'LIVE' ? `🔴 ${m.time || 'LIVE'}` : `✅ ${m.time || m.status}`;
+      const league = m.league || m.competition || '';
+      return `${i + 1}. *${m.home}* vs *${m.away}*\n   ${score} ${status} ${league ? `[${league}]` : ''}`;
+    }).join('\n\n');
+
+    // Build keyboard - one button per match for quick viewing
+    const keyboard = limited.map((m, i) => ({
+      text: `${i + 1}. ${m.home} vs ${m.away}`,
+      callback_data: `match_live_${i}`
+    })).map(btn => [btn]);
+
+    keyboard.push([
+      { text: '⚽ Browse by League', callback_data: 'sport_football' },
+      { text: '🔙 Back', callback_data: 'menu_main' }
+    ]);
+
+    return {
+      method: 'editMessageText',
+      chat_id: chatId,
+      message_id: undefined,
+      text: `🏟️ *Live Matches Now*\n\n${matchText}\n\n_Tap a match to view details and odds._`,
+      parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: keyboard }
+    };
+  } catch (err) {
+    logger.error('Live menu handler error', err);
+    return {
+      method: 'editMessageText',
+      chat_id: chatId,
+      message_id: undefined,
+      text: '❌ Error loading live matches. Please try again.',
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_main' }]]
+      }
+    };
+  }
+}
+
 async function handleLeagueCallback(data, chatId, userId, redis, services) {
   const leagueId = data.replace('league_', '') || null;
   
@@ -1019,28 +1108,53 @@ async function handleLeagueLiveCallback(data, chatId, userId, redis, services) {
 
 /**
  * Show match details and actions for a specific live match index
- * data format: match_{leagueId}_{index}
+ * Supports two formats:
+ * - match_{leagueId}_{index}: for league-specific live matches
+ * - match_live_{index}: for global live matches from handleLiveMenuCallback
  */
 async function handleMatchCallback(data, chatId, userId, redis, services) {
   try {
     const parts = data.split('_');
-    const leagueId = parts[1] || null;
-    const idx = Number(parts[2] || 0);
+    let leagueId = null;
+    let idx = 0;
+    let allLiveMatches = [];
 
-    let matches = [];
-    if (services && services.sportsAggregator) {
-      try {
-        matches = await services.sportsAggregator.getLiveMatches(leagueId);
-      } catch (e) {
-        logger.warn('Failed to fetch live matches for match details', e);
+    // Determine format: match_live_X or match_leagueId_X
+    if (parts[1] === 'live') {
+      // Format: match_live_{index}
+      idx = Number(parts[2] || 0);
+      // Fetch all live matches from popular leagues
+      const popularLeagues = ['39', '140', '135', '61', '78', '2', '3'];
+      if (services && services.sportsAggregator) {
+        try {
+          const matchesPerLeague = await Promise.all(
+            popularLeagues.map(lid => 
+              services.sportsAggregator.getLiveMatches(lid).catch(() => [])
+            )
+          );
+          allLiveMatches = matchesPerLeague.flat();
+        } catch (e) {
+          logger.warn('Failed to fetch all live matches', e);
+        }
+      }
+    } else {
+      // Format: match_{leagueId}_{index}
+      leagueId = parts[1] || null;
+      idx = Number(parts[2] || 0);
+      if (services && services.sportsAggregator) {
+        try {
+          allLiveMatches = await services.sportsAggregator.getLiveMatches(leagueId);
+        } catch (e) {
+          logger.warn('Failed to fetch live matches for match details', e);
+        }
       }
     }
 
-    if (!matches || matches.length === 0 || !matches[idx]) {
+    if (!allLiveMatches || allLiveMatches.length === 0 || !allLiveMatches[idx]) {
       return { method: 'answerCallbackQuery', callback_query_id: undefined, text: 'Match details unavailable', show_alert: true };
     }
 
-    const m = matches[idx];
+    const m = allLiveMatches[idx];
     const score = (m.homeScore != null && m.awayScore != null) ? `${m.homeScore}-${m.awayScore}` : (m.score || 'N/A');
     const time = m.time || m.minute || m.status || 'N/A';
     const homeOdds = m.homeOdds || m.odds?.home || '-';
@@ -1053,11 +1167,17 @@ async function handleMatchCallback(data, chatId, userId, redis, services) {
     if (m.possession) text += `• Possession: ${m.possession}\n`;
     if (m.stats) text += `• Key: ${m.stats.join(' • ')}\n`;
 
+    // Build back button based on format
+    let backData = 'menu_live';
+    if (leagueId) {
+      backData = `league_live_${leagueId}`;
+    }
+
     const keyboard = [
-      [{ text: '🤖 Analyze Match', callback_data: `analyze_match_${leagueId}_${idx}` }],
+      [{ text: '🤖 Analyze Match', callback_data: `analyze_match_${leagueId || 'live'}_${idx}` }],
       [{ text: `⭐ Fav ${encodeURIComponent(m.home).split('%20')[0]}`, callback_data: `fav_add_${encodeURIComponent(m.home)}` }, { text: `⭐ Fav ${encodeURIComponent(m.away).split('%20')[0]}`, callback_data: `fav_add_${encodeURIComponent(m.away)}` }],
-      [{ text: '📊 View Odds', callback_data: `league_odds_${leagueId}` }],
-      [{ text: '🔙 Back', callback_data: `league_live_${leagueId}` }]
+      [{ text: '📊 View Odds', callback_data: leagueId ? `league_odds_${leagueId}` : 'menu_odds' }],
+      [{ text: '🔙 Back', callback_data: backData }]
     ];
 
     return {
