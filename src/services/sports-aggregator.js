@@ -15,6 +15,7 @@ import { Logger } from '../utils/logger.js';
 import fetch from 'node-fetch';
 import { getEspnLiveMatches } from './espn-provider.js';
 import { getNewsHeadlines } from './news-provider-enhanced.js';
+import liveScraper from './live-scraper.js';
 
 const logger = new Logger('SportsAggregator');
 
@@ -280,10 +281,21 @@ export class SportsAggregator {
                 raw: it
               };
             });
-            logger.info(`✅ ScoreBat: Found ${mapped.length} feed entries`);
-            this._setCached(cacheKey, mapped);
-            await this._recordProviderHealth('scorebat', true, `Found ${mapped.length} feed entries`);
-            return this._formatMatches(mapped, 'scorebat');
+            // attempt to enrich with live stats where possible
+            let enriched = mapped;
+            try {
+              // telemetry: note attempt
+              if (this.redis) await this.redis.incr('betrix:telemetry:live_scraper:attempts');
+              enriched = await liveScraper.enrichMatchesWithLiveStats(mapped, { sport: 'football' });
+              if (this.redis) await this.redis.incr('betrix:telemetry:live_scraper:success');
+            } catch (e) {
+              logger.warn('ScoreBat enrichment failed', e?.message || e);
+              if (this.redis) await this.redis.incr('betrix:telemetry:live_scraper:fail');
+            }
+            logger.info(`✅ ScoreBat: Found ${enriched.length} feed entries`);
+            this._setCached(cacheKey, enriched);
+            await this._recordProviderHealth('scorebat', true, `Found ${enriched.length} feed entries`);
+            return this._formatMatches(enriched, 'scorebat');
           }
         } catch (e) {
           logger.warn('ScoreBat feed failed', e.message);
@@ -317,10 +329,20 @@ export class SportsAggregator {
         try {
           const espnMatches = await getEspnLiveMatches({ sport: 'football' });
           if (espnMatches && espnMatches.length > 0) {
-            logger.info(`✅ ESPN: Found ${espnMatches.length} live matches`);
-            this._setCached(cacheKey, espnMatches);
-            await this._recordProviderHealth('espn', true, `Found ${espnMatches.length} live matches`);
-            return this._formatMatches(espnMatches, 'espn');
+            // try to enrich ESPN matches with detailed stats
+            let enriched = espnMatches;
+            try {
+              if (this.redis) await this.redis.incr('betrix:telemetry:live_scraper:attempts');
+              enriched = await liveScraper.enrichMatchesWithLiveStats(espnMatches, { sport: 'football' });
+              if (this.redis) await this.redis.incr('betrix:telemetry:live_scraper:success');
+            } catch (e) {
+              logger.warn('ESPN enrichment failed', e?.message || e);
+              if (this.redis) await this.redis.incr('betrix:telemetry:live_scraper:fail');
+            }
+            logger.info(`✅ ESPN: Found ${enriched.length} live matches`);
+            this._setCached(cacheKey, enriched);
+            await this._recordProviderHealth('espn', true, `Found ${enriched.length} live matches`);
+            return this._formatMatches(enriched, 'espn');
           }
         } catch (e) {
           logger.warn('ESPN live matches failed', e.message);
