@@ -120,35 +120,7 @@ export class SportsAggregator {
 
       let matches = [];
 
-      // Priority 1: SportsData.io (prefer when configured)
-      if (CONFIG.SPORTSDATA.KEY) {
-        try {
-          matches = await this._getLiveFromSportsData();
-          if (matches.length > 0) {
-            logger.info(`✅ SportsData.io: Found ${matches.length} live matches`);
-            this._setCached(cacheKey, matches);
-            return this._formatMatches(matches, 'sportsdata');
-          }
-        } catch (e) {
-          logger.warn('SportsData.io live matches failed', e.message);
-        }
-      }
-
-      // Priority 2: SportsMonks
-      if (CONFIG.SPORTSMONKS.KEY) {
-        try {
-          matches = await this._getLiveFromSportsMonks();
-          if (matches.length > 0) {
-            logger.info(`✅ SportsMonks: Found ${matches.length} live matches`);
-            this._setCached(cacheKey, matches);
-            return this._formatMatches(matches, 'sportsmonks');
-          }
-        } catch (e) {
-          logger.warn('SportsMonks live matches failed', e.message);
-        }
-      }
-
-      // Priority 3: API-Sports (API-Football) - Primary source (adaptive headers)
+      // Priority 1: API-Sports (API-Football) - Primary source
       if (CONFIG.API_FOOTBALL.KEY) {
         try {
           matches = await this._getLiveFromApiSports(leagueId);
@@ -162,7 +134,7 @@ export class SportsAggregator {
         }
       }
 
-      // Priority 4: Football-Data.org - Secondary source
+      // Priority 2: Football-Data.org - Secondary source
       if (CONFIG.FOOTBALLDATA.KEY) {
         try {
           matches = await this._getLiveFromFootballData(leagueId);
@@ -176,7 +148,7 @@ export class SportsAggregator {
         }
       }
 
-      // Priority 5: SofaScore - Real-time data
+      // Priority 3: SofaScore - Real-time data
       if (CONFIG.SOFASCORE.KEY) {
         try {
           matches = await this._getLiveFromSofaScore();
@@ -190,7 +162,7 @@ export class SportsAggregator {
         }
       }
 
-      // Priority 6: AllSports API
+      // Priority 4: AllSports API
       if (CONFIG.ALLSPORTS.KEY) {
         try {
           matches = await this._getLiveFromAllSports();
@@ -201,6 +173,34 @@ export class SportsAggregator {
           }
         } catch (e) {
           logger.warn('AllSports live matches failed', e.message);
+        }
+      }
+
+      // Priority 5: SportsData.io
+      if (CONFIG.SPORTSDATA.KEY) {
+        try {
+          matches = await this._getLiveFromSportsData();
+          if (matches.length > 0) {
+            logger.info(`✅ SportsData.io: Found ${matches.length} live matches`);
+            this._setCached(cacheKey, matches);
+            return this._formatMatches(matches, 'sportsdata');
+          }
+        } catch (e) {
+          logger.warn('SportsData.io live matches failed', e.message);
+        }
+      }
+
+      // Priority 6: SportsMonks
+      if (CONFIG.SPORTSMONKS.KEY) {
+        try {
+          matches = await this._getLiveFromSportsMonks();
+          if (matches.length > 0) {
+            logger.info(`✅ SportsMonks: Found ${matches.length} live matches`);
+            this._setCached(cacheKey, matches);
+            return this._formatMatches(matches, 'sportsmonks');
+          }
+        } catch (e) {
+          logger.warn('SportsMonks live matches failed', e.message);
         }
       }
 

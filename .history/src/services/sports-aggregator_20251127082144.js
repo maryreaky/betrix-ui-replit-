@@ -120,35 +120,7 @@ export class SportsAggregator {
 
       let matches = [];
 
-      // Priority 1: SportsData.io (prefer when configured)
-      if (CONFIG.SPORTSDATA.KEY) {
-        try {
-          matches = await this._getLiveFromSportsData();
-          if (matches.length > 0) {
-            logger.info(`✅ SportsData.io: Found ${matches.length} live matches`);
-            this._setCached(cacheKey, matches);
-            return this._formatMatches(matches, 'sportsdata');
-          }
-        } catch (e) {
-          logger.warn('SportsData.io live matches failed', e.message);
-        }
-      }
-
-      // Priority 2: SportsMonks
-      if (CONFIG.SPORTSMONKS.KEY) {
-        try {
-          matches = await this._getLiveFromSportsMonks();
-          if (matches.length > 0) {
-            logger.info(`✅ SportsMonks: Found ${matches.length} live matches`);
-            this._setCached(cacheKey, matches);
-            return this._formatMatches(matches, 'sportsmonks');
-          }
-        } catch (e) {
-          logger.warn('SportsMonks live matches failed', e.message);
-        }
-      }
-
-      // Priority 3: API-Sports (API-Football) - Primary source (adaptive headers)
+      // Priority 1: API-Sports (API-Football) - Primary source
       if (CONFIG.API_FOOTBALL.KEY) {
         try {
           matches = await this._getLiveFromApiSports(leagueId);
@@ -162,7 +134,7 @@ export class SportsAggregator {
         }
       }
 
-      // Priority 4: Football-Data.org - Secondary source
+      // Priority 2: Football-Data.org - Secondary source
       if (CONFIG.FOOTBALLDATA.KEY) {
         try {
           matches = await this._getLiveFromFootballData(leagueId);
@@ -176,7 +148,7 @@ export class SportsAggregator {
         }
       }
 
-      // Priority 5: SofaScore - Real-time data
+      // Priority 3: SofaScore - Real-time data
       if (CONFIG.SOFASCORE.KEY) {
         try {
           matches = await this._getLiveFromSofaScore();
@@ -190,7 +162,7 @@ export class SportsAggregator {
         }
       }
 
-      // Priority 6: AllSports API
+      // Priority 4: AllSports API
       if (CONFIG.ALLSPORTS.KEY) {
         try {
           matches = await this._getLiveFromAllSports();
@@ -201,6 +173,34 @@ export class SportsAggregator {
           }
         } catch (e) {
           logger.warn('AllSports live matches failed', e.message);
+        }
+      }
+
+      // Priority 5: SportsData.io
+      if (CONFIG.SPORTSDATA.KEY) {
+        try {
+          matches = await this._getLiveFromSportsData();
+          if (matches.length > 0) {
+            logger.info(`✅ SportsData.io: Found ${matches.length} live matches`);
+            this._setCached(cacheKey, matches);
+            return this._formatMatches(matches, 'sportsdata');
+          }
+        } catch (e) {
+          logger.warn('SportsData.io live matches failed', e.message);
+        }
+      }
+
+      // Priority 6: SportsMonks
+      if (CONFIG.SPORTSMONKS.KEY) {
+        try {
+          matches = await this._getLiveFromSportsMonks();
+          if (matches.length > 0) {
+            logger.info(`✅ SportsMonks: Found ${matches.length} live matches`);
+            this._setCached(cacheKey, matches);
+            return this._formatMatches(matches, 'sportsmonks');
+          }
+        } catch (e) {
+          logger.warn('SportsMonks live matches failed', e.message);
         }
       }
 
@@ -388,41 +388,6 @@ export class SportsAggregator {
   }
 
   // ==================== API-Sports ====================
-
-  /**
-   * Adaptive fetch for API-Sports (API-Football).
-   * Tries configured strategies (RapidAPI headers, direct apisports header) and
-   * caches the successful strategy for subsequent calls.
-   */
-  async _fetchApiSports(path, options = {}, retries = 2) {
-    const lastError = { err: null };
-
-    // If we already determined a working strategy, try it first
-    const strategies = this._apiSportsStrategy
-      ? [this._apiSportsStrategy, ...this._apiSportsStrategies.filter(s => s.name !== this._apiSportsStrategy.name)]
-      : this._apiSportsStrategies;
-
-    for (const strat of strategies) {
-      const base = (strat.base || '').replace(/\/$/, '');
-      const url = path.startsWith('http') ? path : `${base}${path}`;
-      const headers = Object.assign({}, (options.headers || {}), strat.headers ? strat.headers() : {});
-      try {
-        const resp = await this._fetchWithRetry(url, Object.assign({}, options, { headers }), retries);
-        // mark strategy as working for future calls
-        this._apiSportsStrategy = strat;
-        logger.info(`API-Sports: using strategy ${strat.name} -> ${base}`);
-        return resp;
-      } catch (e) {
-        lastError.err = e;
-        logger.debug(`API-Sports strategy failed (${strat.name}): ${e.message}`);
-        // try next strategy
-        continue;
-      }
-    }
-
-    // all strategies failed
-    throw lastError.err || new Error('API-Sports: all strategies failed');
-  }
 
   async _getLeaguesFromApiSports(region) {
     const path = '/leagues';
