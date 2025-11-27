@@ -253,15 +253,6 @@ if (typeof v2Handler.setTelemetryRedis === 'function') {
   logger.info('✅ Telemetry Redis injected into v2Handler');
 }
 
-// ===== INITIALIZE PERFORMANCE OPTIMIZER =====
-const perfOptimizer = {
-  cache: smartCache(redis),
-  prefetcher: prefetchData(redis, sportsAggregator),
-  rateLimiter: createRateLimiter(),
-  metrics: getMetrics()
-};
-logger.info('✅ Performance Optimizer initialized with multi-tier caching and prefetching');
-
 // Setup callback telemetry alerts (sends admin message if truncation threshold exceeded)
 setInterval(async () => {
   try {

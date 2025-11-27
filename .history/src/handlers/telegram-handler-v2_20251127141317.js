@@ -13,11 +13,6 @@ import {
   createPaymentOrder,
   getPaymentInstructions
 } from './payment-router.js';
-import { analyzeMatch, analyzeFormData, analyzeHeadToHead } from '../utils/advanced-match-analysis.js';
-import { buildMatchCard, buildBetAnalysis, buildActionButtons, buildSubscriptionComparison } from '../utils/premium-ui-builder.js';
-import { buildContextualMainMenu, buildMatchDetailMenu } from '../utils/intelligent-menu-builder.js';
-import { generateBetrixHeader, formatMatchDisplay, formatBetrixError, generateBetrixFooter } from '../utils/betrix-branding.js';
-import { getLeagueFixtures, getTodayMatches, getUpcomingWeek } from '../utils/fixtures-manager.js';
 import {
   mainMenu,
   sportsMenu,
@@ -1007,61 +1002,28 @@ export async function handleCallbackQuery(callbackQuery, redis, services) {
  * Handle menu callbacks
  */
 function handleMenuCallback(data, chatId, userId, redis) {
-  // 🎯 USE INTELLIGENT MENU BUILDER FOR DYNAMIC MENUS
-  try {
-    // Get user's subscription tier (sync from cache or default)
-    let tier = 'FREE';
-    
-    // Build contextual menus using premium builder
-    const menuMap = {
-      'menu_main': buildContextualMainMenu(tier, userId),
-      'menu_live': buildContextualMainMenu('live', userId),
-      'menu_odds': buildContextualMainMenu('odds', userId),
-      'menu_standings': buildContextualMainMenu('standings', userId),
-      'menu_news': buildContextualMainMenu('news', userId),
-      'menu_profile': buildContextualMainMenu('profile', userId),
-      'menu_vvip': buildContextualMainMenu('subscription', userId),
-      'menu_help': buildContextualMainMenu('help', userId)
-    };
+  const menuMap = {
+    'menu_main': mainMenu,
+    'menu_live': { text: 'Select a sport for live games:', reply_markup: sportsMenu.reply_markup },
+    'menu_odds': { text: 'Loading odds...', reply_markup: sportsMenu.reply_markup },
+    'menu_standings': { text: 'Select a league for standings:', reply_markup: sportsMenu.reply_markup },
+    'menu_news': { text: 'Loading latest news...', reply_markup: mainMenu.reply_markup },
+    'menu_profile': profileMenu,
+    'menu_vvip': subscriptionMenu,
+    'menu_help': helpMenu
+  };
 
-    const menu = menuMap[data] || mainMenu;
-    if (!menu) return null;
+  const menu = menuMap[data];
+  if (!menu) return null;
 
-    return {
-      method: 'editMessageText',
-      chat_id: chatId,
-      message_id: undefined,
-      text: menu.text || menu,
-      reply_markup: menu.reply_markup,
-      parse_mode: 'Markdown'
-    };
-  } catch (e) {
-    logger.warn('Premium menu builder failed, using fallback', e.message);
-    
-    // Fallback to original menu system
-    const menuMap = {
-      'menu_main': mainMenu,
-      'menu_live': { text: 'Select a sport for live games:', reply_markup: sportsMenu.reply_markup },
-      'menu_odds': { text: 'Loading odds...', reply_markup: sportsMenu.reply_markup },
-      'menu_standings': { text: 'Select a league for standings:', reply_markup: sportsMenu.reply_markup },
-      'menu_news': { text: 'Loading latest news...', reply_markup: mainMenu.reply_markup },
-      'menu_profile': profileMenu,
-      'menu_vvip': subscriptionMenu,
-      'menu_help': helpMenu
-    };
-
-    const menu = menuMap[data];
-    if (!menu) return null;
-
-    return {
-      method: 'editMessageText',
-      chat_id: chatId,
-      message_id: undefined,
-      text: menu.text,
-      reply_markup: menu.reply_markup,
-      parse_mode: 'Markdown'
-    };
-  }
+  return {
+    method: 'editMessageText',
+    chat_id: chatId,
+    message_id: undefined,
+    text: menu.text,
+    reply_markup: menu.reply_markup,
+    parse_mode: 'Markdown'
+  };
 }
 
 /**
@@ -1164,17 +1126,13 @@ async function handleLeagueCallback(data, chatId, userId, redis, services) {
     };
     const leagueName = leagueMap[leagueId] || `League ${leagueId}`;
 
-    // 🎯 USE INTELLIGENT MENU BUILDER FOR LEAGUE MENU
-    const subscription = await getUserSubscription(redis, userId).catch(() => ({ tier: 'FREE' }));
-    const leagueMenu = buildMatchDetailMenu(leagueName, subscription.tier, leagueId);
-
     return {
       method: 'editMessageText',
       chat_id: chatId,
       message_id: undefined,
-      text: leagueMenu.text || `📊 *${leagueName}*\n\nWhat would you like to see?`,
+      text: `📊 *${leagueName}*\n\nWhat would you like to see?`,
       parse_mode: 'Markdown',
-      reply_markup: leagueMenu.reply_markup || {
+      reply_markup: {
         inline_keyboard: [
           [
             { text: '🔴 Live Now', callback_data: validateCallbackData(`league_live_${leagueId}`) },
@@ -1205,25 +1163,18 @@ async function handleLeagueLiveCallback(data, chatId, userId, redis, services) {
     let matches = [];
     if (services && services.sportsAggregator) {
       try {
-        // 🎯 USE FIXTURES MANAGER TO GET LEAGUE FIXTURES
-        try {
-          matches = await getLeagueFixtures(leagueId);
-        } catch (e) {
-          logger.warn('Fixtures manager failed, using aggregator', e.message);
-          matches = await services.sportsAggregator.getLiveMatches(leagueId);
-        }
+        matches = await services.sportsAggregator.getLiveMatches(leagueId);
       } catch (e) {
         logger.warn('Failed to fetch live matches', e);
       }
     }
 
     if (!matches || matches.length === 0) {
-      const errorText = formatBetrixError('no_matches', 'No live matches right now');
       return {
         method: 'editMessageText',
         chat_id: chatId,
         message_id: undefined,
-        text: errorText,
+        text: '⏳ No live matches right now.\n\nCheck back soon!',
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [[{ text: '🔙 Back', callback_data: `league_${leagueId}` }]]
@@ -1231,28 +1182,26 @@ async function handleLeagueLiveCallback(data, chatId, userId, redis, services) {
       };
     }
 
-    // 🎯 USE PREMIUM UI BUILDER FOR MATCH CARDS
-    const subscription = await getUserSubscription(redis, userId).catch(() => ({ tier: 'FREE' }));
+    // Build per-match buttons so users can view details or add teams to favorites
     const limited = matches.slice(0, 5);
-    
-    // Build match cards with premium formatting
-    const matchCards = limited.map((m, i) => buildMatchCard(m, subscription.tier, leagueId, i)).join('\n\n');
-    
-    const header = generateBetrixHeader(userId, subscription.tier);
-    const matchText = `${header}\n\n🏟️ *Live Matches*\n\n${matchCards}`;
+    const matchText = limited.map((m, i) => {
+      const score = (m.homeScore !== null && m.awayScore !== null) ? `${m.homeScore}-${m.awayScore}` : '─';
+      const status = m.status === 'LIVE' ? `🔴 ${m.time}` : `✅ ${m.time}`;
+      return `${i + 1}. *${m.home}* vs *${m.away}*\n   ${score} ${status}`;
+    }).join('\n\n');
 
-    // Build keyboard with analysis and favorite buttons
+    // keyboard: for each match add a row with Details and Favorite buttons
     const keyboard = limited.map((m, i) => {
       const homeLabel = teamNameOf(m.home);
       const awayLabel = teamNameOf(m.away);
       const homeKey = encodeURIComponent(homeLabel);
       return [
-        { text: `🔎 Analyze ${i + 1}`, callback_data: validateCallbackData(`analyze_match_${leagueId}_${i}`) },
-        { text: `⭐ ${homeLabel.split(' ')[0]}`, callback_data: validateCallbackData(`fav_add_${homeKey}`) }
+        { text: `🔎 Details ${i + 1}`, callback_data: validateCallbackData(`match_${leagueId}_${i}`) },
+        { text: `⭐ Fav ${homeLabel.split(' ')[0]}`, callback_data: validateCallbackData(`fav_add_${homeKey}`) }
       ];
     });
 
-    // also allow favoriting away team
+    // also allow favoriting away team on next row for compactness
     limited.forEach((m, i) => {
       const awayLabel = teamNameOf(m.away);
       const awayKey = encodeURIComponent(awayLabel);
@@ -1395,7 +1344,7 @@ async function handleMatchCallback(data, chatId, userId, redis, services) {
 }
 
 /**
- * Analyze a match using premium analysis and UI modules
+ * Analyze a match using the multi-sport analyzer service
  * callback: analyze_match_{leagueId}_{index}
  */
 async function handleAnalyzeMatch(data, chatId, userId, redis, services) {
@@ -1405,78 +1354,83 @@ async function handleAnalyzeMatch(data, chatId, userId, redis, services) {
     const idx = Number(parts[3] || 0);
 
     if (!services || !services.sportsAggregator) {
-      const errorText = formatBetrixError('service_error', 'Analysis service unavailable');
-      return { method: 'sendMessage', chat_id: chatId, text: errorText, parse_mode: 'Markdown' };
+      return { method: 'sendMessage', chat_id: chatId, text: 'Analysis service unavailable.', parse_mode: 'Markdown' };
     }
 
     const matches = await services.sportsAggregator.getLiveMatches(leagueId).catch(() => []);
     const m = matches && matches[idx] ? matches[idx] : null;
-    if (!m) {
-      const errorText = formatBetrixError('not_found', 'Match not found for analysis');
-      return { method: 'sendMessage', chat_id: chatId, text: errorText, parse_mode: 'Markdown' };
-    }
+    if (!m) return { method: 'sendMessage', chat_id: chatId, text: 'Match not found for analysis.', parse_mode: 'Markdown' };
 
+    // Check user's subscription tier and prefer analyzer service if available
     const subscription = await getUserSubscription(redis, userId).catch(() => ({ tier: 'FREE' }));
-    
-    try {
-      const home = m.home || m.homeTeam || m.home_name || m.teams?.home || 'Home';
-      const away = m.away || m.awayTeam || m.away_name || m.teams?.away || 'Away';
 
-      // 🎯 USE PREMIUM ANALYSIS MODULE
-      const analysis = await analyzeMatch(home, away, m, leagueId);
-      
-      // Build header with BETRIX branding
-      const header = generateBetrixHeader(userId, subscription.tier);
-      
-      // 🎯 USE PREMIUM UI BUILDER
-      const betAnalysis = buildBetAnalysis(analysis, subscription.tier);
-      
-      // Build action buttons based on subscription
-      const actionButtons = buildActionButtons(subscription.tier, leagueId, idx);
-      
-      // Build complete response with branding
-      let formatted = `${header}\n\n`;
-      formatted += `⚽ *${home}* vs *${away}*\n`;
-      formatted += `Score: ${m.score || 'N/A'} | Time: ${m.time || 'N/A'}\n\n`;
-      formatted += betAnalysis;
-      formatted += `\n\n${actionButtons}`;
-      formatted += `\n\n${generateBetrixFooter()}`;
+    if (services.multiSportAnalyzer && typeof services.multiSportAnalyzer.analyzeMatch === 'function') {
+      try {
+        // Determine sport if available on match object
+        const sport = (m.sport || m.sportKey || 'football');
+        const home = m.home || m.homeTeam || m.home_name || m.teams?.home || 'Home';
+        const away = m.away || m.awayTeam || m.away_name || m.teams?.away || 'Away';
 
-      // Upgrade prompt for FREE tier if analysis is premium
-      if (subscription.tier === 'FREE' && analysis.confidence > 75) {
-        formatted += `\n\n_💎 Premium predictions limited. Upgrade to PRO for full analysis._`;
-      }
+        const analysis = await services.multiSportAnalyzer.analyzeMatch(sport, home, away, leagueId);
 
-      return { method: 'sendMessage', chat_id: chatId, text: formatted, parse_mode: 'Markdown' };
-    } catch (e) {
-      logger.warn('Premium analysis failed, using multiSportAnalyzer fallback', e.message);
-      
-      // Fallback to existing multiSportAnalyzer if available
-      if (services.multiSportAnalyzer && typeof services.multiSportAnalyzer.analyzeMatch === 'function') {
-        try {
-          const sport = m.sport || m.sportKey || 'football';
-          const home = m.home || m.homeTeam || m.home_name || m.teams?.home || 'Home';
-          const away = m.away || m.awayTeam || m.away_name || m.teams?.away || 'Away';
-          
-          const analysis = await services.multiSportAnalyzer.analyzeMatch(sport, home, away, leagueId);
-          let formatted = services.multiSportAnalyzer.formatForTelegram ? 
-            services.multiSportAnalyzer.formatForTelegram(analysis) : 
-            JSON.stringify(analysis, null, 2);
-          
-          return { method: 'sendMessage', chat_id: chatId, text: formatted, parse_mode: 'Markdown' };
-        } catch (innerE) {
-          logger.warn('MultiSportAnalyzer also failed', innerE.message);
+        // If user is VVIP or higher, augment with VVIP extras
+        if (subscription && (subscription.tier === 'VVIP' || subscription.tier === 'PLUS')) {
+          // include curated fixed matches if any
+          try {
+            const fixed = await services.multiSportAnalyzer.getFixedMatches();
+            if (fixed && fixed.length > 0) {
+              let fixedText = `👑 *VVIP Fixed Matches*\n`;
+              fixed.slice(0, 5).forEach((f, i) => {
+                fixedText += `\n${i + 1}. *${f.home}* vs *${f.away}* — ${f.market} ${f.pick} (Confidence: ${f.confidence}%, Odds: ${f.odds})`;
+                if (f.reason) fixedText += `\n   ${f.reason}`;
+              });
+              // attach fixed matches to reasoning
+              if (!analysis._extras) analysis._extras = {};
+              analysis._extras.fixedMatches = fixedText;
+            }
+          } catch (e) {
+            logger.warn('Failed to fetch fixed matches for VVIP', e.message);
+          }
+
+          // Add advanced predictions: HT/FT and correct scores
+          try {
+            const htft = services.multiSportAnalyzer.predictHalftimeFulltime(analysis.matchData || {});
+            const cs = services.multiSportAnalyzer.predictCorrectScores(analysis.matchData || {});
+            if (!analysis._extras) analysis._extras = {};
+            analysis._extras.htft = htft;
+            analysis._extras.correctScores = cs;
+          } catch (e) {
+            logger.warn('Failed to generate advanced predictions', e.message);
+          }
         }
+
+        // Format output
+        let formatted = services.multiSportAnalyzer.formatForTelegram ? services.multiSportAnalyzer.formatForTelegram(analysis) : JSON.stringify(analysis, null, 2);
+
+        // Append VVIP extras if present
+        if (analysis._extras) {
+          if (analysis._extras.fixedMatches) formatted = `${analysis._extras.fixedMatches}\n\n${formatted}`;
+          if (analysis._extras.htft) formatted += `\n\n*HT/FT Prediction:* ${analysis._extras.htft.htft} (Confidence ${analysis._extras.htft.confidence}%)\nReason: ${analysis._extras.htft.reasoning}`;
+          if (analysis._extras.correctScores && analysis._extras.correctScores.length > 0) {
+            formatted += `\n\n*Top Correct Scores:*`;
+            analysis._extras.correctScores.forEach((c, i) => {
+              formatted += `\n${i + 1}. ${c.score} — ${c.confidence}% (Odds ${c.odds})`;
+            });
+          }
+        }
+
+        return { method: 'sendMessage', chat_id: chatId, text: formatted, parse_mode: 'Markdown' };
+      } catch (e) {
+        logger.warn('Analyzer failed, falling back to summary', e);
       }
-      
-      // Last resort fallback
-      const summary = `🤖 *Match Analysis*\n\n*${m.home}* vs *${m.away}*\nScore: ${m.score || 'N/A'}\nTime: ${m.time || 'N/A'}\n\n_Analysis service temporarily unavailable._`;
-      return { method: 'sendMessage', chat_id: chatId, text: summary, parse_mode: 'Markdown' };
     }
+
+    // Fallback summary
+    const summary = `🤖 *Quick Match Summary*\n\n*${m.home}* vs *${m.away}*\nScore: ${m.score || 'N/A'}\nTime: ${m.time || 'N/A'}\n\n_No advanced analysis available right now._`;
+    return { method: 'sendMessage', chat_id: chatId, text: summary, parse_mode: 'Markdown' };
   } catch (e) {
     logger.error('handleAnalyzeMatch error', e);
-    const errorText = formatBetrixError('unexpected', 'Failed to analyze match');
-    return { method: 'sendMessage', chat_id: chatId, text: errorText, parse_mode: 'Markdown' };
+    return { method: 'sendMessage', chat_id: chatId, text: 'Failed to analyze match.', parse_mode: 'Markdown' };
   }
 }
 
@@ -2094,30 +2048,17 @@ async function handleSignupPaymentCallback(data, chatId, userId, redis, services
 }
 
 /**
- * Handle sport selection with fixtures-manager integration
+ * Handle sport selection
  */
 async function handleSportCallback(data, chatId, userId, redis, services) {
   const sportKey = data.replace('sport_', '');
   const sportName = sportKey.charAt(0).toUpperCase() + sportKey.slice(1);
 
   try {
-    // 🎯 TRY FIXTURES MANAGER FIRST
+    // Get leagues from sports aggregator or fallback to hardcoded
     let leagues = [];
-    try {
-      leagues = await getLeagueFixtures(sportKey);
-      if (leagues && leagues.length > 0) {
-        leagues = leagues.slice(0, 8).map(l => ({
-          id: l.id || l.league?.id || '0',
-          name: l.name || l.league?.name || 'Unknown',
-          matches: l.matches || 0
-        }));
-      }
-    } catch (e) {
-      logger.warn('Fixtures manager failed, trying sportsAggregator', e.message);
-    }
     
-    // 🎯 FALLBACK TO SPORTSAGGREGATOR IF NEEDED
-    if (!leagues || leagues.length === 0 && services && services.sportsAggregator) {
+    if (services && services.sportsAggregator) {
       try {
         const allLeagues = await services.sportsAggregator.getLeagues(sportKey);
         leagues = allLeagues.slice(0, 8).map(l => ({

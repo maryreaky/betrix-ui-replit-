@@ -1164,17 +1164,13 @@ async function handleLeagueCallback(data, chatId, userId, redis, services) {
     };
     const leagueName = leagueMap[leagueId] || `League ${leagueId}`;
 
-    // 🎯 USE INTELLIGENT MENU BUILDER FOR LEAGUE MENU
-    const subscription = await getUserSubscription(redis, userId).catch(() => ({ tier: 'FREE' }));
-    const leagueMenu = buildMatchDetailMenu(leagueName, subscription.tier, leagueId);
-
     return {
       method: 'editMessageText',
       chat_id: chatId,
       message_id: undefined,
-      text: leagueMenu.text || `📊 *${leagueName}*\n\nWhat would you like to see?`,
+      text: `📊 *${leagueName}*\n\nWhat would you like to see?`,
       parse_mode: 'Markdown',
-      reply_markup: leagueMenu.reply_markup || {
+      reply_markup: {
         inline_keyboard: [
           [
             { text: '🔴 Live Now', callback_data: validateCallbackData(`league_live_${leagueId}`) },
@@ -1205,25 +1201,18 @@ async function handleLeagueLiveCallback(data, chatId, userId, redis, services) {
     let matches = [];
     if (services && services.sportsAggregator) {
       try {
-        // 🎯 USE FIXTURES MANAGER TO GET LEAGUE FIXTURES
-        try {
-          matches = await getLeagueFixtures(leagueId);
-        } catch (e) {
-          logger.warn('Fixtures manager failed, using aggregator', e.message);
-          matches = await services.sportsAggregator.getLiveMatches(leagueId);
-        }
+        matches = await services.sportsAggregator.getLiveMatches(leagueId);
       } catch (e) {
         logger.warn('Failed to fetch live matches', e);
       }
     }
 
     if (!matches || matches.length === 0) {
-      const errorText = formatBetrixError('no_matches', 'No live matches right now');
       return {
         method: 'editMessageText',
         chat_id: chatId,
         message_id: undefined,
-        text: errorText,
+        text: '⏳ No live matches right now.\n\nCheck back soon!',
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [[{ text: '🔙 Back', callback_data: `league_${leagueId}` }]]
@@ -1231,28 +1220,26 @@ async function handleLeagueLiveCallback(data, chatId, userId, redis, services) {
       };
     }
 
-    // 🎯 USE PREMIUM UI BUILDER FOR MATCH CARDS
-    const subscription = await getUserSubscription(redis, userId).catch(() => ({ tier: 'FREE' }));
+    // Build per-match buttons so users can view details or add teams to favorites
     const limited = matches.slice(0, 5);
-    
-    // Build match cards with premium formatting
-    const matchCards = limited.map((m, i) => buildMatchCard(m, subscription.tier, leagueId, i)).join('\n\n');
-    
-    const header = generateBetrixHeader(userId, subscription.tier);
-    const matchText = `${header}\n\n🏟️ *Live Matches*\n\n${matchCards}`;
+    const matchText = limited.map((m, i) => {
+      const score = (m.homeScore !== null && m.awayScore !== null) ? `${m.homeScore}-${m.awayScore}` : '─';
+      const status = m.status === 'LIVE' ? `🔴 ${m.time}` : `✅ ${m.time}`;
+      return `${i + 1}. *${m.home}* vs *${m.away}*\n   ${score} ${status}`;
+    }).join('\n\n');
 
-    // Build keyboard with analysis and favorite buttons
+    // keyboard: for each match add a row with Details and Favorite buttons
     const keyboard = limited.map((m, i) => {
       const homeLabel = teamNameOf(m.home);
       const awayLabel = teamNameOf(m.away);
       const homeKey = encodeURIComponent(homeLabel);
       return [
-        { text: `🔎 Analyze ${i + 1}`, callback_data: validateCallbackData(`analyze_match_${leagueId}_${i}`) },
-        { text: `⭐ ${homeLabel.split(' ')[0]}`, callback_data: validateCallbackData(`fav_add_${homeKey}`) }
+        { text: `🔎 Details ${i + 1}`, callback_data: validateCallbackData(`match_${leagueId}_${i}`) },
+        { text: `⭐ Fav ${homeLabel.split(' ')[0]}`, callback_data: validateCallbackData(`fav_add_${homeKey}`) }
       ];
     });
 
-    // also allow favoriting away team
+    // also allow favoriting away team on next row for compactness
     limited.forEach((m, i) => {
       const awayLabel = teamNameOf(m.away);
       const awayKey = encodeURIComponent(awayLabel);
