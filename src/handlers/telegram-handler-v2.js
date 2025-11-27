@@ -51,11 +51,27 @@ async function safeGetUserData(redis, key) {
 const logger = new Logger('TelegramHandlerV2');
 
 // Telegram callback_data has a 64-byte limit
-// Helper to validate and truncate if necessary
+// Telemetry Redis (optional) - set via `setTelemetryRedis(redis)` at startup
+let telemetryRedis = null;
+export function setTelemetryRedis(r) {
+  try { telemetryRedis = r; } catch (e) { telemetryRedis = null; }
+}
+
+// Helper to validate and truncate callback_data if necessary
 function validateCallbackData(data) {
   if (!data || typeof data !== 'string') return '';
   if (data.length <= 64) return data;
   logger.warn(`Callback data exceeds 64-byte limit (${data.length}): ${data.substring(0, 40)}...`);
+  // record telemetry if redis available
+  try {
+    if (telemetryRedis && typeof telemetryRedis.incr === 'function') {
+      telemetryRedis.incr('betrix:telemetry:callback_truncated_outgoing').catch(() => {});
+      // store a sample truncated key for inspection
+      telemetryRedis.lpush('betrix:telemetry:callback_truncated_samples', data.substring(0, 256)).catch(() => {});
+      telemetryRedis.ltrim('betrix:telemetry:callback_truncated_samples', 0, 100).catch(() => {});
+      telemetryRedis.expire('betrix:telemetry:callback_truncated_samples', 60 * 60 * 24).catch(() => {});
+    }
+  } catch (e) { /* ignore telemetry errors */ }
   return data.substring(0, 64);
 }
 
@@ -838,6 +854,25 @@ export async function handleCallbackQuery(callbackQuery, redis, services) {
 
     logger.info('Callback query', { userId, data });
 
+    // Telemetry: incoming callback_data length / suspicious patterns
+    try {
+      if (data && data.length > 64) {
+        if (redis && typeof redis.incr === 'function') {
+          await redis.incr('betrix:telemetry:callback_incoming_too_long');
+          await redis.lpush('betrix:telemetry:callback_incoming_samples', data.substring(0, 256)).catch(() => {});
+          await redis.ltrim('betrix:telemetry:callback_incoming_samples', 0, 200).catch(() => {});
+          await redis.expire('betrix:telemetry:callback_incoming_samples', 60 * 60 * 24).catch(() => {});
+        }
+      }
+      // detect repeated 'odds_' pattern which previously caused corruption
+      const repOdds = /(odds_){3,}/i.test(data || '');
+      if (repOdds && redis && typeof redis.incr === 'function') {
+        await redis.incr('betrix:telemetry:callback_repetition_odds');
+      }
+    } catch (e) {
+      logger.warn('Callback telemetry write failed', e?.message || e);
+    }
+
     // Route callback
     if (data === 'menu_live') {
       // Special case: menu_live should show live matches, not sport selection
@@ -1237,7 +1272,8 @@ async function handleMatchCallback(data, chatId, userId, redis, services) {
 
     const m = allLiveMatches[idx];
     const score = (m.homeScore != null && m.awayScore != null) ? `${m.homeScore}-${m.awayScore}` : (m.score || 'N/A');
-    const time = m.time || m.minute || m.status || 'N/A';
+    const live = m.liveStats || {};
+    const time = m.time || m.minute || live.minute || m.status || live.status || 'N/A';
     const homeOdds = m.homeOdds || m.odds?.home || '-';
     const awayOdds = m.awayOdds || m.odds?.away || '-';
     const drawOdds = m.drawOdds || m.odds?.draw || '-';
@@ -1245,8 +1281,30 @@ async function handleMatchCallback(data, chatId, userId, redis, services) {
     let text = `🏟️ *Match Details*\n\n*${m.home}* vs *${m.away}*\n`;
     text += `• Score: ${score}\n• Time: ${time}\n`;
     text += `• Odds: Home ${homeOdds} • Draw ${drawOdds} • Away ${awayOdds}\n`;
-    if (m.possession) text += `• Possession: ${m.possession}\n`;
-    if (m.stats) text += `• Key: ${m.stats.join(' • ')}\n`;
+    // prefer liveStats where available
+    if (m.possession) {
+      text += `• Possession: ${m.possession}\n`;
+    } else if (live.stats) {
+      // try to find possession-like stat
+      try {
+        const poss = Object.values(live.stats).map(a => a.find(s => /possess/i.test(s.label))).filter(Boolean)[0];
+        if (poss && poss.value) text += `• Possession: ${poss.value}\n`;
+      } catch (e) { /* ignore */ }
+    }
+
+    if (m.stats && Array.isArray(m.stats)) {
+      text += `• Key: ${m.stats.join(' • ')}\n`;
+    } else if (live.stats) {
+      // flatten some key stats if available
+      try {
+        const all = [];
+        Object.keys(live.stats).forEach(k => {
+          const arr = live.stats[k] || [];
+          arr.slice(0,3).forEach(s => all.push(`${s.label}: ${s.value}`));
+        });
+        if (all.length > 0) text += `• Key: ${all.join(' • ')}\n`;
+      } catch (e) { /* ignore */ }
+    }
 
     // Build back button based on format
     let backData = 'menu_live';
@@ -2554,3 +2612,5 @@ export default {
   handleCommand,
   handleNaturalLanguage
 };
+// allow worker to set telemetry redis instance
+export { setTelemetryRedis };
