@@ -2675,5 +2675,3 @@ export default {
   handleCommand,
   handleNaturalLanguage
 };
-// allow worker to set telemetry redis instance
-export { setTelemetryRedis };
