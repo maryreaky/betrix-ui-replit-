@@ -2349,25 +2349,21 @@ async function handleProfileCallback(data, chatId, userId, redis) {
       const user = await safeGetUserData(redis, `user:${userId}`) || {};
       const sub = await getUserSubscription(redis, userId);
       
-      // 🎯 USE BETRIX BRANDING FOR PROFILE
-      const header = generateBetrixHeader(userId, sub.tier);
-      const profileText = formatProfile({
-        name: (user && user.name) || 'BETRIX User',
-        tier: sub.tier || 'FREE',
-        joinDate: (user && user.joinDate) || new Date().toLocaleDateString(),
-        predictions: (user && user.predictions) || 0,
-        winRate: (user && user.winRate) || '0',
-        points: user.points || 0,
-        referralCode: user.referralCode || `USER${userId}`,
-        referrals: user.referrals || 0,
-        bonusPoints: user.bonusPoints || 0
-      });
-      
       return {
         method: 'editMessageText',
         chat_id: chatId,
         message_id: undefined,
-        text: `${header}\n\n${profileText}`,
+        text: formatProfile({
+          name: (user && user.name) || 'BETRIX User',
+          tier: sub.tier || 'FREE',
+          joinDate: (user && user.joinDate) || new Date().toLocaleDateString(),
+          predictions: (user && user.predictions) || 0,
+          winRate: (user && user.winRate) || '0',
+          points: user.points || 0,
+          referralCode: user.referralCode || `USER${userId}`,
+          referrals: user.referrals || 0,
+          bonusPoints: user.bonusPoints || 0
+        }),
         parse_mode: 'Markdown',
         reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_profile' }]] }
       };
@@ -2379,12 +2375,11 @@ async function handleProfileCallback(data, chatId, userId, redis) {
         ? `Recent bets:\n${bets.map((b, i) => `${i + 1}. ${b}`).join('\n')}`
         : 'No bets placed yet. Start by selecting a match!';
       
-      const header = generateBetrixHeader(userId, 'FREE');
       return {
         method: 'editMessageText',
         chat_id: chatId,
         message_id: undefined,
-        text: `${header}\n\n💰 *My Bets*\n\n${betList}\n\n_Tap a bet to view details_`,
+        text: `💰 *My Bets*\n\n${betList}\n\n_Tap a bet to view details_`,
         parse_mode: 'Markdown',
         reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_profile' }]] }
       };
@@ -2396,12 +2391,11 @@ async function handleProfileCallback(data, chatId, userId, redis) {
         ? `Your favorite teams:\n${favs.map((f, i) => `${i + 1}. ${f}`).join('\n')}`
         : 'No favorites yet. Add teams to track them!';
       
-      const header = generateBetrixHeader(userId, 'FREE');
       return {
         method: 'editMessageText',
         chat_id: chatId,
         message_id: undefined,
-        text: `${header}\n\n⭐ *My Favorites*\n\n${favList}`,
+        text: `⭐ *My Favorites*\n\n${favList}`,
         parse_mode: 'Markdown',
         reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_profile' }]] }
       };
