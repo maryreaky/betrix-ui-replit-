@@ -1039,7 +1039,7 @@ async function handleLiveMenuCallback(chatId, userId, redis, services) {
     // Build keyboard - one button per match for quick viewing
     const keyboard = limited.map((m, i) => ({
       text: `${i + 1}. ${m.home} vs ${m.away}`,
-      callback_data: validateCallbackData(`match_live_${i}`)
+      callback_data: `match_live_${i}`
     })).map(btn => [btn]);
 
     keyboard.push([
@@ -1156,8 +1156,8 @@ async function handleLeagueLiveCallback(data, chatId, userId, redis, services) {
       const awayLabel = teamNameOf(m.away);
       const homeKey = encodeURIComponent(homeLabel);
       return [
-        { text: `🔎 Details ${i + 1}`, callback_data: validateCallbackData(`match_${leagueId}_${i}`) },
-        { text: `⭐ Fav ${homeLabel.split(' ')[0]}`, callback_data: validateCallbackData(`fav_add_${homeKey}`) }
+        { text: `🔎 Details ${i + 1}`, callback_data: `match_${leagueId}_${i}` },
+        { text: `⭐ Fav ${homeLabel.split(' ')[0]}`, callback_data: `fav_add_${homeKey}` }
       ];
     });
 
@@ -1166,12 +1166,12 @@ async function handleLeagueLiveCallback(data, chatId, userId, redis, services) {
       const awayLabel = teamNameOf(m.away);
       const awayKey = encodeURIComponent(awayLabel);
       keyboard.push([
-        { text: `⭐ Fav ${awayLabel.split(' ')[0]}`, callback_data: validateCallbackData(`fav_add_${awayKey}`) },
-        { text: `🔁 Odds ${i + 1}`, callback_data: validateCallbackData(`league_odds_${leagueId}`) }
+        { text: `⭐ Fav ${awayLabel.split(' ')[0]}`, callback_data: `fav_add_${awayKey}` },
+        { text: `🔁 Odds ${i + 1}`, callback_data: `league_odds_${leagueId}` }
       ]);
     });
 
-    keyboard.push([{ text: '🔙 Back', callback_data: validateCallbackData(`league_${leagueId}`) }]);
+    keyboard.push([{ text: '🔙 Back', callback_data: `league_${leagueId}` }]);
 
     return {
       method: 'editMessageText',
@@ -1251,7 +1251,7 @@ async function handleMatchCallback(data, chatId, userId, redis, services) {
     // Build back button based on format
     let backData = 'menu_live';
     if (leagueId) {
-      backData = validateCallbackData(`league_live_${leagueId}`);
+      backData = `league_live_${leagueId}`;
     }
 
     const homeLabel = teamNameOf(m.home);
@@ -1260,9 +1260,9 @@ async function handleMatchCallback(data, chatId, userId, redis, services) {
     const awayKey = encodeURIComponent(awayLabel);
 
     const keyboard = [
-      [{ text: '🤖 Analyze Match', callback_data: validateCallbackData(`analyze_match_${leagueId || 'live'}_${idx}`) }],
-      [{ text: `⭐ Fav ${homeLabel.split(' ')[0]}`, callback_data: validateCallbackData(`fav_add_${homeKey}`) }, { text: `⭐ Fav ${awayLabel.split(' ')[0]}`, callback_data: validateCallbackData(`fav_add_${awayKey}`) }],
-      [{ text: '📊 View Odds', callback_data: validateCallbackData(leagueId ? `league_odds_${leagueId}` : 'menu_odds') }],
+      [{ text: '🤖 Analyze Match', callback_data: `analyze_match_${leagueId || 'live'}_${idx}` }],
+      [{ text: `⭐ Fav ${homeLabel.split(' ')[0]}`, callback_data: `fav_add_${homeKey}` }, { text: `⭐ Fav ${awayLabel.split(' ')[0]}`, callback_data: `fav_add_${awayKey}` }],
+      [{ text: '📊 View Odds', callback_data: leagueId ? `league_odds_${leagueId}` : 'menu_odds' }],
       [{ text: '🔙 Back', callback_data: backData }]
     ];
 
@@ -1519,7 +1519,7 @@ async function handleLeagueOddsCallback(data, chatId, userId, redis, services) {
         text: '⏳ Odds not available.\n\nCheck back soon!',
         parse_mode: 'Markdown',
         reply_markup: {
-          inline_keyboard: [[{ text: '🔙 Back', callback_data: validateCallbackData(`league_${leagueId}`) }]]
+          inline_keyboard: [[{ text: '🔙 Back', callback_data: `league_${leagueId}` }]]
         }
       };
     }
@@ -1539,7 +1539,7 @@ async function handleLeagueOddsCallback(data, chatId, userId, redis, services) {
       text: `💰 *Best Odds*\n\n${oddsText}\n\n_Compare bookmakers_`,
       parse_mode: 'Markdown',
       reply_markup: {
-        inline_keyboard: [[{ text: '🔙 Back', callback_data: validateCallbackData(`league_${leagueId}`) }]]
+        inline_keyboard: [[{ text: '🔙 Back', callback_data: `league_${leagueId}` }]]
       }
     };
   } catch (err) {
@@ -1572,7 +1572,7 @@ async function handleLeagueStandingsCallback(data, chatId, userId, redis, servic
         text: '⏳ Standings not available.\n\nCheck back soon!',
         parse_mode: 'Markdown',
         reply_markup: {
-          inline_keyboard: [[{ text: '🔙 Back', callback_data: validateCallbackData(`league_${leagueId}`) }]]
+          inline_keyboard: [[{ text: '🔙 Back', callback_data: `league_${leagueId}` }]]
         }
       };
     }
@@ -1592,7 +1592,7 @@ async function handleLeagueStandingsCallback(data, chatId, userId, redis, servic
       text: `📊 *League Table*\n\n\`\`\`\nPos Team           Pts\n${tableText}\n\`\`\``,
       parse_mode: 'Markdown',
       reply_markup: {
-        inline_keyboard: [[{ text: '🔙 Back', callback_data: validateCallbackData(`league_${leagueId}`) }]]
+        inline_keyboard: [[{ text: '🔙 Back', callback_data: `league_${leagueId}` }]]
       }
     };
   } catch (err) {

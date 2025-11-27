@@ -1039,7 +1039,7 @@ async function handleLiveMenuCallback(chatId, userId, redis, services) {
     // Build keyboard - one button per match for quick viewing
     const keyboard = limited.map((m, i) => ({
       text: `${i + 1}. ${m.home} vs ${m.away}`,
-      callback_data: validateCallbackData(`match_live_${i}`)
+      callback_data: `match_live_${i}`
     })).map(btn => [btn]);
 
     keyboard.push([
@@ -1572,7 +1572,7 @@ async function handleLeagueStandingsCallback(data, chatId, userId, redis, servic
         text: '⏳ Standings not available.\n\nCheck back soon!',
         parse_mode: 'Markdown',
         reply_markup: {
-          inline_keyboard: [[{ text: '🔙 Back', callback_data: validateCallbackData(`league_${leagueId}`) }]]
+          inline_keyboard: [[{ text: '🔙 Back', callback_data: `league_${leagueId}` }]]
         }
       };
     }
@@ -1592,7 +1592,7 @@ async function handleLeagueStandingsCallback(data, chatId, userId, redis, servic
       text: `📊 *League Table*\n\n\`\`\`\nPos Team           Pts\n${tableText}\n\`\`\``,
       parse_mode: 'Markdown',
       reply_markup: {
-        inline_keyboard: [[{ text: '🔙 Back', callback_data: validateCallbackData(`league_${leagueId}`) }]]
+        inline_keyboard: [[{ text: '🔙 Back', callback_data: `league_${leagueId}` }]]
       }
     };
   } catch (err) {

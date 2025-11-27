@@ -1039,7 +1039,7 @@ async function handleLiveMenuCallback(chatId, userId, redis, services) {
     // Build keyboard - one button per match for quick viewing
     const keyboard = limited.map((m, i) => ({
       text: `${i + 1}. ${m.home} vs ${m.away}`,
-      callback_data: validateCallbackData(`match_live_${i}`)
+      callback_data: `match_live_${i}`
     })).map(btn => [btn]);
 
     keyboard.push([
