@@ -22,17 +22,34 @@ function parseRssItems(rssText, max = 10) {
 }
 
 export async function getNewsHeadlines({ query = 'football', max = 10 } = {}) {
-  // Google News RSS search (no API key)
+  // Try multiple public RSS sources (no API keys)
   const q = encodeURIComponent(query);
-  const url = `https://news.google.com/rss/search?q=${q}+when:1d&hl=en-US&gl=US&ceid=US:en`;
-  const res = await fetch(url, { timeout: 10000 });
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`News fetch failed: ${res.status} ${res.statusText} - ${text.slice(0,200)}`);
+  const urls = [
+    `https://news.google.com/rss/search?q=${q}+when:1d&hl=en-US&gl=US&ceid=US:en`,
+    // BBC Sport football RSS
+    'https://feeds.bbci.co.uk/sport/football/rss.xml',
+    // Reuters sports news
+    'http://feeds.reuters.com/reuters/sportsNews',
+    // ESPN top headlines RSS
+    'https://www.espn.com/espn/rss/news'
+  ];
+
+  let lastErr = null;
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, { timeout: 10000 });
+      if (!res.ok) {
+        lastErr = new Error(`News fetch failed: ${res.status} ${res.statusText}`);
+        continue;
+      }
+      const rss = await res.text();
+      const items = parseRssItems(rss, max);
+      if (items && items.length > 0) return items;
+    } catch (e) {
+      lastErr = e;
+    }
   }
-  const rss = await res.text();
-  const items = parseRssItems(rss, max);
-  return items;
+  throw lastErr || new Error('News fetch failed (no RSS sources returned items)');
 }
 
 // Team-specific subreddits: fallback when main subreddit is blocked

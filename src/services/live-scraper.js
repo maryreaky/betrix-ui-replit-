@@ -17,17 +17,43 @@ function pickUserAgent(opts = {}) {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 }
 
-async function fetchJson(url, opts = {}) {
+// simple per-domain rate limiter
+const domainLastRequest = new Map();
+const DOMAIN_MIN_INTERVAL_MS = Number(process.env.LIVE_SCRAPER_MIN_INTERVAL_MS || 500);
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function ensureRateLimit(url) {
   try {
-    const headers = Object.assign({}, opts.headers || {}, { 'User-Agent': pickUserAgent(opts) });
-    const res = await fetch(url, { timeout: 8000, ...opts, headers });
-    if (!res.ok) throw new Error(`Fetch failed ${res.status}`);
-    return await res.json();
-  } catch (e) {
-    logger.warn(`fetchJson failed for ${url}: ${e.message || e}`);
-    return null;
-  }
+    const host = new URL(url).host;
+    const last = domainLastRequest.get(host) || 0;
+    const now = Date.now();
+    const delta = now - last;
+    if (delta < DOMAIN_MIN_INTERVAL_MS) {
+      await sleep(DOMAIN_MIN_INTERVAL_MS - delta + 10);
+    }
+    domainLastRequest.set(host, Date.now());
+  } catch (e) { /* ignore malformed URLs */ }
 }
+
+async function retryFetchJson(url, opts = {}, attempts = 3, baseDelay = 300) {
+  for (let i = 0; i < attempts; i++) {
+    try {
+      await ensureRateLimit(url);
+      const headers = Object.assign({}, opts.headers || {}, { 'User-Agent': pickUserAgent(opts) });
+      const res = await fetch(url, { timeout: opts.timeout || 8000, ...opts, headers });
+      if (!res.ok) throw new Error(`Fetch failed ${res.status}`);
+      return await res.json();
+    } catch (e) {
+      logger.warn(`retryFetchJson attempt ${i+1} failed for ${url}: ${e.message || e}`);
+      if (i + 1 === attempts) return null;
+      await sleep(baseDelay * Math.pow(2, i));
+    }
+  }
+  return null;
+}
+
+const fetchJson = retryFetchJson;
 
 // Try to enrich a single ESPN match using the public ESPN summary endpoint
 export async function getEspnMatchStats(eventId, sport = 'soccer') {
@@ -70,13 +96,26 @@ export async function getEspnMatchStats(eventId, sport = 'soccer') {
 }
 
 // Try to fetch extra info from a ScoreBat URL (video embed pages)
-export async function getScorebatMatchDetails(url) {
+export async function getScorebatMatchDetails(url, opts = {}) {
   if (!url) return null;
   try {
+    await ensureRateLimit(url);
     const headers = Object.assign({}, opts?.headers || {}, { 'User-Agent': pickUserAgent(opts) });
-    const res = await fetch(url, { timeout: 8000, headers });
-    if (!res.ok) throw new Error(`ScoreBat fetch failed ${res.status}`);
-    const html = await res.text();
+    // retry pattern
+    const attempts = opts.attempts || 3;
+    let html = null;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        const res = await fetch(url, { timeout: opts.timeout || 8000, headers });
+        if (!res.ok) throw new Error(`ScoreBat fetch failed ${res.status}`);
+        html = await res.text();
+        break;
+      } catch (e) {
+        logger.warn(`ScoreBat fetch attempt ${i+1} failed for ${url}: ${e.message || e}`);
+        if (i + 1 < attempts) await sleep(200 * Math.pow(2, i));
+      }
+    }
+    if (!html) throw new Error('ScoreBat fetch failed after retries');
     const $ = cheerioLoad(html);
     // ScoreBat pages often include JSON inside a script tag with match info
     const scripts = $('script').toArray();
