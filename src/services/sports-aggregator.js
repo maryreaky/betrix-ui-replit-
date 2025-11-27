@@ -7,7 +7,10 @@
  * 4. SportsData.io - Additional source
  * 5. SofaScore (RapidAPI) - Real-time data
  * 6. SportsMonks - Comprehensive data
- * 7. Demo Data - Fallback for testing
+ * 7. Live Scraper (ESPN + ScoreBat) - Real data
+ * 8. Goal.com - Public odds/matches
+ * 9. Flashscore - Public live scores
+ * 10. Demo Data - Fallback for testing
  */
 
 import { CONFIG } from '../config.js';
@@ -16,6 +19,8 @@ import fetch from 'node-fetch';
 import { getEspnLiveMatches } from './espn-provider.js';
 import { getNewsHeadlines } from './news-provider-enhanced.js';
 import liveScraper from './live-scraper.js';
+import { getLiveMatchesFromGoal } from './goal-scraper.js';
+import { getLiveMatchesFromFlashscore, getLiveMatchesByLeagueFromFlashscore } from './flashscore-scraper.js';
 
 const logger = new Logger('SportsAggregator');
 
@@ -350,6 +355,42 @@ export class SportsAggregator {
         }
       }
 
+      // Priority 10: Goal.com public scraper (no API key required)
+      if (await this._isProviderEnabled('GOAL')) {
+        try {
+          const leagueMap = { '39': 'premier-league', '140': 'la-liga', '135': 'serie-a', '78': 'bundesliga', '61': 'ligue-1' };
+          const leaguePath = leagueMap[String(leagueId)] || 'premier-league';
+          const goalMatches = await getLiveMatchesFromGoal(leaguePath);
+          if (goalMatches && goalMatches.length > 0) {
+            logger.info(`✅ Goal.com: Found ${goalMatches.length} matches`);
+            this._setCached(cacheKey, goalMatches);
+            await this._recordProviderHealth('goal', true, `Found ${goalMatches.length} matches`);
+            return this._formatMatches(goalMatches, 'goal');
+          }
+        } catch (e) {
+          logger.warn('Goal.com scraper failed', e.message);
+          await this._recordProviderHealth('goal', false, e.message);
+        }
+      }
+
+      // Priority 11: Flashscore public scraper (no API key required)
+      if (await this._isProviderEnabled('FLASHSCORE')) {
+        try {
+          const flashscoreLeagueMap = { '39': '17', '140': '87', '135': '106', '78': '34', '61': '53' };
+          const flashLeagueId = flashscoreLeagueMap[String(leagueId)] || '17';
+          const flashMatches = await getLiveMatchesByLeagueFromFlashscore(flashLeagueId);
+          if (flashMatches && flashMatches.length > 0) {
+            logger.info(`✅ Flashscore: Found ${flashMatches.length} matches`);
+            this._setCached(cacheKey, flashMatches);
+            await this._recordProviderHealth('flashscore', true, `Found ${flashMatches.length} matches`);
+            return this._formatMatches(flashMatches, 'flashscore');
+          }
+        } catch (e) {
+          logger.warn('Flashscore scraper failed', e.message);
+          await this._recordProviderHealth('flashscore', false, e.message);
+        }
+      }
+
       // Fallback to demo data
       logger.warn('All live APIs failed, using demo data');
       return this._getDemoMatches();
@@ -464,6 +505,21 @@ export class SportsAggregator {
           }
         } catch (e) {
           logger.warn('SportsMonks odds failed', e.message);
+        }
+      }
+
+      // Priority 6: Goal.com public odds scraper
+      if (await this._isProviderEnabled('GOAL')) {
+        try {
+          const { getGoalOdds } = await import('./goal-scraper.js');
+          const goalOdds = await getGoalOdds();
+          if (goalOdds && goalOdds.length > 0) {
+            logger.info(`✅ Goal.com: Found ${goalOdds.length} odds`);
+            this._setCached(cacheKey, goalOdds);
+            return goalOdds;
+          }
+        } catch (e) {
+          logger.warn('Goal.com odds scraper failed', e.message);
         }
       }
 
