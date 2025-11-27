@@ -206,47 +206,12 @@ export class SportsAggregator {
         }
       }
 
-      // Priority 7: ESPN (Public API, no registration required)
-      try {
-        const espnMatches = await getEspnLiveMatches({ sport: 'football' });
-        if (espnMatches && espnMatches.length > 0) {
-          logger.info(`✅ ESPN: Found ${espnMatches.length} live matches`);
-          this._setCached(cacheKey, espnMatches);
-          return this._formatMatches(espnMatches, 'espn');
-        }
-      } catch (e) {
-        logger.warn('ESPN live matches failed', e.message);
-      }
-
       // Fallback to demo data
       logger.warn('All live APIs failed, using demo data');
       return this._getDemoMatches();
     } catch (err) {
       logger.error('getLiveMatches failed', err);
       return this._getDemoMatches();
-    }
-  }
-
-  /**
-   * Get live sports news
-   */
-  async getLiveNews(sport = 'football', max = 10) {
-    try {
-      const cacheKey = `news:${sport}`;
-      if (this.cache.has(cacheKey)) {
-        const cached = this.cache.get(cacheKey);
-        if (Date.now() - cached.timestamp < 30 * 60 * 1000) { // 30 min cache for news
-          return cached.data;
-        }
-      }
-
-      const news = await getNewsHeadlines({ query: sport, max });
-      this._setCached(cacheKey, news);
-      logger.info(`✅ News: Found ${news.length} headlines for "${sport}"`);
-      return news;
-    } catch (err) {
-      logger.warn('News fetch failed', err.message);
-      return [];
     }
   }
 
