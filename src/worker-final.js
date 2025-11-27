@@ -254,26 +254,27 @@ if (typeof v2Handler.setTelemetryRedis === 'function') {
 }
 
 // ===== INITIALIZE PERFORMANCE OPTIMIZER =====
+// perfUtils is a class (default export). Create an instance to access methods.
+const perfInstance = new perfUtils(redis);
 const perfOptimizer = {
-  cache: perfUtils.smartCache(redis),
-  prefetcher: perfUtils.prefetchData(redis, sportsAggregator),
-  rateLimiter: perfUtils.createRateLimiter(),
-  metrics: perfUtils.getMetrics()
+  instance: perfInstance,
+  prefetcher: perfInstance.prefetchData.bind(perfInstance),
+  rateLimiterFactory: perfInstance.createRateLimiter.bind(perfInstance),
+  getMetrics: perfInstance.getMetrics.bind(perfInstance)
 };
-logger.info('✅ Performance Optimizer initialized with multi-tier caching and prefetching');
+logger.info('✅ Performance Optimizer instance created (PerformanceOptimizer)');
 
 // Wrap sportsAggregator methods with caching
 if (sportsAggregator) {
   const originalGetLiveMatches = sportsAggregator.getLiveMatches;
   sportsAggregator.getLiveMatches = async function(leagueId) {
     try {
-      const cacheKey = `cache:live_matches:${leagueId || 'all'}`;
-      const cached = await perfOptimizer.cache.get(cacheKey);
-      if (cached) return cached;
-      
-      const result = await originalGetLiveMatches.call(this, leagueId);
-      await perfOptimizer.cache.set(cacheKey, result, 120); // Cache for 2 minutes
-      return result;
+          const cacheKey = `cache:live_matches:${leagueId || 'all'}`;
+          // Use PerformanceOptimizer.smartCache to fetch-or-read cached value
+          const result = await perfInstance.smartCache(cacheKey, async () => {
+            return await originalGetLiveMatches.call(this, leagueId);
+          }, 120);
+          return result;
     } catch (e) {
       logger.warn('Cached getLiveMatches failed, falling back', e.message);
       return originalGetLiveMatches.call(this, leagueId);
@@ -284,11 +285,9 @@ if (sportsAggregator) {
   sportsAggregator.getLeagues = async function(sport) {
     try {
       const cacheKey = `cache:leagues:${sport || 'all'}`;
-      const cached = await perfOptimizer.cache.get(cacheKey);
-      if (cached) return cached;
-      
-      const result = await originalGetLeagues.call(this, sport);
-      await perfOptimizer.cache.set(cacheKey, result, 600); // Cache for 10 minutes
+      const result = await perfInstance.smartCache(cacheKey, async () => {
+        return await originalGetLeagues.call(this, sport);
+      }, 600);
       return result;
     } catch (e) {
       logger.warn('Cached getLeagues failed, falling back', e.message);
