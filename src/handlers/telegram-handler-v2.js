@@ -18,6 +18,8 @@ import {
   formatNaturalResponse,
   formatUpgradePrompt
 } from './menu-handler.js';
+// instantiate a module-level logger for this handler
+const logger = new Logger('TelegramHandlerV2');
 function normalizeApiFootballFixture(fx) {
   // api-football fixture shape -> { home, away, homeOdds, drawOdds, awayOdds }
   try {
