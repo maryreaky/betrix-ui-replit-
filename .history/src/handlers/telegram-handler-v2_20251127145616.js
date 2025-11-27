@@ -1423,7 +1423,7 @@ async function handleAnalyzeMatch(data, chatId, userId, redis, services) {
       const away = m.away || m.awayTeam || m.away_name || m.teams?.away || 'Away';
 
       // 🎯 USE PREMIUM ANALYSIS MODULE
-      const analysis = await advancedAnalysis.analyzeMatch(m, {}, {});
+      const analysis = await analyzeMatch(home, away, m, leagueId);
       
       // Build header with BETRIX branding
       const header = generateBetrixHeader(userId, subscription.tier);
