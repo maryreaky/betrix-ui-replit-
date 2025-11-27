@@ -142,39 +142,21 @@ class GeminiService {
 
     try {
       const model = this.genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-      
-      // Compact prompt to avoid token bloat
-      const compactData = {
-        home: matchData.home || matchData.homeTeam || 'Team1',
-        away: matchData.away || matchData.awayTeam || 'Team2',
-        score: matchData.score || `${matchData.homeScore || 0}-${matchData.awayScore || 0}`,
-        odds: matchData.odds || 'N/A',
-      };
-      
-      const prompt = `${sport}: ${JSON.stringify(compactData)}\nQ: ${question}\nAnswer in <100 words. Include: insight, prediction, confidence %.`;
-      
       const result = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 150 },
+        contents: [
+          {
+            role: "user",
+            parts: [
+              {
+                text: `Analyze this ${sport}: ${JSON.stringify(matchData)}\nQuestion: ${question}\nProvide: insights, prediction, confidence.`,
+              },
+            ],
+          },
+        ],
+        generationConfig: { maxOutputTokens: 300 },
       });
 
-      let text = result.response?.text?.() || "";
-      const finishReason = result.response?.candidates?.[0]?.finishReason || null;
-
-      // Retry if MAX_TOKENS
-      if ((!text || text.trim().length === 0) && finishReason === 'MAX_TOKENS') {
-        logger.warn("Gemini analysis hit MAX_TOKENS, retrying compact");
-        try {
-          const result2 = await model.generateContent({
-            contents: [{ role: "user", parts: [{ text: `${sport}: ${compactData.home} vs ${compactData.away}. ${question}` }] }],
-            generationConfig: { maxOutputTokens: 100 },
-          });
-          text = result2.response?.text?.() || "";
-        } catch (e) {
-          logger.warn("Gemini analysis retry failed");
-        }
-      }
-
+      const text = result.response?.text?.() || "";
       if (!text || text.trim().length === 0) {
         logger.warn("Gemini analysis returned empty response");
         return `Unable to analyze right now. Try again later.`;
@@ -182,7 +164,7 @@ class GeminiService {
 
       return text;
     } catch (err) {
-      logger.error("Analysis error", { message: String(err?.message || "") });
+      logger.error("Analysis error", err);
       return `Unable to analyze right now. Try again later.`;
     }
   }
