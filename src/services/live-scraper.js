@@ -119,10 +119,6 @@ async function retryFetchJson(url, opts = {}, attempts = 3, baseDelay = 300) {
   }
   return null;
 }
-    }
-  }
-  return null;
-}
 
 const fetchJson = retryFetchJson;
 
