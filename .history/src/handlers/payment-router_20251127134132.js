@@ -490,32 +490,11 @@ function generateMPesaInstructions(orderId, amount) {
     amount,
     currency: 'KES',
     orderId,
-    description: '📱 M-Pesa Payment - STK Push',
-    manualSteps: [
-      `📱 *M-PESA PAYMENT INSTRUCTIONS*`,
-      ``,
-      `💰 *AMOUNT: ${amount} KES*`,
-      `📝 *ORDER ID: ${orderId}*`,
-      ``,
-      `✨ *AUTOMATIC METHOD (Recommended):*`,
-      `• You should receive an STK prompt on your phone automatically`,
-      `• Enter your M-Pesa PIN to confirm`,
-      `• You'll get an M-Pesa confirmation message`,
-      ``,
-      `📋 *MANUAL METHOD (If no prompt):*`,
-      `1. Open M-Pesa on your phone`,
-      `2. Go to *"Send Money"* or *"Lipa na M-Pesa"*`,
-      `3. Look for our Business Number (till/paybill)`,
-      `4. Enter Amount: *${amount} KES*`,
-      `5. Enter Your M-Pesa PIN`,
-      ``,
-      `✅ *AFTER PAYMENT:*`,
-      `• Wait for the confirmation SMS from M-Pesa`,
-      `• Copy the entire confirmation message`,
-      `• Paste it back in this chat for instant activation`,
-      `• OR click "Verify Payment" button below`,
-      ``,
-      `⏰ *Payment expires in 15 minutes*`
+    description: 'M-Pesa will prompt you to enter your PIN',
+    steps: [
+      'Check your phone for M-Pesa PIN prompt',
+      'Enter your PIN to confirm payment',
+      'You will receive a confirmation message'
     ]
   };
 }

@@ -944,11 +944,6 @@ export async function handleCallbackQuery(callbackQuery, redis, services) {
       return handleSignupCountry(data, chatId, userId, redis, services);
     }
 
-    // signup payment method selection
-    if (data.startsWith('signup_paymethod_')) {
-      return handleSignupPaymentMethodSelection(data, chatId, userId, redis, services);
-    }
-
     if (data.startsWith('signup_pay_')) {
       return handleSignupPaymentCallback(data, chatId, userId, redis, services);
     }
@@ -1988,62 +1983,38 @@ async function handleSignupPaymentMethodSelection(data, chatId, userId, redis, s
 }
 
 /**
- * Handle signup payment callback: signup_pay_{METHOD}_{AMOUNT}_{CURRENCY}
+ * Handle signup payment callback: signup_pay_{METHOD}_{AMOUNT}
  */
 async function handleSignupPaymentCallback(data, chatId, userId, redis, services) {
   try {
     const parts = data.split('_');
-    // parts: ['signup','pay','METHOD','AMOUNT'] or ['signup','pay','METHOD','AMOUNT','CURRENCY']
+    // parts: ['signup','pay','METHOD','AMOUNT']
     const method = parts[2];
     const amount = Number(parts[3] || 0);
-    const currency = parts[4] || 'KES';
-    
     const profile = await redis.hgetall(`user:${userId}:profile`) || {};
-    const country = profile.country || 'KE';
+    const region = profile.region || 'KE';
 
-    // Validate payment method is available in country
-    const availableMethods = getAvailablePaymentMethods(country);
-    const methodAvailable = availableMethods.some(m => m.id === method);
-    if (!methodAvailable) {
-      return { method: 'sendMessage', chat_id: chatId, text: `❌ Payment method "${method}" is not available in ${country}. Please select another.`, reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_main' }]]} };
-    }
-
-    // Create custom payment order
+    // create custom payment order
     const { createCustomPaymentOrder, getPaymentInstructions } = await import('./payment-router.js');
-    const order = await createCustomPaymentOrder(redis, userId, amount, method, country, { signup: true });
+    const order = await createCustomPaymentOrder(redis, userId, amount, method, region, { signup: true });
     const instructions = await getPaymentInstructions(redis, order.orderId, method).catch(() => null);
 
-    let instrText = `💳 *BETRIX PAYMENT*\n\n`;
-    instrText += `Order ID: \`${order.orderId}\`\n`;
-    instrText += `Amount: *${amount} ${currency}*\n`;
-    instrText += `Method: *${method.replace('_', ' ').toUpperCase()}*\n`;
-    instrText += `Status: ⏳ Awaiting Payment\n\n`;
-    
-    // Display detailed payment instructions from instructions object
-    if (instructions && instructions.manualSteps && Array.isArray(instructions.manualSteps)) {
-      instrText += instructions.manualSteps.join('\n');
-    } else if (instructions && instructions.description) {
-      instrText += `📝 ${instructions.description}\n`;
-    }
+    let instrText = `Please complete payment for order *${order.orderId}*\nAmount: ${order.totalAmount} ${order.currency}\n`;
+    if (instructions && instructions.description) instrText += `\n${instructions.description}\n`;
+    if (instructions && instructions.manualSteps) instrText += `\nSteps:\n${instructions.manualSteps.join('\n')}`;
+    if (instructions && instructions.checkoutUrl) instrText += `\nOpen: ${instructions.checkoutUrl}`;
 
     const keyboard = [];
-    if (instructions && instructions.checkoutUrl) {
-      keyboard.push([{ text: '🔗 Open Payment Link', url: instructions.checkoutUrl }]);
-    }
-    
-    keyboard.push([
-      { text: '✅ Verify Payment', callback_data: validateCallbackData(`verify_payment_${order.orderId}`) },
-      { text: '❓ Help', callback_data: validateCallbackData(`payment_help_${method}`) }
-    ]);
-    
-    keyboard.push([{ text: '🔙 Cancel Payment', callback_data: 'menu_main' }]);
-
-    instrText += `\n\n💡 *Quick Tip:* After making payment, paste your transaction confirmation message here for instant verification!`;
+    if (instructions && instructions.checkoutUrl) keyboard.push([{ text: '🔗 Open Payment Link', url: instructions.checkoutUrl }]);
+    keyboard.push([{ text: '✅ I Paid', callback_data: `verify_payment_${order.orderId}` }]);
+    // Add a quick instruction to paste the transaction message here for automatic verification
+    instrText += `\n\n*Tip:* After paying, you can paste the full transaction confirmation message you receive (e.g. M-Pesa confirmation) into this chat and BETRIX will try to confirm it automatically.`;
+    keyboard.push([{ text: '🔙 Main Menu', callback_data: 'menu_main' }]);
 
     return { method: 'sendMessage', chat_id: chatId, text: instrText, parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } };
   } catch (e) {
     logger.error('handleSignupPaymentCallback failed', e);
-    return { method: 'sendMessage', chat_id: chatId, text: `❌ Payment setup failed: ${e.message || 'Unknown error'}. Please try again.`, reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_main' }]]} };
+    return { method: 'sendMessage', chat_id: chatId, text: `Failed to create signup payment: ${e.message}` };
   }
 }
 

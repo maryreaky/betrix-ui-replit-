@@ -2013,32 +2013,16 @@ async function handleSignupPaymentCallback(data, chatId, userId, redis, services
     const order = await createCustomPaymentOrder(redis, userId, amount, method, country, { signup: true });
     const instructions = await getPaymentInstructions(redis, order.orderId, method).catch(() => null);
 
-    let instrText = `💳 *BETRIX PAYMENT*\n\n`;
-    instrText += `Order ID: \`${order.orderId}\`\n`;
-    instrText += `Amount: *${amount} ${currency}*\n`;
-    instrText += `Method: *${method.replace('_', ' ').toUpperCase()}*\n`;
-    instrText += `Status: ⏳ Awaiting Payment\n\n`;
-    
-    // Display detailed payment instructions from instructions object
-    if (instructions && instructions.manualSteps && Array.isArray(instructions.manualSteps)) {
-      instrText += instructions.manualSteps.join('\n');
-    } else if (instructions && instructions.description) {
-      instrText += `📝 ${instructions.description}\n`;
-    }
+    let instrText = `💳 *Payment Instructions*\n\nOrder: *${order.orderId}*\nAmount: *${amount} ${currency}*\nMethod: *${method.toUpperCase()}*\n`;
+    if (instructions && instructions.description) instrText += `\n📝 ${instructions.description}\n`;
+    if (instructions && instructions.manualSteps) instrText += `\n📋 Steps:\n${instructions.manualSteps.join('\n')}`;
+    if (instructions && instructions.checkoutUrl) instrText += `\n🔗 Checkout: ${instructions.checkoutUrl}`;
 
     const keyboard = [];
-    if (instructions && instructions.checkoutUrl) {
-      keyboard.push([{ text: '🔗 Open Payment Link', url: instructions.checkoutUrl }]);
-    }
-    
-    keyboard.push([
-      { text: '✅ Verify Payment', callback_data: validateCallbackData(`verify_payment_${order.orderId}`) },
-      { text: '❓ Help', callback_data: validateCallbackData(`payment_help_${method}`) }
-    ]);
-    
-    keyboard.push([{ text: '🔙 Cancel Payment', callback_data: 'menu_main' }]);
-
-    instrText += `\n\n💡 *Quick Tip:* After making payment, paste your transaction confirmation message here for instant verification!`;
+    if (instructions && instructions.checkoutUrl) keyboard.push([{ text: '🔗 Open Payment Link', url: instructions.checkoutUrl }]);
+    keyboard.push([{ text: '✅ Verify Payment', callback_data: validateCallbackData(`verify_payment_${order.orderId}`) }]);
+    instrText += `\n\n💡 After paying, click "Verify Payment" or paste your transaction confirmation (e.g., M-Pesa message) here for automatic verification.`;
+    keyboard.push([{ text: '🔙 Cancel', callback_data: 'menu_main' }]);
 
     return { method: 'sendMessage', chat_id: chatId, text: instrText, parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } };
   } catch (e) {

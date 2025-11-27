@@ -944,11 +944,6 @@ export async function handleCallbackQuery(callbackQuery, redis, services) {
       return handleSignupCountry(data, chatId, userId, redis, services);
     }
 
-    // signup payment method selection
-    if (data.startsWith('signup_paymethod_')) {
-      return handleSignupPaymentMethodSelection(data, chatId, userId, redis, services);
-    }
-
     if (data.startsWith('signup_pay_')) {
       return handleSignupPaymentCallback(data, chatId, userId, redis, services);
     }
@@ -1867,7 +1862,7 @@ async function startOnboarding(chatId, userId, redis) {
 }
 
 /**
- * Handle onboarding messages (name, age, country, payment method)
+ * Handle onboarding messages (name, age, country)
  */
 async function handleOnboardingMessage(text, chatId, userId, redis, services) {
   try {
@@ -1880,7 +1875,7 @@ async function handleOnboardingMessage(text, chatId, userId, redis, services) {
       if (!name || name.length < 2) {
         return { method: 'sendMessage', chat_id: chatId, text: 'Please send a valid full name (at least 2 characters).' };
       }
-      await redis.hset(`user:${userId}:profile`, 'name', name);
+      await redis.hset(`user:${userId}`, 'name', name);
       state.step = 'age';
       await redis.setex(`user:${userId}:onboarding`, 1800, JSON.stringify(state));
       return { method: 'sendMessage', chat_id: chatId, text: `Thanks *${name}*! How old are you?`, parse_mode: 'Markdown' };
@@ -1891,7 +1886,7 @@ async function handleOnboardingMessage(text, chatId, userId, redis, services) {
       if (!age || age < 13) {
         return { method: 'sendMessage', chat_id: chatId, text: 'Please enter a valid age (13+).' };
       }
-      await redis.hset(`user:${userId}:profile`, 'age', String(age));
+      await redis.hset(`user:${userId}`, 'age', String(age));
       state.step = 'country';
       await redis.setex(`user:${userId}:onboarding`, 1800, JSON.stringify(state));
 
@@ -1919,131 +1914,73 @@ async function handleOnboardingMessage(text, chatId, userId, redis, services) {
 async function handleSignupCountry(data, chatId, userId, redis, services) {
   try {
     const code = data.replace('signup_country_', '') || 'OTHER';
-    await redis.hset(`user:${userId}:profile`, 'country', code);
-    
-    // Move to payment method selection
-    const state = { step: 'payment_method' };
+    await redis.hset(`user:${userId}:profile`, 'region', code);
+    // mark onboarding to confirm
+    const state = { step: 'confirm' };
     await redis.setex(`user:${userId}:onboarding`, 1800, JSON.stringify(state));
 
-    // Get available methods for this country and build buttons
-    const methods = getAvailablePaymentMethods(code);
-    const keyboard = methods.map(m => ([{ 
-      text: `${m.emoji || '💳'} ${m.name}`, 
-      callback_data: validateCallbackData(`signup_paymethod_${m.id}`) 
-    }]));
+    const user = await safeGetUserData(redis, `user:${userId}`) || {};
+    const profile = await safeGetUserData(redis, `user:${userId}:profile`) || {};
+
+    const name = user.name || 'New User';
+    const age = user.age || 'N/A';
+    const region = profile.region || code;
+
+    // compute signup fee suggestion based on region
+    // Updated signup fee: KES 150 (~1 USD) for Kenya, USD 1 for others by default
+    const feeMap = { KE: 150, NG: 500, US: 1, UK: 1, OTHER: 1 };
+    const amount = feeMap[region] || feeMap.OTHER;
+
+    // choose suggested payment methods for region
+    const methods = getAvailablePaymentMethods(region).map(m => m.id);
+
+    // Build payment buttons for signup (signup_pay_{method}_{amount})
+    const keyboard = methods.map(mid => ([{ text: `${PAYMENT_PROVIDERS[mid]?.symbol || ''} ${PAYMENT_PROVIDERS[mid]?.name || mid}`, callback_data: `signup_pay_${mid}_${amount}` }]));
     keyboard.push([{ text: '🔙 Cancel', callback_data: 'menu_main' }]);
 
-    const text = `🌍 Great choice! Now, what's your preferred payment method?\n\n(These are available in your region)`;
+    const text = `✅ Please confirm your details:\nName: *${name}*\nAge: *${age}*\nCountry: *${region}*\n\nTo complete signup, a one-time fee of *${amount}* will be charged based on your region. Choose a payment method below:`;
 
     return { method: 'sendMessage', chat_id: chatId, text, parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } };
   } catch (e) {
     logger.error('handleSignupCountry failed', e);
     return { method: 'sendMessage', chat_id: chatId, text: 'Failed to select country. Try again.' };
   }
+  
 }
 
 /**
- * Handle signup payment method selection: signup_paymethod_{METHOD_ID}
- */
-async function handleSignupPaymentMethodSelection(data, chatId, userId, redis, services) {
-  try {
-    const methodId = data.replace('signup_paymethod_', '');
-    const profile = await redis.hgetall(`user:${userId}:profile`) || {};
-    
-    // Store payment method preference
-    await redis.hset(`user:${userId}:profile`, 'paymentMethod', methodId);
-
-    // Mark onboarding as complete, prepare signup confirmation
-    const state = { step: 'confirm' };
-    await redis.setex(`user:${userId}:onboarding`, 1800, JSON.stringify(state));
-
-    const name = profile.name || 'New User';
-    const age = profile.age || 'N/A';
-    const country = profile.country || 'Unknown';
-
-    // Compute signup fee based on country
-    const feeMap = { KE: 150, NG: 500, US: 1, UK: 1, OTHER: 1 };
-    const amount = feeMap[country] || feeMap.OTHER;
-    const currency = { KE: 'KES', NG: 'NGN', US: 'USD', UK: 'GBP', OTHER: 'USD' }[country] || 'USD';
-
-    const text = `✅ *Signup Summary*\n\nName: ${name}\nAge: ${age} years\nCountry: ${country}\nPayment Method: ${methodId}\n\n💳 One-time signup fee: *${amount} ${currency}*\n\nClick the button below to complete payment and activate your account.`;
-
-    return { 
-      method: 'sendMessage', 
-      chat_id: chatId, 
-      text, 
-      parse_mode: 'Markdown', 
-      reply_markup: { 
-        inline_keyboard: [[
-          { text: '✅ Pay & Activate', callback_data: validateCallbackData(`signup_pay_${methodId}_${amount}_${currency}`) }
-        ], [
-          { text: '🔙 Back', callback_data: 'menu_main' }
-        ]] 
-      } 
-    };
-  } catch (e) {
-    logger.error('handleSignupPaymentMethodSelection failed', e);
-    return { method: 'sendMessage', chat_id: chatId, text: 'Failed to select payment method. Try again.' };
-  }
-}
-
-/**
- * Handle signup payment callback: signup_pay_{METHOD}_{AMOUNT}_{CURRENCY}
+ * Handle signup payment callback: signup_pay_{METHOD}_{AMOUNT}
  */
 async function handleSignupPaymentCallback(data, chatId, userId, redis, services) {
   try {
     const parts = data.split('_');
-    // parts: ['signup','pay','METHOD','AMOUNT'] or ['signup','pay','METHOD','AMOUNT','CURRENCY']
+    // parts: ['signup','pay','METHOD','AMOUNT']
     const method = parts[2];
     const amount = Number(parts[3] || 0);
-    const currency = parts[4] || 'KES';
-    
     const profile = await redis.hgetall(`user:${userId}:profile`) || {};
-    const country = profile.country || 'KE';
+    const region = profile.region || 'KE';
 
-    // Validate payment method is available in country
-    const availableMethods = getAvailablePaymentMethods(country);
-    const methodAvailable = availableMethods.some(m => m.id === method);
-    if (!methodAvailable) {
-      return { method: 'sendMessage', chat_id: chatId, text: `❌ Payment method "${method}" is not available in ${country}. Please select another.`, reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_main' }]]} };
-    }
-
-    // Create custom payment order
+    // create custom payment order
     const { createCustomPaymentOrder, getPaymentInstructions } = await import('./payment-router.js');
-    const order = await createCustomPaymentOrder(redis, userId, amount, method, country, { signup: true });
+    const order = await createCustomPaymentOrder(redis, userId, amount, method, region, { signup: true });
     const instructions = await getPaymentInstructions(redis, order.orderId, method).catch(() => null);
 
-    let instrText = `💳 *BETRIX PAYMENT*\n\n`;
-    instrText += `Order ID: \`${order.orderId}\`\n`;
-    instrText += `Amount: *${amount} ${currency}*\n`;
-    instrText += `Method: *${method.replace('_', ' ').toUpperCase()}*\n`;
-    instrText += `Status: ⏳ Awaiting Payment\n\n`;
-    
-    // Display detailed payment instructions from instructions object
-    if (instructions && instructions.manualSteps && Array.isArray(instructions.manualSteps)) {
-      instrText += instructions.manualSteps.join('\n');
-    } else if (instructions && instructions.description) {
-      instrText += `📝 ${instructions.description}\n`;
-    }
+    let instrText = `Please complete payment for order *${order.orderId}*\nAmount: ${order.totalAmount} ${order.currency}\n`;
+    if (instructions && instructions.description) instrText += `\n${instructions.description}\n`;
+    if (instructions && instructions.manualSteps) instrText += `\nSteps:\n${instructions.manualSteps.join('\n')}`;
+    if (instructions && instructions.checkoutUrl) instrText += `\nOpen: ${instructions.checkoutUrl}`;
 
     const keyboard = [];
-    if (instructions && instructions.checkoutUrl) {
-      keyboard.push([{ text: '🔗 Open Payment Link', url: instructions.checkoutUrl }]);
-    }
-    
-    keyboard.push([
-      { text: '✅ Verify Payment', callback_data: validateCallbackData(`verify_payment_${order.orderId}`) },
-      { text: '❓ Help', callback_data: validateCallbackData(`payment_help_${method}`) }
-    ]);
-    
-    keyboard.push([{ text: '🔙 Cancel Payment', callback_data: 'menu_main' }]);
-
-    instrText += `\n\n💡 *Quick Tip:* After making payment, paste your transaction confirmation message here for instant verification!`;
+    if (instructions && instructions.checkoutUrl) keyboard.push([{ text: '🔗 Open Payment Link', url: instructions.checkoutUrl }]);
+    keyboard.push([{ text: '✅ I Paid', callback_data: `verify_payment_${order.orderId}` }]);
+    // Add a quick instruction to paste the transaction message here for automatic verification
+    instrText += `\n\n*Tip:* After paying, you can paste the full transaction confirmation message you receive (e.g. M-Pesa confirmation) into this chat and BETRIX will try to confirm it automatically.`;
+    keyboard.push([{ text: '🔙 Main Menu', callback_data: 'menu_main' }]);
 
     return { method: 'sendMessage', chat_id: chatId, text: instrText, parse_mode: 'Markdown', reply_markup: { inline_keyboard: keyboard } };
   } catch (e) {
     logger.error('handleSignupPaymentCallback failed', e);
-    return { method: 'sendMessage', chat_id: chatId, text: `❌ Payment setup failed: ${e.message || 'Unknown error'}. Please try again.`, reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_main' }]]} };
+    return { method: 'sendMessage', chat_id: chatId, text: `Failed to create signup payment: ${e.message}` };
   }
 }
 
