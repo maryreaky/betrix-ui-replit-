@@ -58,6 +58,7 @@ function getProxyAgent(proxyUrl) {
   //   return null;
   // }
   return null;
+}
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
