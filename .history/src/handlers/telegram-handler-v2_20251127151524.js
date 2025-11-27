@@ -1166,7 +1166,7 @@ async function handleLeagueCallback(data, chatId, userId, redis, services) {
 
     // 🎯 USE INTELLIGENT MENU BUILDER FOR LEAGUE MENU
     const subscription = await getUserSubscription(redis, userId).catch(() => ({ tier: 'FREE' }));
-    const leagueMenu = intelligentMenus.buildMatchDetailMenu(leagueName, subscription.tier, leagueId);
+    const leagueMenu = buildMatchDetailMenu(leagueName, subscription.tier, leagueId);
 
     return {
       method: 'editMessageText',
@@ -1207,7 +1207,7 @@ async function handleLeagueLiveCallback(data, chatId, userId, redis, services) {
       try {
         // 🎯 USE FIXTURES MANAGER TO GET LEAGUE FIXTURES
         try {
-          matches = await fixturesManager.getLeagueFixtures(leagueId);
+          matches = await getLeagueFixtures(leagueId);
         } catch (e) {
           logger.warn('Fixtures manager failed, using aggregator', e.message);
           matches = await services.sportsAggregator.getLiveMatches(leagueId);
@@ -1236,9 +1236,9 @@ async function handleLeagueLiveCallback(data, chatId, userId, redis, services) {
     const limited = matches.slice(0, 5);
     
     // Build match cards with premium formatting
-    const matchCards = limited.map((m, i) => premiumUI.buildMatchCard(m, subscription.tier, leagueId, i)).join('\n\n');
+    const matchCards = limited.map((m, i) => buildMatchCard(m, subscription.tier, leagueId, i)).join('\n\n');
     
-    const header = brandingUtils.generateBetrixHeader(subscription.tier);
+    const header = generateBetrixHeader(userId, subscription.tier);
     const matchText = `${header}\n\n🏟️ *Live Matches*\n\n${matchCards}`;
 
     // Build keyboard with analysis and favorite buttons
@@ -1405,14 +1405,14 @@ async function handleAnalyzeMatch(data, chatId, userId, redis, services) {
     const idx = Number(parts[3] || 0);
 
     if (!services || !services.sportsAggregator) {
-      const errorText = brandingUtils.formatBetrixError('service_error', 'Analysis service unavailable');
+      const errorText = formatBetrixError('service_error', 'Analysis service unavailable');
       return { method: 'sendMessage', chat_id: chatId, text: errorText, parse_mode: 'Markdown' };
     }
 
     const matches = await services.sportsAggregator.getLiveMatches(leagueId).catch(() => []);
     const m = matches && matches[idx] ? matches[idx] : null;
     if (!m) {
-      const errorText = brandingUtils.formatBetrixError('not_found', 'Match not found for analysis');
+      const errorText = formatBetrixError('not_found', 'Match not found for analysis');
       return { method: 'sendMessage', chat_id: chatId, text: errorText, parse_mode: 'Markdown' };
     }
 
@@ -1426,13 +1426,13 @@ async function handleAnalyzeMatch(data, chatId, userId, redis, services) {
       const analysis = await advancedAnalysis.analyzeMatch(m, {}, {});
       
       // Build header with BETRIX branding
-      const header = brandingUtils.generateBetrixHeader(subscription.tier);
+      const header = generateBetrixHeader(userId, subscription.tier);
       
       // 🎯 USE PREMIUM UI BUILDER
-      const betAnalysis = premiumUI.buildBetAnalysis(analysis, subscription.tier);
+      const betAnalysis = buildBetAnalysis(analysis, subscription.tier);
       
       // Build action buttons based on subscription
-      const actionButtons = premiumUI.buildMatchActionButtons(subscription.tier, leagueId, idx);
+      const actionButtons = buildActionButtons(subscription.tier, leagueId, idx);
       
       // Build complete response with branding
       let formatted = `${header}\n\n`;
@@ -1440,7 +1440,7 @@ async function handleAnalyzeMatch(data, chatId, userId, redis, services) {
       formatted += `Score: ${m.score || 'N/A'} | Time: ${m.time || 'N/A'}\n\n`;
       formatted += betAnalysis;
       formatted += `\n\n${actionButtons}`;
-      formatted += `\n\n${brandingUtils.generateBetrixFooter()}`;
+      formatted += `\n\n${generateBetrixFooter()}`;
 
       // Upgrade prompt for FREE tier if analysis is premium
       if (subscription.tier === 'FREE' && analysis.confidence > 75) {
@@ -2104,7 +2104,7 @@ async function handleSportCallback(data, chatId, userId, redis, services) {
     // 🎯 TRY FIXTURES MANAGER FIRST
     let leagues = [];
     try {
-      leagues = await fixturesManager.getLeagueFixtures(sportKey);
+      leagues = await getLeagueFixtures(sportKey);
       if (leagues && leagues.length > 0) {
         leagues = leagues.slice(0, 8).map(l => ({
           id: l.id || l.league?.id || '0',
@@ -2178,8 +2178,8 @@ async function handleSubscriptionCallback(data, chatId, userId, redis, services)
     if (data === 'sub_manage') {
       const subscription = await getUserSubscription(redis, userId);
       // 🎯 USE BETRIX BRANDING FOR SUBSCRIPTION DISPLAY
-      const header = brandingUtils.generateBetrixHeader(subscription.tier);
-      const comparison = premiumUI.buildSubscriptionComparison(subscription.tier);
+      const header = generateBetrixHeader(userId, subscription.tier);
+      const comparison = buildSubscriptionComparison(subscription.tier);
       const text = `${header}\n\n${comparison}`;
       
       return {
@@ -2350,7 +2350,7 @@ async function handleProfileCallback(data, chatId, userId, redis) {
       const sub = await getUserSubscription(redis, userId);
       
       // 🎯 USE BETRIX BRANDING FOR PROFILE
-      const header = brandingUtils.generateBetrixHeader(sub.tier);
+      const header = generateBetrixHeader(userId, sub.tier);
       const profileText = formatProfile({
         name: (user && user.name) || 'BETRIX User',
         tier: sub.tier || 'FREE',
@@ -2379,7 +2379,7 @@ async function handleProfileCallback(data, chatId, userId, redis) {
         ? `Recent bets:\n${bets.map((b, i) => `${i + 1}. ${b}`).join('\n')}`
         : 'No bets placed yet. Start by selecting a match!';
       
-      const header = brandingUtils.generateBetrixHeader('FREE');
+      const header = generateBetrixHeader(userId, 'FREE');
       return {
         method: 'editMessageText',
         chat_id: chatId,
@@ -2396,7 +2396,7 @@ async function handleProfileCallback(data, chatId, userId, redis) {
         ? `Your favorite teams:\n${favs.map((f, i) => `${i + 1}. ${f}`).join('\n')}`
         : 'No favorites yet. Add teams to track them!';
       
-      const header = brandingUtils.generateBetrixHeader('FREE');
+      const header = generateBetrixHeader(userId, 'FREE');
       return {
         method: 'editMessageText',
         chat_id: chatId,
@@ -2745,4 +2745,3 @@ export default {
   handleCommand,
   handleNaturalLanguage
 };
-

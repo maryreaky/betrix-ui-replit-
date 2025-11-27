@@ -2178,8 +2178,8 @@ async function handleSubscriptionCallback(data, chatId, userId, redis, services)
     if (data === 'sub_manage') {
       const subscription = await getUserSubscription(redis, userId);
       // 🎯 USE BETRIX BRANDING FOR SUBSCRIPTION DISPLAY
-      const header = brandingUtils.generateBetrixHeader(subscription.tier);
-      const comparison = premiumUI.buildSubscriptionComparison(subscription.tier);
+      const header = generateBetrixHeader(userId, subscription.tier);
+      const comparison = buildSubscriptionComparison(subscription.tier);
       const text = `${header}\n\n${comparison}`;
       
       return {
@@ -2350,7 +2350,7 @@ async function handleProfileCallback(data, chatId, userId, redis) {
       const sub = await getUserSubscription(redis, userId);
       
       // 🎯 USE BETRIX BRANDING FOR PROFILE
-      const header = brandingUtils.generateBetrixHeader(sub.tier);
+      const header = generateBetrixHeader(userId, sub.tier);
       const profileText = formatProfile({
         name: (user && user.name) || 'BETRIX User',
         tier: sub.tier || 'FREE',
@@ -2379,7 +2379,7 @@ async function handleProfileCallback(data, chatId, userId, redis) {
         ? `Recent bets:\n${bets.map((b, i) => `${i + 1}. ${b}`).join('\n')}`
         : 'No bets placed yet. Start by selecting a match!';
       
-      const header = brandingUtils.generateBetrixHeader('FREE');
+      const header = generateBetrixHeader(userId, 'FREE');
       return {
         method: 'editMessageText',
         chat_id: chatId,
@@ -2396,7 +2396,7 @@ async function handleProfileCallback(data, chatId, userId, redis) {
         ? `Your favorite teams:\n${favs.map((f, i) => `${i + 1}. ${f}`).join('\n')}`
         : 'No favorites yet. Add teams to track them!';
       
-      const header = brandingUtils.generateBetrixHeader('FREE');
+      const header = generateBetrixHeader(userId, 'FREE');
       return {
         method: 'editMessageText',
         chat_id: chatId,
@@ -2745,4 +2745,3 @@ export default {
   handleCommand,
   handleNaturalLanguage
 };
-
