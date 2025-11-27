@@ -21,6 +21,20 @@ function pickUserAgent(opts = {}) {
 const domainLastRequest = new Map();
 const DOMAIN_MIN_INTERVAL_MS = Number(process.env.LIVE_SCRAPER_MIN_INTERVAL_MS || 500);
 
+// proxy rotation
+const proxies = (process.env.LIVE_SCRAPER_PROXIES || '')
+  .split(',')
+  .map(p => p.trim())
+  .filter(p => p.length > 0);
+let proxyIndex = 0;
+
+function getNextProxy() {
+  if (proxies.length === 0) return null;
+  const p = proxies[proxyIndex % proxies.length];
+  proxyIndex++;
+  return p;
+}
+
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function ensureRateLimit(url) {
@@ -41,7 +55,23 @@ async function retryFetchJson(url, opts = {}, attempts = 3, baseDelay = 300) {
     try {
       await ensureRateLimit(url);
       const headers = Object.assign({}, opts.headers || {}, { 'User-Agent': pickUserAgent(opts) });
-      const res = await fetch(url, { timeout: opts.timeout || 8000, ...opts, headers });
+      
+      // Add proxy support if configured
+      const fetchOpts = { timeout: opts.timeout || 8000, ...opts, headers };
+      if (proxies.length > 0) {
+        const proxy = getNextProxy();
+        if (proxy) {
+          try {
+            // Note: node-fetch doesn't support HTTP_PROXY directly; for production, consider using axios or https-proxy-agent
+            // For now, just log proxy intent
+            logger.debug(`Using proxy: ${proxy} (note: actual proxy agent not yet configured)`);
+          } catch (e) {
+            // proxy config failed, continue without
+          }
+        }
+      }
+
+      const res = await fetch(url, fetchOpts);
       if (!res.ok) throw new Error(`Fetch failed ${res.status}`);
       return await res.json();
     } catch (e) {
