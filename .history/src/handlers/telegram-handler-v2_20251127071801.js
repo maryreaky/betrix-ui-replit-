@@ -542,36 +542,10 @@ async function handleOdds(chatId, userId, redis, services, query = {}) {
  */
 async function handleStandings(chatId, userId, redis, services, query = {}) {
   try {
-    const { openLiga, sportMonks, sportsData } = services;
+    const { openLiga } = services;
 
     let standingsRaw = [];
-    
-    // Try SportMonks for standings data
-    if (sportMonks && sportMonks.enabled) {
-      try {
-        const leagueId = query.leagueId || 501; // Premier League default
-        const standings = await sportMonks.getStandings(leagueId).catch(() => []);
-        standingsRaw = standingsRaw.concat(standings || []);
-        logger.info(`Fetched standings from SportMonks (league: ${leagueId})`);
-      } catch (e) {
-        logger.warn('Failed to fetch standings from SportMonks', e.message);
-      }
-    }
-
-    // Try SportsData.io for alternative standings
-    if (sportsData && sportsData.enabled && standingsRaw.length === 0) {
-      try {
-        const competitionId = query.competitionId || 1; // Default competition ID
-        const standings = await sportsData.getStandings(competitionId).catch(() => []);
-        standingsRaw = standingsRaw.concat(standings || []);
-        logger.info(`Fetched standings from SportsData (competition: ${competitionId})`);
-      } catch (e) {
-        logger.warn('Failed to fetch standings from SportsData', e.message);
-      }
-    }
-
-    // Fall back to OpenLiga
-    if (openLiga && standingsRaw.length === 0) {
+    if (openLiga) {
       try {
         const league = query.league || 'BL1';
         standingsRaw = await openLiga.getStandings(league) || [];
@@ -581,15 +555,12 @@ async function handleStandings(chatId, userId, redis, services, query = {}) {
     }
 
     const standings = normalizeStandingsOpenLiga(standingsRaw || []);
-    
-    // Only use demo if absolutely no data
-    const finalStandings = (standings && standings.length) ? standings : [
-      { name: 'Manchester City', played: 30, won: 24, drawn: 4, lost: 2, goalDiff: 58, points: 76 },
-      { name: 'Arsenal', played: 30, won: 22, drawn: 4, lost: 4, goalDiff: 48, points: 70 },
-      { name: 'Liverpool', played: 30, won: 20, drawn: 6, lost: 4, goalDiff: 42, points: 66 },
-      { name: 'Manchester United', played: 30, won: 18, drawn: 5, lost: 7, goalDiff: 28, points: 59 },
-      { name: 'Newcastle United', played: 30, won: 17, drawn: 6, lost: 7, goalDiff: 25, points: 57 }
-    ];
+    // Demo fallback for standings when providers missing
+    const enableDemo = process.env.ENABLE_DEMO === '1' || process.env.NODE_ENV !== 'production';
+    const finalStandings = (standings && standings.length) ? standings : (enableDemo ? [
+      { name: 'Home FC', played: 12, won: 8, drawn: 2, lost: 2, goalDiff: 12, points: 26 },
+      { name: 'Away United', played: 12, won: 7, drawn: 3, lost: 2, goalDiff: 8, points: 24 }
+    ] : []);
 
     const response = formatStandings(query.league || 'Premier League', finalStandings);
 
