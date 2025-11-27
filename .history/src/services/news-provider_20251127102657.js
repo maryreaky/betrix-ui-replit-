@@ -36,27 +36,13 @@ export async function getNewsHeadlines({ query = 'football', max = 10 } = {}) {
 }
 
 export async function getRedditHeadlines({ subreddit = 'soccer', max = 10 } = {}) {
-  const headers = { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) BetrixBot/1.0' };
-  const urls = [
-    `https://www.reddit.com/r/${encodeURIComponent(subreddit)}/.rss`,
-    `https://old.reddit.com/r/${encodeURIComponent(subreddit)}/.rss`
-  ];
-
-  let lastErr = null;
-  for (const url of urls) {
-    try {
-      const res = await fetch(url, { timeout: 10000, headers });
-      if (!res.ok) {
-        lastErr = new Error(`Reddit RSS fetch failed: ${res.status} ${res.statusText}`);
-        continue;
-      }
-      const rss = await res.text();
-      const items = parseRssItems(rss, max);
-      return items;
-    } catch (e) {
-      lastErr = e;
-      continue;
-    }
+  const url = `https://www.reddit.com/r/${encodeURIComponent(subreddit)}/.rss`;
+  const res = await fetch(url, { timeout: 10000, headers: { 'User-Agent': 'betrix-bot/1.0 (+https://example.com)' } });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Reddit RSS fetch failed: ${res.status} ${res.statusText} - ${text.slice(0,200)}`);
   }
-  throw lastErr || new Error('Reddit RSS fetch failed');
+  const rss = await res.text();
+  const items = parseRssItems(rss, max);
+  return items;
 }

@@ -48,11 +48,6 @@ try {
   process.exit(1);
 }
 
-// If REDIS_URL is not provided in env, allow using an explicit fallback (use with caution)
-if (!process.env.REDIS_URL && typeof process !== 'undefined') {
-  // No-op: leave to env. You can set REDIS_URL externally to avoid embedding secrets in code.
-}
-
 const redis = new Redis(CONFIG.REDIS_URL);
 redis.on("error", err => logger.error("Redis error", err));
 redis.on("connect", () => logger.info("✅ Redis connected"));

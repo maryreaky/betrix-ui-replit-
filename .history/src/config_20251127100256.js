@@ -166,20 +166,12 @@ const CONFIG = {
     SOFASCORE: { enabled: process.env.PROVIDER_SOFASCORE_ENABLED !== 'false', priority: 5 },
     ALLSPORTS: { enabled: process.env.PROVIDER_ALLSPORTS_ENABLED !== 'false', priority: 6 },
     ESPN: { enabled: process.env.PROVIDER_ESPN_ENABLED !== 'false', priority: 7 },
-    CLAUDE: { enabled: process.env.PROVIDER_CLAUDE_ENABLED !== 'false', priority: 0 }
   },
 
   // Provider diagnostics (Redis key prefix)
   DIAGNOSTICS: {
     PREFIX: 'betrix:provider:health:',
     TTL: 3600, // 1 hour
-  },
-  // Claude (Anthropic) Haiku model
-  CLAUDE: {
-    ENABLED: process.env.CLAUDE_HAIKU_ENABLED !== 'false',
-    API_KEY: process.env.CLAUDE_API_KEY || process.env.CLAUDE_HAIKU_KEY || null,
-    MODEL: process.env.CLAUDE_HAIKU_MODEL || 'claude-haiku-4.5',
-    TIMEOUT_MS: Number(process.env.CLAUDE_TIMEOUT_MS || 15000)
   },
 };
 

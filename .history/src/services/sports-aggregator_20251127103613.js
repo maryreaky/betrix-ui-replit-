@@ -290,28 +290,8 @@ export class SportsAggregator {
           await this._recordProviderHealth('scorebat', false, e.message);
         }
       }
-      
-      // Priority 8: OpenLigaDB (public) for supported leagues
-      if (await this._isProviderEnabled('OPENLIGADB') && this.openLiga) {
-        try {
-          const league = LEAGUE_MAPPINGS[String(leagueId)];
-          if (league && league.country && league.country.toLowerCase().includes('germany')) {
-            const year = new Date().getFullYear();
-            const recent = await this.openLiga.getRecentMatches(league.code || league.name, year).catch(() => []);
-            if (recent && recent.length > 0) {
-              const mapped = recent.slice(0, 10).map(m => ({ provider: 'openligadb', raw: m }));
-              this._setCached(cacheKey, mapped);
-              await this._recordProviderHealth('openligadb', true, `Found ${mapped.length} recent matches`);
-              return this._formatMatches(mapped, 'openligadb');
-            }
-          }
-        } catch (e) {
-          logger.warn('OpenLigaDB live fetch failed', e.message);
-          await this._recordProviderHealth('openligadb', false, e.message);
-        }
-      }
 
-      // Priority 9: ESPN (Public API, no registration required)
+      // Priority 8: ESPN (Public API, no registration required)
       if (await this._isProviderEnabled('ESPN')) {
         try {
           const espnMatches = await getEspnLiveMatches({ sport: 'football' });

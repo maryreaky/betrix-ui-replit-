@@ -48,11 +48,6 @@ try {
   process.exit(1);
 }
 
-// If REDIS_URL is not provided in env, allow using an explicit fallback (use with caution)
-if (!process.env.REDIS_URL && typeof process !== 'undefined') {
-  // No-op: leave to env. You can set REDIS_URL externally to avoid embedding secrets in code.
-}
-
 const redis = new Redis(CONFIG.REDIS_URL);
 redis.on("error", err => logger.error("Redis error", err));
 redis.on("connect", () => logger.info("✅ Redis connected"));
@@ -91,7 +86,7 @@ const rssAggregator = new RSSAggregator(cache, { ttlSeconds: 60 });
 const footballDataService = new FootballDataService();
 const scorebatService = new ScoreBatService(process.env.SCOREBAT_TOKEN || null);
 const scrapers = new Scrapers(redis);
-const sportsAggregator = new SportsAggregator(redis, { scorebat: scorebatService, rss: rssAggregator, openLiga });
+const sportsAggregator = new SportsAggregator(redis);
 const oddsAnalyzer = new OddsAnalyzer(redis, sportsAggregator, null);
 const multiSportAnalyzer = new MultiSportAnalyzer(redis, sportsAggregator, null);
 const sportMonksAPI = new SportMonksAPI();

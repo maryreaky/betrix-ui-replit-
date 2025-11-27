@@ -166,7 +166,6 @@ const CONFIG = {
     SOFASCORE: { enabled: process.env.PROVIDER_SOFASCORE_ENABLED !== 'false', priority: 5 },
     ALLSPORTS: { enabled: process.env.PROVIDER_ALLSPORTS_ENABLED !== 'false', priority: 6 },
     ESPN: { enabled: process.env.PROVIDER_ESPN_ENABLED !== 'false', priority: 7 },
-    CLAUDE: { enabled: process.env.PROVIDER_CLAUDE_ENABLED !== 'false', priority: 0 }
   },
 
   // Provider diagnostics (Redis key prefix)

@@ -75,23 +75,6 @@ export class SportsAggregator {
     }
   }
 
-  // Check if a provider is enabled: checks CONFIG.PROVIDERS then optional Redis override
-  async _isProviderEnabled(name) {
-    try {
-      const cfg = (CONFIG.PROVIDERS && CONFIG.PROVIDERS[name]) || null;
-      let enabled = cfg ? (cfg.enabled !== false) : true;
-      if (this.redis) {
-        const key = `betrix:provider:enabled:${name.toLowerCase()}`;
-        const v = await this.redis.get(key).catch(() => null);
-        if (v === 'true') enabled = true;
-        if (v === 'false') enabled = false;
-      }
-      return Boolean(enabled);
-    } catch (e) {
-      return true;
-    }
-  }
-
   /**
    * Get all available leagues
    */
@@ -237,7 +220,7 @@ export class SportsAggregator {
       }
 
       // Priority 6: AllSports API
-      if (await this._isProviderEnabled('ALLSPORTS') && CONFIG.ALLSPORTS.KEY) {
+      if (CONFIG.ALLSPORTS.KEY) {
         try {
           matches = await this._getLiveFromAllSports();
           if (matches.length > 0) {
@@ -252,16 +235,10 @@ export class SportsAggregator {
         }
       }
 
-      // Priority 7: ScoreBat free highlights/feed (no API key required)
-      if (await this._isProviderEnabled('SCOREBAT') && this.scorebat) {
+      // Priority 7: ScoreBat free highlights/feed (no API key required for free feed)
+      if (this.scorebat) {
         try {
-          let sb = null;
-          try {
-            sb = await this.scorebat.freeFeed();
-          } catch (err) {
-            // freeFeed may be region-limited; try featured as fallback
-            sb = await this.scorebat.featured().catch(() => null);
-          }
+          const sb = await this.scorebat.freeFeed();
           const items = (sb && (sb.response || sb)) || sb;
           if (items && items.length > 0) {
             // map ScoreBat entries to minimal match objects
@@ -290,41 +267,19 @@ export class SportsAggregator {
           await this._recordProviderHealth('scorebat', false, e.message);
         }
       }
-      
-      // Priority 8: OpenLigaDB (public) for supported leagues
-      if (await this._isProviderEnabled('OPENLIGADB') && this.openLiga) {
-        try {
-          const league = LEAGUE_MAPPINGS[String(leagueId)];
-          if (league && league.country && league.country.toLowerCase().includes('germany')) {
-            const year = new Date().getFullYear();
-            const recent = await this.openLiga.getRecentMatches(league.code || league.name, year).catch(() => []);
-            if (recent && recent.length > 0) {
-              const mapped = recent.slice(0, 10).map(m => ({ provider: 'openligadb', raw: m }));
-              this._setCached(cacheKey, mapped);
-              await this._recordProviderHealth('openligadb', true, `Found ${mapped.length} recent matches`);
-              return this._formatMatches(mapped, 'openligadb');
-            }
-          }
-        } catch (e) {
-          logger.warn('OpenLigaDB live fetch failed', e.message);
-          await this._recordProviderHealth('openligadb', false, e.message);
-        }
-      }
 
-      // Priority 9: ESPN (Public API, no registration required)
-      if (await this._isProviderEnabled('ESPN')) {
-        try {
-          const espnMatches = await getEspnLiveMatches({ sport: 'football' });
-          if (espnMatches && espnMatches.length > 0) {
-            logger.info(`✅ ESPN: Found ${espnMatches.length} live matches`);
-            this._setCached(cacheKey, espnMatches);
-            await this._recordProviderHealth('espn', true, `Found ${espnMatches.length} live matches`);
-            return this._formatMatches(espnMatches, 'espn');
-          }
-        } catch (e) {
-          logger.warn('ESPN live matches failed', e.message);
-          await this._recordProviderHealth('espn', false, e.message);
+      // Priority 7: ESPN (Public API, no registration required)
+      try {
+        const espnMatches = await getEspnLiveMatches({ sport: 'football' });
+        if (espnMatches && espnMatches.length > 0) {
+          logger.info(`✅ ESPN: Found ${espnMatches.length} live matches`);
+          this._setCached(cacheKey, espnMatches);
+          await this._recordProviderHealth('espn', true, `Found ${espnMatches.length} live matches`);
+          return this._formatMatches(espnMatches, 'espn');
         }
+      } catch (e) {
+        logger.warn('ESPN live matches failed', e.message);
+        await this._recordProviderHealth('espn', false, e.message);
       }
 
       // Fallback to demo data
