@@ -239,6 +239,31 @@ try {
     } catch (e) { logger.warn('Failed reactive prefetch action', e?.message || String(e)); }
   });
 } catch (e) { logger.warn('Prefetch subscriber failed to start', e?.message || String(e)); }
+// Inject Redis into v2 handler for telemetry wiring
+if (typeof v2Handler.setTelemetryRedis === 'function') {
+  v2Handler.setTelemetryRedis(redis);
+  logger.info('✅ Telemetry Redis injected into v2Handler');
+}
+
+// Setup callback telemetry alerts (sends admin message if truncation threshold exceeded)
+setInterval(async () => {
+  try {
+    const truncCount = await redis.get('betrix:telemetry:callback_truncated_outgoing');
+    const repOdds = await redis.get('betrix:telemetry:callback_repetition_odds');
+    if ((Number(truncCount) || 0) > 10 || (Number(repOdds) || 0) > 5) {
+      const adminId = CONFIG.TELEGRAM && CONFIG.TELEGRAM.ADMIN_ID ? Number(CONFIG.TELEGRAM.ADMIN_ID) : null;
+      if (adminId && telegram) {
+        const msg = `⚠️ *Callback Telemetry Alert*\n\nTruncated outgoing: ${truncCount || 0}\nRepetition (odds): ${repOdds || 0}\n\nCheck samples: betrix:telemetry:callback_truncated_samples`;
+        await telegram.sendMessage(adminId, msg, { parse_mode: 'Markdown' }).catch(() => {});
+      }
+      await redis.set('betrix:telemetry:callback_truncated_outgoing', '0');
+      await redis.set('betrix:telemetry:callback_repetition_odds', '0');
+    }
+  } catch (e) {
+    logger.warn('Callback telemetry alert check failed', e?.message || String(e));
+  }
+}, 60 * 1000);
+
 const advancedHandler = new AdvancedHandler(basicHandlers, redis, telegram, userService, ai);
 const premiumService = new PremiumService(redis, ai);
 const adminDashboard = new AdminDashboard(redis, telegram, analytics);
