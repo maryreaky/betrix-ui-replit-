@@ -324,6 +324,15 @@ async function handleAnalyze(userId, chatId, redis, services, params) {
     };
   }
 
+  // If no analysis services available, and user requested an analysis, return a clear error message
+  if (!services || (!services.oddsAnalyzer && !services.apiFootball && !services.openLiga && !services.multiSportAnalyzer)) {
+    return {
+      chat_id: chatId,
+      text: '❌ Failed to analyze: required analysis services are not available. Please try again later.',
+      parse_mode: 'Markdown'
+    };
+  }
+
   try {
     // Parse team names from query (format: "Team1 vs Team2")
     const teams = query.split(/\s+vs\s+|vs\s+|\svs\s+/i);
@@ -337,6 +346,15 @@ async function handleAnalyze(userId, chatId, redis, services, params) {
 
     const homeTeam = teams[0].trim();
     const awayTeam = teams[1].trim();
+
+    // If no analysis services available, return a clear error message
+    if (!services || (!services.oddsAnalyzer && !services.apiFootball && !services.openLiga && !services.multiSportAnalyzer)) {
+      return {
+        chat_id: chatId,
+        text: '❌ Failed to analyze: required analysis services are not available. Please try again later.',
+        parse_mode: 'Markdown'
+      };
+    }
 
     // Use OddsAnalyzer for comprehensive match analysis
     if (services.oddsAnalyzer) {

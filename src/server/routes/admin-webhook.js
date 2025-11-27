@@ -19,8 +19,7 @@ router.post('/webhook/set', async (req, res) => {
   }
 
   const botToken = process.env.TELEGRAM_BOT_TOKEN;
-  const webhookUrl = process.env.WEBHOOK_URL ||
-    ${process.env.PROTOCOL || 'https'}:///webhook/telegram;
+  const webhookUrl = process.env.WEBHOOK_URL || `${process.env.PROTOCOL || 'https'}://${process.env.HOST || 'localhost'}${process.env.PORT ? `:${process.env.PORT}` : ''}/webhook/telegram`;
 
   if (!botToken || !webhookUrl) {
     return res.status(400).json({
@@ -35,7 +34,7 @@ router.post('/webhook/set', async (req, res) => {
 
   const options = {
     hostname: 'api.telegram.org',
-    path: /bot/setWebhook,
+    path: `/bot${botToken}/setWebhook`,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) },
     timeout: 15000

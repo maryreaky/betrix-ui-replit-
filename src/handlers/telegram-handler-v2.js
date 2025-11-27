@@ -18,63 +18,6 @@ import {
   formatNaturalResponse,
   formatUpgradePrompt
 } from './menu-handler.js';
-import {
-  parseMessage,
-  intentToCommand,
-  extractQuery
-} from './nl-parser.js';
-import {
-  getUserSubscription,
-  canAccessFeature,
-  formatSubscriptionDetails,
-  TIERS
-} from './payment-handler.js';
-import {
-  getAvailablePaymentMethods,
-  createPaymentOrder,
-  generateSafaricomTillPayment,
-  getPaymentInstructions,
-  PAYMENT_PROVIDERS
-  , verifyAndActivatePayment
-} from './payment-router.js';
-
-const logger = new Logger('TelegramHandler');
-
-// -------------------------
-// Data normalization helpers
-// -------------------------
-function normalizeOpenLigaMatch(item) {
-  // OpenLigaDB match object -> { home, away, score, time, odds }
-  try {
-    const home = item.Team1?.TeamName || item.Team1?.name || (item.team1 && item.team1.name) || 'Home';
-    const away = item.Team2?.TeamName || item.Team2?.name || (item.team2 && item.team2.name) || 'Away';
-    const scoreHome = item.MatchResults && item.MatchResults[0] ? item.MatchResults[0].PointsTeam1 : (item.goals?.home ?? null);
-    const scoreAway = item.MatchResults && item.MatchResults[0] ? item.MatchResults[0].PointsTeam2 : (item.goals?.away ?? null);
-    const score = (scoreHome != null && scoreAway != null) ? `${scoreHome}-${scoreAway}` : null;
-    const time = item.MatchDateTime ? new Date(item.MatchDateTime).toLocaleTimeString() : (item.MatchIsFinished ? 'FT' : null);
-    return { home, away, score, time, odds: null };
-  } catch (e) {
-    return { home: 'Home', away: 'Away', score: null, time: null, odds: null };
-  }
-}
-
-function normalizeFootballDataFixture(fx) {
-  // footballData fixtures -> { home, away, homeOdds, drawOdds, awayOdds, prediction, value }
-  try {
-    const home = fx.home || fx.home_team || fx.teams?.home || fx.teams?.home?.name || fx.home?.name || 'Home';
-    const away = fx.away || fx.away_team || fx.teams?.away || fx.teams?.away?.name || fx.away?.name || 'Away';
-    // attempt to pick odds from common fields
-    const market = fx.odds || fx.bookmakers?.[0] || fx.markets?.[0] || {};
-    const values = market.values || market.bets?.[0]?.values || [];
-    const homeOdds = values[0]?.odd || fx.homeOdds || fx.odds?.home || '-';
-    const drawOdds = values[1]?.odd || fx.drawOdds || fx.odds?.draw || '-';
-    const awayOdds = values[2]?.odd || fx.awayOdds || fx.odds?.away || '-';
-    return { home, away, homeOdds, drawOdds, awayOdds, prediction: fx.prediction || null, value: fx.value || null };
-  } catch (e) {
-    return { home: 'Home', away: 'Away', homeOdds: '-', drawOdds: '-', awayOdds: '-', prediction: null, value: null };
-  }
-}
-
 function normalizeApiFootballFixture(fx) {
   // api-football fixture shape -> { home, away, homeOdds, drawOdds, awayOdds }
   try {
@@ -946,57 +889,6 @@ async function handleLeagueStandingsCallback(data, chatId, userId, redis, servic
   }
 }
 
-async function handleLeagueLiveCallback(data, chatId, userId, redis, services) {
-  const leagueId = data.replace('league_live_', '');
-  try {
-    let fixtures = [];
-    if (services && services.apiFootball && typeof services.apiFootball.getFixturesByLeague === 'function') {
-      const res = await services.apiFootball.getFixturesByLeague(leagueId, { live: true });
-      fixtures = res?.response || [];
-    }
-
-    const games = (fixtures || []).map(f => ({
-      id: f.fixture?.id || f.id || f.fixture_id || null,
-      home: f.teams?.home?.name || f.home || 'Home',
-      away: f.teams?.away?.name || f.away || 'Away',
-      status: f.fixture?.status?.short || f.status || 'LIVE',
-      minute: f.fixture?.status?.elapsed || null,
-      score: (f.goals || f.score) ? { home: f.goals?.home ?? f.score?.fulltime?.home ?? null, away: f.goals?.away ?? f.score?.fulltime?.away ?? null } : null
-    }));
-
-    const responseText = formatLiveGames(games, 'League');
-
-    // Build inline keyboard with quick bet buttons for top 3 fixtures
-    const keyboard = [];
-    for (let i = 0; i < Math.min(games.length, 3); i++) {
-      const f = games[i];
-      if (f && f.id) {
-        keyboard.push([{ text: `Quick Bet: ${f.home} vs ${f.away}`, callback_data: `bet_fixture_${f.id}` }]);
-      }
-    }
-    keyboard.push([{ text: '🔙 Back', callback_data: 'menu_main' }]);
-
-    return {
-      method: 'editMessageText',
-      chat_id: chatId,
-      message_id: undefined,
-      text: responseText,
-      parse_mode: 'Markdown',
-      reply_markup: { inline_keyboard: keyboard }
-    };
-  } catch (err) {
-    logger.warn('handleLeagueLiveCallback failed', err);
-    return {
-      method: 'editMessageText',
-      chat_id: chatId,
-      message_id: undefined,
-      text: `Unable to fetch live matches for league ${leagueId}`,
-      parse_mode: 'Markdown'
-    };
-  }
-}
-
-// ----------------------
 // Betslip helpers
 // ----------------------
 async function createBetslip(redis, userId, fixtureId, fixtureText) {
