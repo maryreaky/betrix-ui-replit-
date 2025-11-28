@@ -160,7 +160,7 @@ export class SportsAggregator {
   }
 
   /**
-   * Get live matches for a league
+   * Get live matches for a league - STATPAL ONLY
    */
   async getLiveMatches(leagueId, options = {}) {
     try {
@@ -172,306 +172,46 @@ export class SportsAggregator {
         }
       }
 
-      let matches = [];
+      if (!CONFIG.STATPAL.KEY) {
+        logger.error('❌ StatPal API Key (STATPAL_API env var) not configured');
+        return [];
+      }
 
-      // Priority 0: StatPal (All Sports Data) - PRIMARY COMPREHENSIVE SOURCE 🌟
-      if (CONFIG.STATPAL.KEY) {
-        if (await this.providerHealth.isDisabled('statpal-live')) {
-          logger.info('Skipping StatPal: provider marked disabled by health helper');
+      if (await this.providerHealth.isDisabled('statpal-live')) {
+        logger.warn('⚠️  StatPal provider currently disabled');
+        return [];
+      }
+
+      try {
+        logger.debug(`📡 Fetching live matches from StatPal for league ${leagueId}`);
+        const statpalData = await this.statpal.getLiveScores('soccer', 'v1');
+        
+        if (!statpalData) {
+          logger.warn('⚠️  StatPal returned null data');
+          return [];
+        }
+
+        let matches = Array.isArray(statpalData) ? statpalData : (statpalData.data || statpalData.matches || []);
+        
+        if (matches.length > 0) {
+          logger.info(`✅ StatPal: Found ${matches.length} live matches (soccer)`);
+          this._setCached(cacheKey, matches);
+          await this._recordProviderHealth('statpal', true, `Found ${matches.length} live matches`);
+          return this._formatMatches(matches, 'statpal');
         } else {
-          try {
-            const statpalData = await this.statpal.getLiveScores('soccer', 'v1');
-            if (statpalData && statpalData.length > 0) {
-              matches = Array.isArray(statpalData) ? statpalData : (statpalData.data || []);
-              if (matches.length > 0) {
-                logger.info(`✅ StatPal: Found ${matches.length} live matches (soccer)`);
-                this._setCached(cacheKey, matches);
-                await this._recordProviderHealth('statpal', true, `Found ${matches.length} live matches`);
-                return this._formatMatches(matches, 'statpal');
-              }
-            }
-          } catch (e) {
-            logger.warn('StatPal live matches failed', e.message);
-            await this._recordProviderHealth('statpal', false, e.message);
-            try { await this.providerHealth.markFailure('statpal-live', e.statusCode || e.status || 500, e.message); } catch(e2) {}
-          }
+          logger.warn('⚠️  StatPal returned empty match list');
+          return [];
         }
+      } catch (e) {
+        logger.error(`❌ StatPal live matches error: ${e.message}`);
+        await this._recordProviderHealth('statpal', false, e.message);
+        try { 
+          await this.providerHealth.markFailure('statpal-live', e.statusCode || e.status || 500, e.message); 
+        } catch(e2) {}
+        return [];
       }
-
-      // Priority 1: API-Sports (API-Football) - Primary source (PROVEN WORKING ✅)
-      if (CONFIG.API_FOOTBALL.KEY) {
-        try {
-          matches = await this._getLiveFromApiSports(leagueId);
-          if (matches.length > 0) {
-            logger.info(`✅ API-Sports: Found ${matches.length} live matches`);
-            this._setCached(cacheKey, matches);
-            await this._recordProviderHealth('api-sports', true, `Found ${matches.length} live matches`);
-            return this._formatMatches(matches, 'api-sports');
-          }
-        } catch (e) {
-          logger.warn('API-Sports live matches failed', e.message);
-          await this._recordProviderHealth('api-sports', false, e.message);
-        }
-      }
-
-      // Priority 2: Football-Data.org - Secondary source (needs proper auth headers)
-      if (CONFIG.FOOTBALLDATA.KEY) {
-        if (await this.providerHealth.isDisabled('football-data')) {
-          logger.info('Skipping Football-Data: provider marked disabled by health helper');
-        } else {
-        try {
-          matches = await this._getLiveFromFootballData(leagueId);
-          if (matches.length > 0) {
-            logger.info(`✅ Football-Data: Found ${matches.length} live matches`);
-            this._setCached(cacheKey, matches);
-            await this._recordProviderHealth('football-data', true, `Found ${matches.length} live matches`);
-            return this._formatMatches(matches, 'football-data');
-          }
-        } catch (e) {
-          logger.warn('Football-Data live matches failed', e.message);
-          await this._recordProviderHealth('football-data', false, e.message);
-          try { await this.providerHealth.markFailure('football-data', e.status || e.statusCode || e.code || 0, e.message); } catch(e2) {}
-        }
-        }
-      }
-
-      // Priority 3: SportsData.io (HTTP 404 errors - needs endpoint verification)
-      if (CONFIG.SPORTSDATA.KEY) {
-        if (await this.providerHealth.isDisabled('sportsdata')) {
-          logger.info('Skipping SportsData.io: provider marked disabled by health helper');
-        } else {
-        try {
-          matches = await this._getLiveFromSportsData();
-          if (matches.length > 0) {
-            logger.info(`✅ SportsData.io: Found ${matches.length} live matches`);
-            this._setCached(cacheKey, matches);
-            await this._recordProviderHealth('sportsdata', true, `Found ${matches.length} live matches`);
-            return this._formatMatches(matches, 'sportsdata');
-          }
-        } catch (e) {
-          logger.warn('SportsData.io live matches failed', e.message);
-          await this._recordProviderHealth('sportsdata', false, e.message);
-          try { await this.providerHealth.markFailure('sportsdata', e.status || e.statusCode || e.code || 0, e.message); } catch(e2) {}
-        }
-        }
-      }
-
-      // Priority 4: SportsMonks (certificate hostname mismatch - needs TLS config)
-      if (CONFIG.SPORTSMONKS.KEY) {
-        if (await this.providerHealth.isDisabled('sportsmonks')) {
-          logger.info('Skipping SportsMonks: provider marked disabled by health helper');
-        } else {
-        try {
-          matches = await this._getLiveFromSportsMonks();
-          if (matches.length > 0) {
-            logger.info(`✅ SportsMonks: Found ${matches.length} live matches`);
-            this._setCached(cacheKey, matches);
-            await this._recordProviderHealth('sportsmonks', true, `Found ${matches.length} live matches`);
-            return this._formatMatches(matches, 'sportsmonks');
-          }
-        } catch (e) {
-          logger.warn('SportsMonks live matches failed', e.message);
-          await this._recordProviderHealth('sportsmonks', false, e.message);
-          try { await this.providerHealth.markFailure('sportsmonks', e.status || e.statusCode || e.code || 0, e.message); } catch(e2) {}
-        }
-        }
-      }
-
-      // Priority 5: SofaScore - Real-time data
-      if (CONFIG.SOFASCORE.KEY) {
-        if (await this.providerHealth.isDisabled('sofascore')) {
-          logger.info('Skipping SofaScore: provider marked disabled by health helper');
-        } else {
-        try {
-          matches = await this._getLiveFromSofaScore();
-          if (matches.length > 0) {
-            logger.info(`✅ SofaScore: Found ${matches.length} live matches`);
-            this._setCached(cacheKey, matches);
-            await this._recordProviderHealth('sofascore', true, `Found ${matches.length} live matches`);
-            return this._formatMatches(matches, 'sofascore');
-          }
-        } catch (e) {
-          logger.warn('SofaScore live matches failed', e.message);
-          await this._recordProviderHealth('sofascore', false, e.message);
-          try { await this.providerHealth.markFailure('sofascore', e.status || e.statusCode || e.code || 0, e.message); } catch(e2) {}
-        }
-        }
-      }
-
-      // Priority 6: AllSports API
-      if (await this._isProviderEnabled('ALLSPORTS') && CONFIG.ALLSPORTS.KEY) {
-        if (await this.providerHealth.isDisabled('allsports')) {
-          logger.info('Skipping AllSports: provider marked disabled by health helper');
-        } else {
-        try {
-          matches = await this._getLiveFromAllSports();
-          if (matches.length > 0) {
-            logger.info(`✅ AllSports: Found ${matches.length} live matches`);
-            this._setCached(cacheKey, matches);
-            await this._recordProviderHealth('allsports', true, `Found ${matches.length} live matches`);
-            return this._formatMatches(matches, 'allsports');
-          }
-        } catch (e) {
-          logger.warn('AllSports live matches failed', e.message);
-          await this._recordProviderHealth('allsports', false, e.message);
-          try { await this.providerHealth.markFailure('allsports', e.status || e.statusCode || e.code || 0, e.message); } catch(e2) {}
-        }
-        }
-      }
-
-      // Priority 7: ScoreBat free highlights/feed (no API key required)
-      if (await this._isProviderEnabled('SCOREBAT') && this.scorebat) {
-        if (await this.providerHealth.isDisabled('scorebat')) {
-          logger.info('Skipping ScoreBat: provider marked disabled by health helper');
-        } else {
-        try {
-          let sb = null;
-          try {
-            sb = await this.scorebat.freeFeed();
-          } catch (err) {
-            // freeFeed may be region-limited; try featured as fallback
-            sb = await this.scorebat.featured().catch(() => null);
-          }
-          const items = (sb && (sb.response || sb)) || sb;
-            if (items && items.length > 0) {
-            // map ScoreBat entries to minimal match objects
-            const mapped = items.slice(0, 10).map(it => {
-              const title = it.title || it.match || it.videotitle || '';
-              const teams = title.split(' - ').map(s => s.trim());
-              const home = teams[0] || null;
-              const away = teams[1] || null;
-              return {
-                provider: 'scorebat',
-                title,
-                home,
-                away,
-                time: it.date || it.matchTime || null,
-                url: (it.videos && it.videos[0] && it.videos[0].embed) || it.url || null,
-                raw: it
-              };
-            });
-            // attempt to enrich with live stats where possible
-            let enriched = mapped;
-            try {
-              // telemetry: note attempt
-              if (this.redis) await this.redis.incr('betrix:telemetry:live_scraper:attempts');
-              enriched = await liveScraper.enrichMatchesWithLiveStats(mapped, { sport: 'football' });
-              if (this.redis) await this.redis.incr('betrix:telemetry:live_scraper:success');
-            } catch (e) {
-              logger.warn('ScoreBat enrichment failed', e?.message || e);
-              if (this.redis) await this.redis.incr('betrix:telemetry:live_scraper:fail');
-            }
-            logger.info(`✅ ScoreBat: Found ${enriched.length} feed entries`);
-            this._setCached(cacheKey, enriched);
-            await this._recordProviderHealth('scorebat', true, `Found ${enriched.length} feed entries`);
-            return this._formatMatches(enriched, 'scorebat');
-            }
-        } catch (e) {
-          logger.warn('ScoreBat feed failed', e.message);
-          await this._recordProviderHealth('scorebat', false, e.message);
-          try { await this.providerHealth.markFailure('scorebat', e.status || e.statusCode || e.code || 0, e.message); } catch(e2) {}
-        }
-        }
-      }
-      
-      // Priority 8: OpenLigaDB (public) for supported leagues
-      if (await this._isProviderEnabled('OPENLIGADB') && this.openLiga) {
-        try {
-          const league = LEAGUE_MAPPINGS[String(leagueId)];
-          if (league && league.country && league.country.toLowerCase().includes('germany')) {
-            const year = new Date().getFullYear();
-            const recent = await this.openLiga.getRecentMatches(league.code || league.name, year).catch(() => []);
-            if (recent && recent.length > 0) {
-              // Normalize OpenLiga match objects to canonical analyzer schema
-              const normalized = recent.slice(0, 10).map(m => this._normalizeOpenLigaMatch(m));
-              this._setCached(cacheKey, normalized);
-              await this._recordProviderHealth('openligadb', true, `Found ${normalized.length} recent matches`);
-              return this._formatMatches(normalized, 'openligadb');
-            }
-          }
-        } catch (e) {
-          logger.warn('OpenLigaDB live fetch failed', e.message);
-          await this._recordProviderHealth('openligadb', false, e.message);
-        }
-      }
-
-      // Priority 9: ESPN (Public API, no registration required)
-      if (await this._isProviderEnabled('ESPN')) {
-        try {
-          const espnMatches = await getEspnLiveMatches({ sport: 'football' });
-          if (espnMatches && espnMatches.length > 0) {
-            // try to enrich ESPN matches with detailed stats
-            let enriched = espnMatches;
-            try {
-              if (this.redis) await this.redis.incr('betrix:telemetry:live_scraper:attempts');
-              enriched = await liveScraper.enrichMatchesWithLiveStats(espnMatches, { sport: 'football' });
-              if (this.redis) await this.redis.incr('betrix:telemetry:live_scraper:success');
-            } catch (e) {
-              logger.warn('ESPN enrichment failed', e?.message || e);
-              if (this.redis) await this.redis.incr('betrix:telemetry:live_scraper:fail');
-            }
-            logger.info(`✅ ESPN: Found ${enriched.length} live matches`);
-            this._setCached(cacheKey, enriched);
-            await this._recordProviderHealth('espn', true, `Found ${enriched.length} live matches`);
-            return this._formatMatches(enriched, 'espn');
-          }
-        } catch (e) {
-          logger.warn('ESPN live matches failed', e.message);
-          await this._recordProviderHealth('espn', false, e.message);
-        }
-      }
-
-      // Priority 10: Goal.com public scraper (no API key required)
-      if (await this._isProviderEnabled('GOAL')) {
-        if (await this.providerHealth.isDisabled('goal')) {
-          logger.info('Skipping Goal.com scraper: provider marked disabled by health helper');
-        } else {
-          try {
-            const leagueMap = { '39': 'premier-league', '140': 'la-liga', '135': 'serie-a', '78': 'bundesliga', '61': 'ligue-1' };
-            const leaguePath = leagueMap[String(leagueId)] || 'premier-league';
-            const goalMatches = await getLiveMatchesFromGoal(leaguePath);
-            if (goalMatches && goalMatches.length > 0) {
-              logger.info(`✅ Goal.com: Found ${goalMatches.length} matches`);
-              this._setCached(cacheKey, goalMatches);
-              await this._recordProviderHealth('goal', true, `Found ${goalMatches.length} matches`);
-              return this._formatMatches(goalMatches, 'goal');
-            }
-          } catch (e) {
-            logger.warn('Goal.com scraper failed', e.message);
-            await this._recordProviderHealth('goal', false, e.message);
-            try { await this.providerHealth.markFailure('goal', e.status || e.statusCode || e.code || 0, e.message); } catch(e2) {}
-          }
-        }
-      }
-
-      // Priority 11: Flashscore public scraper (no API key required)
-      if (await this._isProviderEnabled('FLASHSCORE')) {
-        if (await this.providerHealth.isDisabled('flashscore')) {
-          logger.info('Skipping Flashscore scraper: provider marked disabled by health helper');
-        } else {
-          try {
-            const flashscoreLeagueMap = { '39': '17', '140': '87', '135': '106', '78': '34', '61': '53' };
-            const flashLeagueId = flashscoreLeagueMap[String(leagueId)] || '17';
-            const flashMatches = await getLiveMatchesByLeagueFromFlashscore(flashLeagueId);
-            if (flashMatches && flashMatches.length > 0) {
-              logger.info(`✅ Flashscore: Found ${flashMatches.length} matches`);
-              this._setCached(cacheKey, flashMatches);
-              await this._recordProviderHealth('flashscore', true, `Found ${flashMatches.length} matches`);
-              return this._formatMatches(flashMatches, 'flashscore');
-            }
-          } catch (e) {
-            logger.warn('Flashscore scraper failed', e.message);
-            await this._recordProviderHealth('flashscore', false, e.message);
-            try { await this.providerHealth.markFailure('flashscore', e.status || e.statusCode || e.code || 0, e.message); } catch(e2) {}
-          }
-        }
-      }
-
-      // No real data available - return empty instead of fake data
-      logger.warn('All live APIs failed, returning empty match list');
-      return [];
     } catch (err) {
-      logger.error('getLiveMatches failed', err);
+      logger.error('getLiveMatches failed:', err.message);
       return [];
     }
   }
