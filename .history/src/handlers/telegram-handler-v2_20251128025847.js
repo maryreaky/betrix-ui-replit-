@@ -1103,14 +1103,11 @@ async function handleLiveMenuCallback(chatId, userId, redis, services) {
 
     // If no live matches found, show message with fallback to league selection
     if (!allLiveMatches || allLiveMatches.length === 0) {
-      const subscription = await getUserSubscription(redis, userId).catch(() => ({ tier: 'FREE' }));
-      const header = brandingUtils.generateBetrixHeader(subscription.tier);
-      const noMatchText = `${header}\n\n🔴 *No Live Matches Right Now*\n\nNo games are currently live. Would you like to browse by league instead?`;
       return {
         method: 'editMessageText',
         chat_id: chatId,
         message_id: undefined,
-        text: noMatchText,
+        text: '🔴 *No Live Matches Right Now*\n\nNo games are currently live. Would you like to browse by league instead?',
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [
@@ -1122,11 +1119,6 @@ async function handleLiveMenuCallback(chatId, userId, redis, services) {
         }
       };
     }
-
-    // Get subscription for branding
-    const subscription = await getUserSubscription(redis, userId).catch(() => ({ tier: 'FREE' }));
-    const header = brandingUtils.generateBetrixHeader(subscription.tier);
-    const footer = brandingUtils.generateBetrixFooter(false, 'Click a match to view odds and analysis');
 
     // Limit to top 10 live matches
     const limited = allLiveMatches.slice(0, 10);
@@ -1152,18 +1144,17 @@ async function handleLiveMenuCallback(chatId, userId, redis, services) {
       method: 'editMessageText',
       chat_id: chatId,
       message_id: undefined,
-      text: `${header}\n\n🏟️ *Live Matches Now*\n\n${matchText}${footer}`,
+      text: `🏟️ *Live Matches Now*\n\n${matchText}\n\n_Tap a match to view details and odds._`,
       parse_mode: 'Markdown',
       reply_markup: { inline_keyboard: keyboard }
     };
   } catch (err) {
     logger.error('Live menu handler error', err);
-    const errorMsg = brandingUtils.formatBetrixError({ type: 'connection', message: err.message }, 'FREE');
     return {
       method: 'editMessageText',
       chat_id: chatId,
       message_id: undefined,
-      text: errorMsg,
+      text: '❌ Error loading live matches. Please try again.',
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_main' }]]

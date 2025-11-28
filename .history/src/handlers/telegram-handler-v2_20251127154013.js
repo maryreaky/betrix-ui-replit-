@@ -1006,40 +1006,25 @@ export async function handleCallbackQuery(callbackQuery, redis, services) {
 /**
  * Handle menu callbacks
  */
-async function handleMenuCallback(data, chatId, userId, redis) {
+function handleMenuCallback(data, chatId, userId, redis) {
   // 🎯 USE INTELLIGENT MENU BUILDER FOR DYNAMIC MENUS
   try {
-    // Get user's subscription tier and data
-    const userSubscription = await getUserSubscription(redis, userId);
-    const userData = await safeGetUserData(redis, `user:${userId}`) || {};
-    const tier = userSubscription.tier || 'FREE';
+    // Get user's subscription tier (sync from cache or default)
+    let tier = 'FREE';
     
-    // Instantiate intelligent menu builder
-    const menuBuilder = new intelligentMenus(redis);
-    
-    // Build contextual menu based on data type
-    let menu = mainMenu; // Default fallback
-    
-    if (data === 'menu_main') {
-      const mainMenuResult = await menuBuilder.buildContextualMainMenu(userId, userData);
-      menu = mainMenuResult || mainMenu;
-    } else if (data === 'menu_live') {
-      const liveMenu = await menuBuilder.buildMatchDetailMenu(userId);
-      menu = liveMenu || { text: 'Select a sport for live games:', reply_markup: sportsMenu.reply_markup };
-    } else if (data === 'menu_odds') {
-      menu = { text: '📊 *Quick Odds*\n\nSelect a league to view current odds:', reply_markup: sportsMenu.reply_markup };
-    } else if (data === 'menu_standings') {
-      menu = { text: '🏆 *League Standings*\n\nSelect a league to view standings:', reply_markup: sportsMenu.reply_markup };
-    } else if (data === 'menu_news') {
-      menu = { text: '📰 *Latest News*\n\nLoading latest sports news...', reply_markup: mainMenu.reply_markup };
-    } else if (data === 'menu_profile') {
-      menu = { text: `👤 *Your Profile*\n\n*Name:* ${userData.name || 'BETRIX User'}\n*Tier:* ${tier}\n*Points:* ${userData.points || 0}`, reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_main' }]] } };
-    } else if (data === 'menu_vvip') {
-      menu = subscriptionMenu;
-    } else if (data === 'menu_help') {
-      menu = helpMenu;
-    }
+    // Build contextual menus using premium builder
+    const menuMap = {
+      'menu_main': buildContextualMainMenu(tier, userId),
+      'menu_live': buildContextualMainMenu('live', userId),
+      'menu_odds': buildContextualMainMenu('odds', userId),
+      'menu_standings': buildContextualMainMenu('standings', userId),
+      'menu_news': buildContextualMainMenu('news', userId),
+      'menu_profile': buildContextualMainMenu('profile', userId),
+      'menu_vvip': buildContextualMainMenu('subscription', userId),
+      'menu_help': buildContextualMainMenu('help', userId)
+    };
 
+    const menu = menuMap[data] || mainMenu;
     if (!menu) return null;
 
     return {
@@ -1103,14 +1088,11 @@ async function handleLiveMenuCallback(chatId, userId, redis, services) {
 
     // If no live matches found, show message with fallback to league selection
     if (!allLiveMatches || allLiveMatches.length === 0) {
-      const subscription = await getUserSubscription(redis, userId).catch(() => ({ tier: 'FREE' }));
-      const header = brandingUtils.generateBetrixHeader(subscription.tier);
-      const noMatchText = `${header}\n\n🔴 *No Live Matches Right Now*\n\nNo games are currently live. Would you like to browse by league instead?`;
       return {
         method: 'editMessageText',
         chat_id: chatId,
         message_id: undefined,
-        text: noMatchText,
+        text: '🔴 *No Live Matches Right Now*\n\nNo games are currently live. Would you like to browse by league instead?',
         parse_mode: 'Markdown',
         reply_markup: {
           inline_keyboard: [
@@ -1122,11 +1104,6 @@ async function handleLiveMenuCallback(chatId, userId, redis, services) {
         }
       };
     }
-
-    // Get subscription for branding
-    const subscription = await getUserSubscription(redis, userId).catch(() => ({ tier: 'FREE' }));
-    const header = brandingUtils.generateBetrixHeader(subscription.tier);
-    const footer = brandingUtils.generateBetrixFooter(false, 'Click a match to view odds and analysis');
 
     // Limit to top 10 live matches
     const limited = allLiveMatches.slice(0, 10);
@@ -1152,18 +1129,17 @@ async function handleLiveMenuCallback(chatId, userId, redis, services) {
       method: 'editMessageText',
       chat_id: chatId,
       message_id: undefined,
-      text: `${header}\n\n🏟️ *Live Matches Now*\n\n${matchText}${footer}`,
+      text: `🏟️ *Live Matches Now*\n\n${matchText}\n\n_Tap a match to view details and odds._`,
       parse_mode: 'Markdown',
       reply_markup: { inline_keyboard: keyboard }
     };
   } catch (err) {
     logger.error('Live menu handler error', err);
-    const errorMsg = brandingUtils.formatBetrixError({ type: 'connection', message: err.message }, 'FREE');
     return {
       method: 'editMessageText',
       chat_id: chatId,
       message_id: undefined,
-      text: errorMsg,
+      text: '❌ Error loading live matches. Please try again.',
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_main' }]]
@@ -1233,8 +1209,7 @@ async function handleLeagueLiveCallback(data, chatId, userId, redis, services) {
       try {
         // 🎯 USE FIXTURES MANAGER TO GET LEAGUE FIXTURES
         try {
-          const fm = new fixturesManager(redis);
-          matches = await fm.getLeagueFixtures(leagueId);
+          matches = await fixturesManager.getLeagueFixtures(leagueId);
         } catch (e) {
           logger.warn('Fixtures manager failed, using aggregator', e.message);
           matches = await services.sportsAggregator.getLiveMatches(leagueId);
@@ -2131,9 +2106,7 @@ async function handleSportCallback(data, chatId, userId, redis, services) {
     // 🎯 TRY FIXTURES MANAGER FIRST
     let leagues = [];
     try {
-      // FixturesManager is a class (default export) - instantiate with Redis
-      const fm = new fixturesManager(redis);
-      leagues = await fm.getLeagueFixtures(sportKey);
+      leagues = await fixturesManager.getLeagueFixtures(sportKey);
       if (leagues && leagues.length > 0) {
         leagues = leagues.slice(0, 8).map(l => ({
           id: l.id || l.league?.id || '0',

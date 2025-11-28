@@ -1158,12 +1158,12 @@ async function handleLiveMenuCallback(chatId, userId, redis, services) {
     };
   } catch (err) {
     logger.error('Live menu handler error', err);
-    const errorMsg = brandingUtils.formatBetrixError({ type: 'connection', message: err.message }, 'FREE');
+    const errorText = brandingUtils.generateBetrixError('error', 'Error loading live matches. Please try again.');
     return {
       method: 'editMessageText',
       chat_id: chatId,
       message_id: undefined,
-      text: errorMsg,
+      text: errorText,
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_main' }]]
