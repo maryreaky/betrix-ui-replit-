@@ -669,38 +669,74 @@ export class SportsAggregator {
   }
 
   async _getLiveFromApiSports(leagueId) {
-    // Use DIRECT endpoint only - RapidAPI endpoint has issues
-    const url = `https://v3.football.api-sports.io/fixtures?league=${leagueId}&status=LIVE`;
+    // Try multiple endpoint strategies - API-Sports might use different query formats
+    const strategies = [
+      // Strategy 1: League-based live query (standard)
+      {
+        url: `https://v3.football.api-sports.io/fixtures?league=${leagueId}&status=LIVE`,
+        name: 'league_live'
+      },
+      // Strategy 2: Date-based query for today
+      {
+        url: `https://v3.football.api-sports.io/fixtures?league=${leagueId}&season=2024&status=LIVE`,
+        name: 'league_season_live'
+      }
+    ];
+    
     const headers = {
       'x-apisports-key': CONFIG.API_FOOTBALL.KEY
     };
     
-    try {
-      const response = await this._fetchWithRetry(url, { headers }, 2);
-      return (response.response || []).slice(0, 10);
-    } catch (e) {
-      logger.warn(`API-Sports live matches failed: ${e.message}`);
-      return [];
+    for (const strategy of strategies) {
+      try {
+        const response = await this._fetchWithRetry(strategy.url, { headers }, 1);
+        if (response.response && response.response.length > 0) {
+          logger.info(`API-Sports (${strategy.name}): Got ${response.response.length} matches`);
+          return response.response.slice(0, 10);
+        }
+      } catch (e) {
+        logger.debug(`API-Sports ${strategy.name} failed: ${e.message}`);
+      }
     }
+    
+    logger.warn(`API-Sports live matches for league ${leagueId}: No data from any strategy`);
+    return [];
   }
 
   async _getOddsFromApiSports(leagueId) {
-    // Use DIRECT endpoint only - RapidAPI endpoint has issues
-    const url = `https://v3.football.api-sports.io/odds?league=${leagueId}&status=LIVE`;
+    // Try multiple endpoint strategies for odds
+    const strategies = [
+      {
+        url: `https://v3.football.api-sports.io/odds?league=${leagueId}&status=LIVE`,
+        name: 'odds_live'
+      },
+      {
+        url: `https://v3.football.api-sports.io/odds?league=${leagueId}`,
+        name: 'odds_all'
+      }
+    ];
+    
     const headers = {
       'x-apisports-key': CONFIG.API_FOOTBALL.KEY
     };
     
-    try {
-      const response = await this._fetchWithRetry(url, { headers }, 2);
-      return (response.response || []).slice(0, 10).map(m => ({
-        fixture: m.fixture,
-        bookmakers: m.bookmakers || []
-      }));
-    } catch (e) {
-      logger.warn(`API-Sports odds failed: ${e.message}`);
-      return [];
+    for (const strategy of strategies) {
+      try {
+        const response = await this._fetchWithRetry(strategy.url, { headers }, 1);
+        if (response.response && response.response.length > 0) {
+          logger.info(`API-Sports odds (${strategy.name}): Got ${response.response.length} matches`);
+          return response.response.slice(0, 10).map(m => ({
+            fixture: m.fixture,
+            bookmakers: m.bookmakers || []
+          }));
+        }
+      } catch (e) {
+        logger.debug(`API-Sports ${strategy.name} failed: ${e.message}`);
+      }
     }
+    
+    logger.warn(`API-Sports odds for league ${leagueId}: No data from any strategy`);
+    return [];
   }
 
   async _getStandingsFromApiSports(leagueId, season) {
