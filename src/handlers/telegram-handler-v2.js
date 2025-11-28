@@ -11,7 +11,9 @@ import {
   verifyPaymentFromMessage, 
   getAvailablePackages,
   createPaymentOrder,
-  getPaymentInstructions
+  getPaymentInstructions,
+  normalizePaymentMethod,
+  getPaymentGuide
 } from './payment-router.js';
 import advancedAnalysis from '../utils/advanced-match-analysis.js';
 import premiumUI from '../utils/premium-ui-builder.js';
@@ -442,6 +444,22 @@ async function handleNaturalLanguage(text, chatId, userId, redis, services) {
  */
 async function handleLiveGames(chatId, userId, redis, services, query = {}) {
   try {
+    // If an aggregator instance is provided, run a quick health check to detect
+    // whether the primary live-feed provider is healthy. If degraded, set a
+    // warning flag so we can surface a short notice to the user.
+    let liveFeedWarning = false;
+    try {
+      if (services && services.sportsAggregator && typeof services.sportsAggregator.isLiveFeedHealthy === 'function') {
+        const healthy = await services.sportsAggregator.isLiveFeedHealthy().catch(() => false);
+        if (!healthy) {
+          liveFeedWarning = true;
+          logger.warn('Primary live feed appears degraded (aggregator health check)');
+        }
+      }
+    } catch (e) {
+      // non-fatal: continue to attempt fallbacks
+      logger.debug('Aggregator health check failed', e?.message || String(e));
+    }
     const { openLiga, rss, footballData, sportMonks, sportsData } = services;
 
     // Try SportMonks first for premium live data
@@ -524,10 +542,11 @@ async function handleLiveGames(chatId, userId, redis, services, query = {}) {
     }
 
     const response = formatLiveGames(games, query.sport || 'Football');
+    const responseText = (liveFeedWarning ? ('⚠️ Live feed currently degraded — showing best available data.\n\n') : '') + response;
 
     return {
       chat_id: chatId,
-      text: response,
+      text: responseText,
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [
@@ -1009,6 +1028,11 @@ export async function handleCallbackQuery(callbackQuery, redis, services) {
     // Handle payment verification
     if (data.startsWith('verify_payment_')) {
       return handlePaymentVerification(data, chatId, userId, redis);
+    }
+
+    // Handle payment help/guide request
+    if (data.startsWith('payment_help_')) {
+      return handlePaymentHelp(data, chatId, userId, redis);
     }
 
     // Handle payment method selection with tier
@@ -2111,9 +2135,12 @@ async function handleSignupPaymentCallback(data, chatId, userId, redis, services
   try {
     const parts = data.split('_');
     // parts: ['signup','pay','METHOD','AMOUNT'] or ['signup','pay','METHOD','AMOUNT','CURRENCY']
-    const method = parts[2];
+    let method = parts[2];
     const amount = Number(parts[3] || 0);
     const currency = parts[4] || 'KES';
+    
+    // Normalize payment method to canonical key
+    method = normalizePaymentMethod(method) || method;
     
     const profile = await redis.hgetall(`user:${userId}:profile`) || {};
     const country = profile.country || 'KE';
@@ -2161,6 +2188,48 @@ async function handleSignupPaymentCallback(data, chatId, userId, redis, services
   } catch (e) {
     logger.error('handleSignupPaymentCallback failed', e);
     return { method: 'sendMessage', chat_id: chatId, text: `❌ Payment setup failed: ${e.message || 'Unknown error'}. Please try again.`, reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_main' }]]} };
+  }
+}
+
+/**
+ * Handle payment help/guide request: payment_help_{METHOD}
+ * Display step-by-step guide for a specific payment method
+ */
+async function handlePaymentHelp(data, chatId, userId, redis) {
+  try {
+    const method = data.replace('payment_help_', '');
+    const guide = getPaymentGuide(method);
+
+    if (!guide) {
+      return { 
+        method: 'sendMessage', 
+        chat_id: chatId, 
+        text: `❌ Payment method "${method}" guide not found.`, 
+        reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_main' }]]} 
+      };
+    }
+
+    let guideText = `📖 *${guide.title} - Step-by-Step Guide*\n\n`;
+    guideText += `${guide.description}\n\n`;
+    guideText += `*Steps:*\n`;
+    guideText += guide.steps.map((step, i) => `${i + 1}️⃣ ${step}`).join('\n');
+    guideText += `\n\n💡 *Have questions?* Contact support for assistance.`;
+
+    return {
+      method: 'sendMessage',
+      chat_id: chatId,
+      text: guideText,
+      parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: [[{ text: '🔙 Back to Payment', callback_data: 'menu_main' }]]} 
+    };
+  } catch (e) {
+    logger.error('handlePaymentHelp failed', e);
+    return { 
+      method: 'sendMessage', 
+      chat_id: chatId, 
+      text: `❌ Failed to load payment guide: ${e.message || 'Unknown error'}`, 
+      reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_main' }]]} 
+    };
   }
 }
 
@@ -2631,7 +2700,11 @@ async function handlePaymentMethodSelection(data, chatId, userId, redis, service
       'QUICK_VVIP': 'SAFARICOM_TILL' // Quick VVIP uses Safaricom Till
     };
     
-    const paymentMethod = methodMap[callbackMethod] || callbackMethod;
+    let paymentMethod = methodMap[callbackMethod] || callbackMethod;
+    
+    // Further normalize in case methodMap doesn't cover all aliases
+    const normalized = normalizePaymentMethod(paymentMethod);
+    if (normalized) paymentMethod = normalized;
     
     // Get tier from pending_payment record in Redis (should have been set by sub_* callback)
     let tier = 'VVIP'; // default fallback
@@ -2688,16 +2761,16 @@ async function handlePaymentMethodSelection(data, chatId, userId, redis, service
     }
 
     // Validate payment method is available for user's region
-    const available = getAvailablePaymentMethods(userRegion);
-    if (!available.find(m => m.id === paymentMethod)) {
-      const availableNames = available.map(m => m.name).join(', ');
-      logger.warn('Payment method not available for region', { paymentMethod, userRegion, available: availableNames });
-      return {
-        method: 'answerCallbackQuery',
-        callback_query_id: undefined,
-        text: `❌ ${paymentMethod} is not available in ${userRegion}. Available: ${availableNames}`,
-        show_alert: true
-      };
+    // NOTE: Allow all providers globally — log if provider not listed but proceed.
+    try {
+      const available = getAvailablePaymentMethods(userRegion);
+      if (!available.find(m => m.id === paymentMethod)) {
+        const availableNames = available.map(m => m.name).join(', ');
+        logger.warn('Payment method not listed for region, proceeding anyway', { paymentMethod, userRegion, available: availableNames });
+        // do not return; allow user to proceed with selected method
+      }
+    } catch (e) {
+      logger.warn('Failed to check available payment methods, proceeding', e?.message || e);
     }
 
     // Create payment order

@@ -81,19 +81,82 @@ export const PAYMENT_PROVIDERS = {
   }
 };
 
+// Normalize incoming payment method identifiers (accept common aliases)
+export function normalizePaymentMethod(method) {
+  if (!method) return null;
+  const m = String(method).trim().toLowerCase();
+  const aliasMap = {
+    'safaricom_till': 'SAFARICOM_TILL',
+    'safaricom': 'SAFARICOM_TILL',
+    'till': 'SAFARICOM_TILL',
+    'mpesa': 'MPESA',
+    'mpesa_stk': 'MPESA',
+    'stk': 'MPESA',
+    'paypal': 'PAYPAL',
+    'binance': 'BINANCE',
+    'binance_pay': 'BINANCE',
+    'swift': 'SWIFT',
+    'bank': 'SWIFT',
+    'bank_transfer': 'SWIFT',
+    'bitcoin': 'BITCOIN',
+    'btc': 'BITCOIN',
+    'eth': 'BITCOIN'
+  };
+
+  // Direct uppercase match to keys
+  const up = m.toUpperCase();
+  if (Object.prototype.hasOwnProperty.call(PAYMENT_PROVIDERS, up)) return up;
+  if (aliasMap[m]) return aliasMap[m];
+  return null;
+}
+
 /**
  * Get available payment methods for user region
  */
 export function getAvailablePaymentMethods(userRegion = 'KE') {
-  return Object.entries(PAYMENT_PROVIDERS)
-    .filter(([_, provider]) => 
-      provider.regions.includes('GLOBAL') || 
-      provider.regions.includes(userRegion)
-    )
-    .map(([key, provider]) => ({
-      id: key,
-      ...provider
-    }));
+  // By default make all providers available (user requested global availability).
+  // Keep env var for backward compatibility, but default to all providers.
+  return Object.entries(PAYMENT_PROVIDERS).map(([key, provider]) => ({ id: key, ...provider }));
+}
+
+/**
+ * Return a user-facing guide object for a payment method.
+ * Guide includes title, short description, and step list suitable for the bot to display.
+ */
+export function getPaymentGuide(paymentMethod) {
+  const pmKey = normalizePaymentMethod(paymentMethod) || String(paymentMethod).toUpperCase();
+  const provider = PAYMENT_PROVIDERS[pmKey];
+  if (!provider) return null;
+
+  const title = `${provider.symbol || ''} ${provider.name}`.trim();
+  const description = provider.description || `${provider.name} payment instructions`;
+
+  // Use existing instruction generators where available
+  let steps = [];
+  switch (pmKey) {
+    case 'MPESA':
+      steps = generateMPesaInstructions('ORDER_ID', provider.minAmount).manualSteps || [];
+      break;
+    case 'SAFARICOM_TILL':
+      steps = generateSafaricomTillPayment('USER', provider.minAmount, 'member').manualSteps || [];
+      break;
+    case 'PAYPAL':
+      steps = generatePayPalInstructions('ORDER_ID', provider.minAmount).steps || [];
+      break;
+    case 'BINANCE':
+      steps = generateBinanceInstructions('ORDER_ID', provider.minAmount).steps || [];
+      break;
+    case 'SWIFT':
+      steps = generateSwiftInstructions('ORDER_ID', provider.minAmount).steps || [];
+      break;
+    case 'BITCOIN':
+      steps = generateBitcoinInstructions('ORDER_ID', provider.minAmount).steps || [];
+      break;
+    default:
+      steps = [`Use ${provider.name} to send ${provider.currencies && provider.currencies[0] ? provider.currencies[0] : 'the required currency'}.`];
+  }
+
+  return { id: pmKey, title, description, steps };
 }
 
 /**
@@ -119,7 +182,8 @@ export function calculatePaymentWithFees(baseAmount, paymentMethod) {
  * Validate payment amount
  */
 export function validatePaymentAmount(amount, paymentMethod) {
-  const provider = PAYMENT_PROVIDERS[paymentMethod];
+  const pmKey = normalizePaymentMethod(paymentMethod) || paymentMethod;
+  const provider = PAYMENT_PROVIDERS[pmKey];
   if (!provider) {
     return { valid: false, error: 'Invalid payment method' };
   }
@@ -139,7 +203,7 @@ export function validatePaymentAmount(amount, paymentMethod) {
   }
 
   return { valid: true };
-}
+} 
 
 /**
  * Generate Safaricom Till payment instruction
@@ -197,23 +261,33 @@ function generateTillQRCode(till, amount, ref) {
  */
 export async function createPaymentOrder(redis, userId, tier, paymentMethod, userRegion = 'KE', metadata = {}) {
   try {
-    // Validate inputs
-    if (!paymentMethod || paymentMethod.trim() === '') {
+    // Normalize and validate inputs
+    if (!paymentMethod || String(paymentMethod).trim() === '') {
       throw new Error('Payment method is required');
     }
-    if (!PAYMENT_PROVIDERS[paymentMethod]) {
+    const pmKey = normalizePaymentMethod(paymentMethod);
+    if (!pmKey || !PAYMENT_PROVIDERS[pmKey]) {
       throw new Error(`Unknown payment method: ${paymentMethod}`);
     }
     
-    // Validate method is available for region
-    const available = getAvailablePaymentMethods(userRegion);
-    const isAvailable = available.find(m => m.id === paymentMethod);
-    if (!isAvailable) {
-      const availableMethods = available.map(m => m.name).join(', ');
-      throw new Error(`${paymentMethod} is not available in ${userRegion}. Available methods: ${availableMethods}`);
+    // Validate method is available for region (do not block - allow global availability)
+    // User requested: make all payment systems available everywhere. Log if provider missing.
+    try {
+      const available = getAvailablePaymentMethods(userRegion);
+      const isAvailable = available.find(m => m.id === pmKey);
+      if (!isAvailable) {
+        const availableMethods = available.map(m => m.name).join(', ');
+        logger.warn(`Requested payment method ${pmKey} not listed for region ${userRegion}; proceeding anyway. Available: ${availableMethods}`);
+      }
+    } catch (e) {
+      logger.warn('Failed to determine available payment methods, proceeding', e?.message || e);
     }
 
-    const tierPrice = getTierPrice(tier);
+    // Use normalized key for subsequent logic
+    paymentMethod = pmKey; 
+
+    // Determine price in the currency appropriate for the selected payment method
+    const tierPrice = getTierPrice(tier, pmKey);
     const validation = validatePaymentAmount(tierPrice, paymentMethod);
     if (!validation.valid) {
       throw new Error(validation.error);
@@ -309,15 +383,19 @@ export async function createPaymentOrder(redis, userId, tier, paymentMethod, use
  */
 export async function createCustomPaymentOrder(redis, userId, amount, paymentMethod, userRegion = 'KE', metadata = {}) {
   try {
-    if (!paymentMethod || paymentMethod.trim() === '') throw new Error('Payment method is required');
-    if (!PAYMENT_PROVIDERS[paymentMethod]) throw new Error(`Unknown payment method: ${paymentMethod}`);
+    if (!paymentMethod || String(paymentMethod).trim() === '') throw new Error('Payment method is required');
+    const pmKey = normalizePaymentMethod(paymentMethod);
+    if (!pmKey || !PAYMENT_PROVIDERS[pmKey]) throw new Error(`Unknown payment method: ${paymentMethod}`);
 
     // Validate method availability
     const available = getAvailablePaymentMethods(userRegion);
-    if (!available.find(m => m.id === paymentMethod)) {
+    if (!available.find(m => m.id === pmKey)) {
       const availableNames = available.map(m => m.name).join(', ');
       throw new Error(`${paymentMethod} is not available in ${userRegion}. Available: ${availableNames}`);
     }
+
+    // Use normalized key
+    paymentMethod = pmKey;
 
     const validation = validatePaymentAmount(amount, paymentMethod);
     if (!validation.valid) throw new Error(validation.error);
@@ -406,7 +484,8 @@ export async function getPaymentInstructions(redis, orderId, paymentMethod) {
       BITCOIN: generateBitcoinInstructions(orderId, totalAmount)
     };
 
-    return instructions[paymentMethod] || null;
+    const pmKey = normalizePaymentMethod(paymentMethod) || paymentMethod;
+    return instructions[pmKey] || null;
   } catch (err) {
     logger.error('Failed to get payment instructions', err);
     throw err;
