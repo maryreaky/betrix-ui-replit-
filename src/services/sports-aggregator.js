@@ -26,17 +26,17 @@ const logger = new Logger('SportsAggregator');
 
 const LEAGUE_MAPPINGS = {
   // Premier League
-  '39': { id: 39, name: 'Premier League', country: 'England', code: 'E0' },
+  '39': { id: 39, name: 'Premier League', country: 'England', code: 'E0', footballDataId: 'PL' },
   // La Liga
-  '140': { id: 140, name: 'La Liga', country: 'Spain', code: 'E1' },
+  '140': { id: 140, name: 'La Liga', country: 'Spain', code: 'E1', footballDataId: 'SA' },
   // Serie A
-  '135': { id: 135, name: 'Serie A', country: 'Italy', code: 'E2' },
+  '135': { id: 135, name: 'Serie A', country: 'Italy', code: 'E2', footballDataId: 'SA' },
   // Ligue 1
-  '61': { id: 61, name: 'Ligue 1', country: 'France', code: 'E3' },
+  '61': { id: 61, name: 'Ligue 1', country: 'France', code: 'E3', footballDataId: 'FL1' },
   // Bundesliga
-  '78': { id: 78, name: 'Bundesliga', country: 'Germany', code: 'E4' },
+  '78': { id: 78, name: 'Bundesliga', country: 'Germany', code: 'E4', footballDataId: 'BL1' },
   // Champions League
-  '2': { id: 2, name: 'Champions League', country: 'Europe', code: 'C1' },
+  '2': { id: 2, name: 'Champions League', country: 'Europe', code: 'C1', footballDataId: 'CL' },
 };
 
 export class SportsAggregator {
@@ -669,20 +669,38 @@ export class SportsAggregator {
   }
 
   async _getLiveFromApiSports(leagueId) {
-    const path = `/fixtures?league=${leagueId}&status=LIVE`;
-    const response = await this._fetchApiSports(path);
-
-    return (response.response || []).slice(0, 10);
+    // Use DIRECT endpoint only - RapidAPI endpoint has issues
+    const url = `https://v3.football.api-sports.io/fixtures?league=${leagueId}&status=LIVE`;
+    const headers = {
+      'x-apisports-key': CONFIG.API_FOOTBALL.KEY
+    };
+    
+    try {
+      const response = await this._fetchWithRetry(url, { headers }, 2);
+      return (response.response || []).slice(0, 10);
+    } catch (e) {
+      logger.warn(`API-Sports live matches failed: ${e.message}`);
+      return [];
+    }
   }
 
   async _getOddsFromApiSports(leagueId) {
-    const path = `/odds?league=${leagueId}&status=LIVE`;
-    const response = await this._fetchApiSports(path);
-
-    return (response.response || []).slice(0, 10).map(m => ({
-      fixture: m.fixture,
-      bookmakers: m.bookmakers || []
-    }));
+    // Use DIRECT endpoint only - RapidAPI endpoint has issues
+    const url = `https://v3.football.api-sports.io/odds?league=${leagueId}&status=LIVE`;
+    const headers = {
+      'x-apisports-key': CONFIG.API_FOOTBALL.KEY
+    };
+    
+    try {
+      const response = await this._fetchWithRetry(url, { headers }, 2);
+      return (response.response || []).slice(0, 10).map(m => ({
+        fixture: m.fixture,
+        bookmakers: m.bookmakers || []
+      }));
+    } catch (e) {
+      logger.warn(`API-Sports odds failed: ${e.message}`);
+      return [];
+    }
   }
 
   async _getStandingsFromApiSports(leagueId, season) {
@@ -710,21 +728,37 @@ export class SportsAggregator {
   }
 
   async _getLiveFromFootballData(leagueId) {
-    const url = `${CONFIG.FOOTBALLDATA.BASE}/competitions/${leagueId}/matches?status=LIVE`;
-    const response = await this._fetchWithRetry(url, {
-      headers: { 'X-Auth-Token': CONFIG.FOOTBALLDATA.KEY }
-    });
-
-    return (response.matches || []).slice(0, 10);
+    // Map API-Sports league ID to Football-Data league code
+    const mapping = LEAGUE_MAPPINGS[String(leagueId)];
+    const fdLeagueId = mapping ? mapping.footballDataId : String(leagueId);
+    
+    const url = `${CONFIG.FOOTBALLDATA.BASE}/competitions/${fdLeagueId}/matches?status=LIVE`;
+    try {
+      const response = await this._fetchWithRetry(url, {
+        headers: { 'X-Auth-Token': CONFIG.FOOTBALLDATA.KEY }
+      }, 2);
+      return (response.matches || []).slice(0, 10);
+    } catch (e) {
+      logger.warn(`Football-Data live matches for league ${fdLeagueId} failed: ${e.message}`);
+      return [];
+    }
   }
 
   async _getStandingsFromFootballData(leagueId, season) {
-    const url = `${CONFIG.FOOTBALLDATA.BASE}/competitions/${leagueId}/standings`;
-    const response = await this._fetchWithRetry(url, {
-      headers: { 'X-Auth-Token': CONFIG.FOOTBALLDATA.KEY }
-    });
-
-    return (response.standings || [{ table: [] }])[0].table || [];
+    // Map API-Sports league ID to Football-Data league code
+    const mapping = LEAGUE_MAPPINGS[String(leagueId)];
+    const fdLeagueId = mapping ? mapping.footballDataId : String(leagueId);
+    
+    const url = `${CONFIG.FOOTBALLDATA.BASE}/competitions/${fdLeagueId}/standings`;
+    try {
+      const response = await this._fetchWithRetry(url, {
+        headers: { 'X-Auth-Token': CONFIG.FOOTBALLDATA.KEY }
+      }, 2);
+      return (response.standings || [{ table: [] }])[0].table || [];
+    } catch (e) {
+      logger.warn(`Football-Data standings for league ${fdLeagueId} failed: ${e.message}`);
+      return [];
+    }
   }
 
   // ==================== SofaScore (RapidAPI) ====================

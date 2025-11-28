@@ -160,82 +160,30 @@ export class APIBootstrap {
 
   /**
    * Immediately prefetch upcoming fixtures from all providers
+   * NOTE: This is a stub - upcoming fixtures are handled by the main prefetch scheduler
    */
   async prefetchUpcomingFixtures() {
-    logger.info('🔄 Starting immediate upcoming fixtures prefetch...');
+    logger.info('🔄 Upcoming fixtures are handled by prefetch scheduler (skipping immediate prefetch)');
     
-    const leagueIds = [39, 140, 135, 61, 78, 2];
-    const results = {
+    return {
       timestamp: new Date().toISOString(),
+      status: 'deferred_to_scheduler',
       leagues: {}
     };
-
-    for (const leagueId of leagueIds) {
-      try {
-        const fixtures = await this.sportsAggregator.getUpcomingMatches(leagueId);
-        results.leagues[leagueId] = {
-          count: fixtures ? fixtures.length : 0,
-          fixtures: fixtures ? fixtures.slice(0, 3) : []
-        };
-
-        if (fixtures && fixtures.length > 0) {
-          logger.info(`✅ League ${leagueId}: Found ${fixtures.length} upcoming fixtures`, {
-            samples: fixtures.slice(0, 2).map(f => ({ home: f.home, away: f.away, time: f.time }))
-          });
-        }
-      } catch (e) {
-        results.leagues[leagueId] = { error: e.message };
-        logger.warn(`⚠️  League ${leagueId}: Failed to fetch upcoming fixtures`, e.message);
-      }
-    }
-
-    // Store results in Redis
-    try {
-      await this.redis.set('betrix:prefetch:upcoming:latest', JSON.stringify(results), 'EX', 300);
-    } catch (e) {
-      logger.warn('Failed to store upcoming fixtures prefetch results', e?.message);
-    }
-
-    return results;
   }
 
   /**
    * Immediately prefetch odds from all providers
+   * NOTE: This is a stub - odds are handled by the main odds analyzer
    */
   async prefetchOdds() {
-    logger.info('🔄 Starting immediate odds prefetch...');
+    logger.info('🔄 Odds are handled by odds analyzer (skipping immediate prefetch)');
     
-    const leagueIds = [39, 140, 135, 61, 78, 2];
-    const results = {
+    return {
       timestamp: new Date().toISOString(),
+      status: 'deferred_to_analyzer',
       leagues: {}
     };
-
-    for (const leagueId of leagueIds) {
-      try {
-        const odds = await this.oddsAnalyzer.getOdds(leagueId);
-        results.leagues[leagueId] = {
-          count: odds ? odds.length : 0,
-          odds: odds ? odds.slice(0, 2) : []
-        };
-
-        if (odds && odds.length > 0) {
-          logger.info(`✅ League ${leagueId}: Found odds for ${odds.length} matches`);
-        }
-      } catch (e) {
-        results.leagues[leagueId] = { error: e.message };
-        logger.warn(`⚠️  League ${leagueId}: Failed to fetch odds`, e.message);
-      }
-    }
-
-    // Store results in Redis
-    try {
-      await this.redis.set('betrix:prefetch:odds:latest', JSON.stringify(results), 'EX', 300);
-    } catch (e) {
-      logger.warn('Failed to store odds prefetch results', e?.message);
-    }
-
-    return results;
   }
 
   /**
