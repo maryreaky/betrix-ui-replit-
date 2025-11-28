@@ -5,12 +5,12 @@
 
 import { Logger } from '../utils/logger.js';
 
-const logger = new Logger('IntegrationGuide');
-
-/**
- * INTEGRATION CHECKLIST
- * 
- * These new modules are now available for integration:
+export const TEST_COMMANDS = {
+  testBranding: `node -e "import('./src/utils/betrix-branding.js').then(m => console.log(m.generateBetrixHeader('VVIP', 'TestUser')))"`,
+  testAnalysis: `node -e "import('./src/utils/advanced-match-analysis.js').then(m => console.log(m.calculateConfidence({sections:{}})))"`,
+  testPerformance: `node -e "import('./src/utils/performance-optimizer.js').then(m => { const p = new m.default(null); console.log(p.getMetrics()); })"`,
+  testFixtures: `node -e "import('./src/utils/fixtures-manager.js').then(m => console.log('Fixtures manager loaded'))"`
+};
  * 
  * 1. PREMIUM_UI_BUILDER (src/utils/premium-ui-builder.js)
  *    - Superior match card formatting
