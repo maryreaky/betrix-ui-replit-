@@ -1,60 +1,9 @@
 import fetch from 'node-fetch';
 
-// Fallback live data (used when ESPN API is unavailable or returns no games)
+// Do NOT return fallback data - show real data only
+// Fake matches confuse users and damage bot credibility
 function getLiveDataFallback() {
-  return [
-    {
-      id: 'live_1',
-      league: 'Premier League',
-      name: 'Manchester City vs Liverpool',
-      status: 'In Live',
-      startTime: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
-      home: {
-        id: 'team_1',
-        name: 'Manchester City',
-        score: 2,
-      },
-      away: {
-        id: 'team_2',
-        name: 'Liverpool',
-        score: 1,
-      },
-    },
-    {
-      id: 'live_2',
-      league: 'La Liga',
-      name: 'Real Madrid vs Barcelona',
-      status: 'In Live',
-      startTime: new Date(Date.now() + 7200000).toISOString(), // 2 hours from now
-      home: {
-        id: 'team_3',
-        name: 'Real Madrid',
-        score: 1,
-      },
-      away: {
-        id: 'team_4',
-        name: 'Barcelona',
-        score: 0,
-      },
-    },
-    {
-      id: 'live_3',
-      league: 'Bundesliga',
-      name: 'Bayern Munich vs Borussia Dortmund',
-      status: 'In Live',
-      startTime: new Date(Date.now() + 10800000).toISOString(), // 3 hours from now
-      home: {
-        id: 'team_5',
-        name: 'Bayern Munich',
-        score: 2,
-      },
-      away: {
-        id: 'team_6',
-        name: 'Borussia Dortmund',
-        score: 2,
-      },
-    },
-  ];
+  return [];
 }
 
 export async function getEspnLiveMatches({ sport = 'football' } = {}) {
