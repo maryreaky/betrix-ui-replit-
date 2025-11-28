@@ -68,16 +68,14 @@ class StatPalService {
       const url = `${this.baseUrl}/${version}/${sport}/livescores?access_key=${this.apiKey}`;
       logger.debug(`📡 Fetching StatPal live scores: ${sport} (${version})`);
 
-      const response = await this.httpClient.fetch(url, {
-        headers: { 'Accept': 'application/json' },
-        timeout: 8000,
-      });
+      const data = await this.httpClient.fetch(url, {
+        headers: { 'Accept': 'application/json' }
+      }, `statpal:${sport}:livescores`, 2, 8000);
 
-      if (!response.ok) {
-        throw new Error(`StatPal livescores returned ${response.status}`);
+      if (!data || (Array.isArray(data) && data.length === 0) || (data && typeof data === 'object' && Object.keys(data).length === 0)) {
+        throw new Error(`StatPal livescores returned empty`);
       }
 
-      const data = await response.json();
       logger.info(`✅ StatPal live scores fetched: ${sport}`);
       return data;
     } catch (error) {
@@ -105,16 +103,14 @@ class StatPalService {
       const url = `${this.baseUrl}/${version}/${sport}/odds?access_key=${this.apiKey}`;
       logger.debug(`📊 Fetching StatPal odds: ${sport}`);
 
-      const response = await this.httpClient.fetch(url, {
-        headers: { 'Accept': 'application/json' },
-        timeout: 8000,
-      });
+      const data = await this.httpClient.fetch(url, {
+        headers: { 'Accept': 'application/json' }
+      }, `statpal:${sport}:odds`, 2, 8000);
 
-      if (!response.ok) {
-        throw new Error(`StatPal odds returned ${response.status}`);
+      if (!data || (Array.isArray(data) && data.length === 0) || (data && typeof data === 'object' && Object.keys(data).length === 0)) {
+        throw new Error(`StatPal odds returned empty`);
       }
 
-      const data = await response.json();
       logger.info(`✅ StatPal odds fetched: ${sport}`);
       return data;
     } catch (error) {
@@ -142,16 +138,14 @@ class StatPalService {
       const url = `${this.baseUrl}/${version}/${sport}/fixtures?access_key=${this.apiKey}`;
       logger.debug(`📅 Fetching StatPal fixtures: ${sport}`);
 
-      const response = await this.httpClient.fetch(url, {
-        headers: { 'Accept': 'application/json' },
-        timeout: 8000,
-      });
+      const data = await this.httpClient.fetch(url, {
+        headers: { 'Accept': 'application/json' }
+      }, `statpal:${sport}:fixtures`, 2, 8000);
 
-      if (!response.ok) {
-        throw new Error(`StatPal fixtures returned ${response.status}`);
+      if (!data || (Array.isArray(data) && data.length === 0) || (data && typeof data === 'object' && Object.keys(data).length === 0)) {
+        throw new Error(`StatPal fixtures returned empty`);
       }
 
-      const data = await response.json();
       logger.info(`✅ StatPal fixtures fetched: ${sport}`);
       return data;
     } catch (error) {
@@ -185,16 +179,14 @@ class StatPalService {
 
       logger.debug(`🏆 Fetching StatPal standings: ${sport}${league ? '/' + league : ''}`);
 
-      const response = await this.httpClient.fetch(url, {
-        headers: { 'Accept': 'application/json' },
-        timeout: 8000,
-      });
+      const data = await this.httpClient.fetch(url, {
+        headers: { 'Accept': 'application/json' }
+      }, `statpal:${sport}:standings`, 2, 8000);
 
-      if (!response.ok) {
-        throw new Error(`StatPal standings returned ${response.status}`);
+      if (!data || (Array.isArray(data) && data.length === 0) || (data && typeof data === 'object' && Object.keys(data).length === 0)) {
+        throw new Error(`StatPal standings returned empty`);
       }
 
-      const data = await response.json();
       logger.info(`✅ StatPal standings fetched: ${sport}`);
       return data;
     } catch (error) {
@@ -223,16 +215,14 @@ class StatPalService {
       const url = `${this.baseUrl}/${version}/${sport}/players/${playerId}?access_key=${this.apiKey}`;
       logger.debug(`👤 Fetching StatPal player stats: ${sport}/${playerId}`);
 
-      const response = await this.httpClient.fetch(url, {
-        headers: { 'Accept': 'application/json' },
-        timeout: 8000,
-      });
+      const data = await this.httpClient.fetch(url, {
+        headers: { 'Accept': 'application/json' }
+      }, `statpal:${sport}:player:${playerId}`, 2, 8000);
 
-      if (!response.ok) {
-        throw new Error(`StatPal player stats returned ${response.status}`);
+      if (!data || (Array.isArray(data) && data.length === 0) || (data && typeof data === 'object' && Object.keys(data).length === 0)) {
+        throw new Error(`StatPal player stats returned empty`);
       }
 
-      const data = await response.json();
       logger.info(`✅ StatPal player stats fetched: ${playerId}`);
       return data;
     } catch (error) {
@@ -261,16 +251,14 @@ class StatPalService {
       const url = `${this.baseUrl}/${version}/${sport}/teams/${teamId}?access_key=${this.apiKey}`;
       logger.debug(`🏢 Fetching StatPal team stats: ${sport}/${teamId}`);
 
-      const response = await this.httpClient.fetch(url, {
-        headers: { 'Accept': 'application/json' },
-        timeout: 8000,
-      });
+      const data = await this.httpClient.fetch(url, {
+        headers: { 'Accept': 'application/json' }
+      }, `statpal:${sport}:team:${teamId}`, 2, 8000);
 
-      if (!response.ok) {
-        throw new Error(`StatPal team stats returned ${response.status}`);
+      if (!data || (Array.isArray(data) && data.length === 0) || (data && typeof data === 'object' && Object.keys(data).length === 0)) {
+        throw new Error(`StatPal team stats returned empty`);
       }
 
-      const data = await response.json();
       logger.info(`✅ StatPal team stats fetched: ${teamId}`);
       return data;
     } catch (error) {
@@ -298,16 +286,14 @@ class StatPalService {
       const url = `${this.baseUrl}/${version}/${sport}/injuries?access_key=${this.apiKey}`;
       logger.debug(`🏥 Fetching StatPal injuries: ${sport}`);
 
-      const response = await this.httpClient.fetch(url, {
-        headers: { 'Accept': 'application/json' },
-        timeout: 8000,
-      });
+      const data = await this.httpClient.fetch(url, {
+        headers: { 'Accept': 'application/json' }
+      }, `statpal:${sport}:injuries`, 2, 8000);
 
-      if (!response.ok) {
-        throw new Error(`StatPal injuries returned ${response.status}`);
+      if (!data || (Array.isArray(data) && data.length === 0) || (data && typeof data === 'object' && Object.keys(data).length === 0)) {
+        throw new Error(`StatPal injuries returned empty`);
       }
 
-      const data = await response.json();
       logger.info(`✅ StatPal injuries fetched: ${sport}`);
       return data;
     } catch (error) {
@@ -336,16 +322,14 @@ class StatPalService {
       const url = `${this.baseUrl}/${version}/${sport}/live-plays/${matchId}?access_key=${this.apiKey}`;
       logger.debug(`▶️ Fetching StatPal play-by-play: ${sport}/${matchId}`);
 
-      const response = await this.httpClient.fetch(url, {
-        headers: { 'Accept': 'application/json' },
-        timeout: 8000,
-      });
+      const data = await this.httpClient.fetch(url, {
+        headers: { 'Accept': 'application/json' }
+      }, `statpal:${sport}:playbyplay:${matchId}`, 2, 8000);
 
-      if (!response.ok) {
-        throw new Error(`StatPal play-by-play returned ${response.status}`);
+      if (!data || (Array.isArray(data) && data.length === 0) || (data && typeof data === 'object' && Object.keys(data).length === 0)) {
+        throw new Error(`StatPal play-by-play returned empty`);
       }
 
-      const data = await response.json();
       logger.info(`✅ StatPal play-by-play fetched: ${matchId}`);
       return data;
     } catch (error) {
@@ -374,16 +358,14 @@ class StatPalService {
       const url = `${this.baseUrl}/${version}/${sport}/live-match-stats/${matchId}?access_key=${this.apiKey}`;
       logger.debug(`📈 Fetching StatPal live match stats: ${sport}/${matchId}`);
 
-      const response = await this.httpClient.fetch(url, {
-        headers: { 'Accept': 'application/json' },
-        timeout: 8000,
-      });
+      const data = await this.httpClient.fetch(url, {
+        headers: { 'Accept': 'application/json' }
+      }, `statpal:${sport}:matchstats:${matchId}`, 2, 8000);
 
-      if (!response.ok) {
-        throw new Error(`StatPal live match stats returned ${response.status}`);
+      if (!data || (Array.isArray(data) && data.length === 0) || (data && typeof data === 'object' && Object.keys(data).length === 0)) {
+        throw new Error(`StatPal live match stats returned empty`);
       }
 
-      const data = await response.json();
       logger.info(`✅ StatPal live match stats fetched: ${matchId}`);
       return data;
     } catch (error) {
@@ -411,16 +393,14 @@ class StatPalService {
       const url = `${this.baseUrl}/${version}/${sport}/results?access_key=${this.apiKey}`;
       logger.debug(`📋 Fetching StatPal results: ${sport}`);
 
-      const response = await this.httpClient.fetch(url, {
-        headers: { 'Accept': 'application/json' },
-        timeout: 8000,
-      });
+      const data = await this.httpClient.fetch(url, {
+        headers: { 'Accept': 'application/json' }
+      }, `statpal:${sport}:results`, 2, 8000);
 
-      if (!response.ok) {
-        throw new Error(`StatPal results returned ${response.status}`);
+      if (!data || (Array.isArray(data) && data.length === 0) || (data && typeof data === 'object' && Object.keys(data).length === 0)) {
+        throw new Error(`StatPal results returned empty`);
       }
 
-      const data = await response.json();
       logger.info(`✅ StatPal results fetched: ${sport}`);
       return data;
     } catch (error) {
@@ -448,16 +428,14 @@ class StatPalService {
       const url = `${this.baseUrl}/${version}/${sport}/scoring-leaders?access_key=${this.apiKey}`;
       logger.debug(`⭐ Fetching StatPal scoring leaders: ${sport}`);
 
-      const response = await this.httpClient.fetch(url, {
-        headers: { 'Accept': 'application/json' },
-        timeout: 8000,
-      });
+      const data = await this.httpClient.fetch(url, {
+        headers: { 'Accept': 'application/json' }
+      }, `statpal:${sport}:leaders`, 2, 8000);
 
-      if (!response.ok) {
-        throw new Error(`StatPal scoring leaders returned ${response.status}`);
+      if (!data || (Array.isArray(data) && data.length === 0) || (data && typeof data === 'object' && Object.keys(data).length === 0)) {
+        throw new Error(`StatPal scoring leaders returned empty`);
       }
 
-      const data = await response.json();
       logger.info(`✅ StatPal scoring leaders fetched: ${sport}`);
       return data;
     } catch (error) {
@@ -486,16 +464,14 @@ class StatPalService {
       const url = `${this.baseUrl}/${version}/${sport}/rosters/${teamId}?access_key=${this.apiKey}`;
       logger.debug(`📑 Fetching StatPal roster: ${sport}/${teamId}`);
 
-      const response = await this.httpClient.fetch(url, {
-        headers: { 'Accept': 'application/json' },
-        timeout: 8000,
-      });
+      const data = await this.httpClient.fetch(url, {
+        headers: { 'Accept': 'application/json' }
+      }, `statpal:${sport}:roster:${teamId}`, 2, 8000);
 
-      if (!response.ok) {
-        throw new Error(`StatPal rosters returned ${response.status}`);
+      if (!data || (Array.isArray(data) && data.length === 0) || (data && typeof data === 'object' && Object.keys(data).length === 0)) {
+        throw new Error(`StatPal rosters returned empty`);
       }
 
-      const data = await response.json();
       logger.info(`✅ StatPal roster fetched: ${teamId}`);
       return data;
     } catch (error) {
