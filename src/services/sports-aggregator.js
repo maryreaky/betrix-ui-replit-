@@ -322,9 +322,11 @@ export class SportsAggregator {
       try {
         const oddsData = await this._getOddsFromStatPal('soccer', CONFIG.STATPAL.V1 || 'v1');
         if (oddsData && oddsData.length > 0) {
-          logger.info(`✅ StatPal: Found ${oddsData.length} odds`);
-          this._setCached(cacheKey, oddsData);
-          return oddsData;
+          const formatted = this._formatStatPalOdds(oddsData, 'soccer');
+          logger.info(`✅ StatPal: Found ${formatted.length} odds entries (normalized)`);
+          this._setCached(cacheKey, formatted);
+          await this._recordProviderHealth('statpal', true, `Found ${formatted.length} odds`);
+          return formatted;
         }
         logger.warn('⚠️  StatPal returned empty odds list');
         return [];
@@ -1121,6 +1123,91 @@ export class SportsAggregator {
     } catch (e) {
       logger.error(`StatPal ${sport} fixtures error:`, e.message);
       return [];
+    }
+  }
+
+  /**
+   * Format StatPal fixtures into the canonical match shape used by the aggregator
+   */
+  _formatStatPalFixtures(fixtures, sport = 'soccer') {
+    if (!fixtures || fixtures.length === 0) return [];
+    try {
+      return fixtures.map(f => {
+        const match = {
+          id: f.id || f.match_id || f.fixture_id || null,
+          home: f.home || f.home_team || f.localteam || (f.teams && f.teams.home) || (f.teams && f.teams.home && f.teams.home.name) || f.team_home || null,
+          away: f.away || f.away_team || f.visitorteam || (f.teams && f.teams.away) || (f.teams && f.teams.away && f.teams.away.name) || f.team_away || null,
+          homeScore: f.homeScore || f.home_score || (f.score && f.score.home) || null,
+          awayScore: f.awayScore || f.away_score || (f.score && f.score.away) || null,
+          status: f.status || f.match_status || (f.state && f.state.name) || 'SCHEDULED',
+          time: f.time || f.match_time || f.start_time || f.utc || f.date || null,
+          venue: f.venue || (f.location && f.location.name) || null,
+          provider: 'statpal',
+          raw: f
+        };
+
+        return this._formatMatches([match], 'statpal')[0];
+      });
+    } catch (e) {
+      logger.warn('Failed to normalize StatPal fixtures', e?.message || String(e));
+      return fixtures;
+    }
+  }
+
+  /**
+   * Normalize StatPal odds payload into canonical bookmaker/market/outcome shape
+   */
+  _formatStatPalOdds(oddsRaw, sport = 'soccer') {
+    if (!oddsRaw || (Array.isArray(oddsRaw) && oddsRaw.length === 0)) return [];
+    try {
+      const items = Array.isArray(oddsRaw) ? oddsRaw : (oddsRaw.data || []);
+      return items.map(item => {
+        // Determine fixture identifier (various shapes)
+        const fixtureObj = item.fixture || item.event || item.match || item.game || item;
+        const fixtureId = fixtureObj && (fixtureObj.id || fixtureObj.fixture_id || item.match_id || item.id || fixtureObj.match_id || null);
+
+        // Extract bookmakers array from common shapes
+        let boks = item.bookmakers || item.bookies || item.odds || item.markets || item.providers || [];
+        if (!Array.isArray(boks) && boks && typeof boks === 'object') {
+          boks = Object.values(boks);
+        }
+
+        const bookmakers = (boks || []).map(b => {
+          const marketsRaw = b.markets || b.markets_full || b.odds || b.markets || b.rows || b.markets || b.markets || b.selections || b.bets || [];
+          const marketsArr = Array.isArray(marketsRaw) ? marketsRaw : (marketsRaw && typeof marketsRaw === 'object' ? Object.values(marketsRaw) : []);
+          const markets = (marketsArr || []).map(m => {
+            const outcomesRaw = m.outcomes || m.selections || m.prices || m.odds || m.rows || m.options || [];
+            const outcomesArr = Array.isArray(outcomesRaw) ? outcomesRaw : (outcomesRaw && typeof outcomesRaw === 'object' ? Object.values(outcomesRaw) : []);
+            return {
+              key: m.key || m.market || m.name || m.code || m.label || 'unknown',
+              label: m.label || m.name || m.key || null,
+              outcomes: (outcomesArr || []).map(o => ({
+                name: o.name || o.label || o.side || o.selection || o.team || '',
+                price: o.price || o.odds || o.decimal || o.price_decimal || null,
+                raw: o
+              })),
+              raw: m
+            };
+          });
+
+          return {
+            title: b.title || b.bookmaker || b.name || b.key || b.provider || 'unknown',
+            last_update: b.last_update || b.updated_at || b.ts || b.updated || null,
+            markets,
+            raw: b
+          };
+        });
+
+        return {
+          fixtureId: fixtureId || null,
+          bookmakers,
+          provider: 'statpal',
+          raw: item
+        };
+      });
+    } catch (e) {
+      logger.warn('Failed to normalize StatPal odds', e?.message || String(e));
+      return oddsRaw;
     }
   }
 
