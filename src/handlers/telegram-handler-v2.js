@@ -1175,9 +1175,8 @@ async function handleLiveMenuCallback(chatId, userId, redis, services) {
       const header = brandingUtils.generateBetrixHeader(subscription.tier);
       const noMatchText = `${header}\n\n🔴 *No Live Matches Right Now*\n\nNo games are currently live. Would you like to browse by league instead?`;
       return {
-        method: 'editMessageText',
+        method: 'sendMessage',
         chat_id: chatId,
-        message_id: undefined,
         text: noMatchText,
         parse_mode: 'Markdown',
         reply_markup: {
@@ -1225,9 +1224,8 @@ async function handleLiveMenuCallback(chatId, userId, redis, services) {
     ]);
 
     return {
-      method: 'editMessageText',
+      method: 'sendMessage',
       chat_id: chatId,
-      message_id: undefined,
       text: `${header}\n\n🏟️ *Live Matches Now*\n\n${matchText}${footer}`,
       parse_mode: 'Markdown',
       reply_markup: { inline_keyboard: keyboard }
@@ -1236,9 +1234,8 @@ async function handleLiveMenuCallback(chatId, userId, redis, services) {
     logger.error('Live menu handler error', err);
     const errorMsg = brandingUtils.formatBetrixError({ type: 'connection', message: err.message }, 'FREE');
     return {
-      method: 'editMessageText',
+      method: 'sendMessage',
       chat_id: chatId,
-      message_id: undefined,
       text: errorMsg,
       parse_mode: 'Markdown',
       reply_markup: {
