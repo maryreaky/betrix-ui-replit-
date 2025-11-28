@@ -10,4 +10,4 @@ COPY . .
 
 EXPOSE 5000
 
-CMD ["node","src/worker.js"]
+CMD ["node","src/worker-final.js"]

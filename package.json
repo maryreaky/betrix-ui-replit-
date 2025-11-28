@@ -3,12 +3,12 @@
   "version": "2.0.0",
   "type": "module",
   "description": "BETRIX - Global Sports AI Platform",
-  "main": "src/worker-db.js",
+  "main": "src/worker-final.js",
   "engines": {
     "node": ">=20.0.0"
   },
   "scripts": {
-    "start": "bash start.sh",
+    "start": "node src/worker-final.js",
     "dev": "node src/worker-db.js",
     "worker": "node src/worker-final.js",
     "test": "node --test tests/*.js",
