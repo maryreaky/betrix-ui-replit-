@@ -706,14 +706,10 @@ async function handleStandings(chatId, userId, redis, services, query = {}) {
     ];
 
     const response = formatStandings(query.league || 'Premier League', finalStandings);
-    const subscription = await getUserSubscription(redis, userId).catch(() => ({ tier: 'FREE' }));
-    const header = brandingUtils.generateBetrixHeader(subscription.tier);
-    const footer = brandingUtils.generateBetrixFooter(false, 'Current season standings');
-    const fullText = `${header}\n\n🏆 *League Standings*\n\n${response}${footer}`;
 
     return {
       chat_id: chatId,
-      text: fullText,
+      text: response,
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [
@@ -724,10 +720,9 @@ async function handleStandings(chatId, userId, redis, services, query = {}) {
     };
   } catch (err) {
     logger.error('Standings handler error', err);
-    const errorMsg = brandingUtils.formatBetrixError({ type: 'connection', message: err.message }, 'FREE');
     return {
       chat_id: chatId,
-      text: errorMsg,
+      text: '🌀 *BETRIX* - Unable to fetch standings.',
       parse_mode: 'Markdown'
     };
   }
