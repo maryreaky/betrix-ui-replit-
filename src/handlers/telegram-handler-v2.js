@@ -1196,20 +1196,28 @@ async function handleLiveMenuCallback(chatId, userId, redis, services) {
     const header = brandingUtils.generateBetrixHeader(subscription.tier);
     const footer = brandingUtils.generateBetrixFooter(false, 'Click a match to view odds and analysis');
 
-    // Limit to top 10 live matches
+    // Limit to top 10 live matches and build a safer, branded display
     const limited = allLiveMatches.slice(0, 10);
+
     const matchText = limited.map((m, i) => {
-      const score = (m.homeScore !== null && m.awayScore !== null) ? `${m.homeScore}-${m.awayScore}` : '─';
-      const status = m.status === 'LIVE' ? `🔴 ${m.time || 'LIVE'}` : `✅ ${m.time || m.status}`;
+      const home = teamNameOf(m.home);
+      const away = teamNameOf(m.away);
+      const score = (typeof m.homeScore === 'number' && typeof m.awayScore === 'number') ? `${m.homeScore}-${m.awayScore}` : '─';
+      const status = (String(m.status || '').toUpperCase() === 'LIVE') ? `🔴 ${m.time || 'LIVE'}` : `⏱ ${m.time || m.status || 'TBD'}`;
       const league = m.league || m.competition || '';
-      return `${i + 1}. *${m.home}* vs *${m.away}*\n   ${score} ${status} ${league ? `[${league}]` : ''}`;
+      return `${i + 1}. *${home}* vs *${away}*\n   ${score} ${status} ${league ? `[${league}]` : ''}`;
     }).join('\n\n');
 
-    // Build keyboard - one button per match for quick viewing
-    const keyboard = limited.map((m, i) => ({
-      text: `${i + 1}. ${m.home} vs ${m.away}`,
-      callback_data: validateCallbackData(`match_live_${i}`)
-    })).map(btn => [btn]);
+    // Build keyboard - one button per match for quick viewing with safe callback ids
+    const keyboard = limited.map((m, i) => {
+      const home = teamNameOf(m.home);
+      const away = teamNameOf(m.away);
+      const label = `${i + 1}. ${home} vs ${away}`.substring(0, 64);
+      const provider = (m.provider || 'p').toString().replace(/[^a-zA-Z0-9_-]/g, '');
+      const mid = m.id || m.fixture?.id || i;
+      const cb = validateCallbackData(`match_live_${provider}_${mid}`);
+      return [{ text: label, callback_data: cb }];
+    });
 
     keyboard.push([
       { text: '⚽ Browse by League', callback_data: 'sport_football' },
@@ -2673,10 +2681,12 @@ We're here to help! Reach out:
  */
 async function handlePaymentMethodSelection(data, chatId, userId, redis, services) {
   try {
-    const parts = data.split('_');
-    // Format: pay_METHOD (e.g., pay_mpesa, pay_till)
-    // Tier is retrieved from pending_payment in Redis (set when sub_vvip was clicked)
-    if (parts.length < 2) {
+    // Format: pay_METHOD or pay_METHOD_TIER (e.g., pay_mpesa, pay_till, pay_mpesa_PRO, pay_safaricom_till_VVIP)
+    // Strip 'pay_' prefix to get the rest
+    const afterPay = data.replace('pay_', '');
+    const parts = afterPay.split('_');
+    
+    if (parts.length < 1) {
       logger.error('Invalid payment callback format', { data, parts });
       return {
         method: 'answerCallbackQuery',
@@ -2686,12 +2696,25 @@ async function handlePaymentMethodSelection(data, chatId, userId, redis, service
       };
     }
     
-    // Extract payment method (everything after "pay_") and map to provider key
-    const callbackMethod = data.replace('pay_', '').toUpperCase();
+    // Extract payment method from first part(s) and tier from last part
+    // Handle both 'pay_mpesa' and 'pay_mpesa_PRO' formats
+    let callbackMethod, tierFromCallback;
+    
+    // Check if last part looks like a tier (all caps, single word, matches known tier)
+    const lastPart = parts[parts.length - 1].toUpperCase();
+    if (['FREE', 'PRO', 'VVIP', 'PLUS'].includes(lastPart)) {
+      tierFromCallback = lastPart;
+      // Join remaining parts for method name (e.g., 'safaricom_till' from ['safaricom', 'till'])
+      callbackMethod = parts.slice(0, -1).join('_').toUpperCase();
+    } else {
+      callbackMethod = afterPay.toUpperCase();
+      tierFromCallback = null;
+    }
     
     // Map callback names to provider keys
     const methodMap = {
       'TILL': 'SAFARICOM_TILL',
+      'SAFARICOM_TILL': 'SAFARICOM_TILL',
       'MPESA': 'MPESA',
       'PAYPAL': 'PAYPAL',
       'BINANCE': 'BINANCE',
@@ -2706,13 +2729,13 @@ async function handlePaymentMethodSelection(data, chatId, userId, redis, service
     const normalized = normalizePaymentMethod(paymentMethod);
     if (normalized) paymentMethod = normalized;
     
-    // Get tier from pending_payment record in Redis (should have been set by sub_* callback)
-    let tier = 'VVIP'; // default fallback
+    // Get tier: prefer tier from callback, then from pending_payment in Redis (should have been set by sub_* callback)
+    let tier = tierFromCallback || 'VVIP'; // default fallback
     try {
       const pending = await redis.get(`user:${userId}:pending_payment`);
       if (pending) {
         const pendingObj = JSON.parse(pending);
-        tier = pendingObj.tier || tier;
+        tier = tierFromCallback || pendingObj.tier || tier;
       } else {
         logger.warn('No pending payment found for user', { userId, data });
       }
