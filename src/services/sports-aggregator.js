@@ -208,8 +208,46 @@ export class SportsAggregator {
           logger.warn('⚠️  StatPal returned null data');
           return [];
         }
+        // Normalize StatPal response shapes. StatPal responses vary between
+        // - an array of matches
+        // - { data: [...] }
+        // - { data: { matches: [...] } }
+        // - { results: [...] } or { matches: [...] }
+        // - nested objects where the first encountered array is the payload
+        const extractMatches = (obj) => {
+          if (!obj) return [];
+          if (Array.isArray(obj)) return obj;
+          // Common top-level array holders
+          if (Array.isArray(obj.data)) return obj.data;
+          if (Array.isArray(obj.matches)) return obj.matches;
+          if (Array.isArray(obj.results)) return obj.results;
+          // data as object containing arrays
+          if (obj.data && typeof obj.data === 'object') {
+            if (Array.isArray(obj.data.matches)) return obj.data.matches;
+            if (Array.isArray(obj.data.results)) return obj.data.results;
+            // find first array value inside data
+            for (const v of Object.values(obj.data)) {
+              if (Array.isArray(v)) return v;
+            }
+          }
+          // fallback: check any top-level property that is an array
+          for (const v of Object.values(obj)) {
+            if (Array.isArray(v)) return v;
+          }
+          // maybe the payload is an object keyed by league ids -> arrays
+          const arrays = [];
+          for (const v of Object.values(obj)) {
+            if (v && typeof v === 'object') {
+              for (const sub of Object.values(v)) {
+                if (Array.isArray(sub)) arrays.push(...sub);
+              }
+            }
+          }
+          if (arrays.length > 0) return arrays;
+          return [];
+        };
 
-        let matches = Array.isArray(statpalData) ? statpalData : (statpalData.data || statpalData.matches || []);
+        let matches = extractMatches(statpalData);
         
         if (matches.length > 0) {
           logger.info(`✅ StatPal: Found ${matches.length} live matches (soccer)`);
@@ -217,7 +255,7 @@ export class SportsAggregator {
           await this._recordProviderHealth('statpal', true, `Found ${matches.length} live matches`);
           return this._formatMatches(matches, 'statpal');
         } else {
-          logger.warn('⚠️  StatPal returned empty match list');
+          logger.warn('⚠️  StatPal returned empty match list or unrecognized payload shape');
           return [];
         }
       } catch (e) {
