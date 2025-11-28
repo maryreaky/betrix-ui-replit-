@@ -77,6 +77,7 @@ class StatPalService {
       }
 
       logger.info(`✅ StatPal live scores fetched: ${sport}`);
+      try { await this.providerHealth.clear('statpal-live'); } catch (e) {}
       return data;
     } catch (error) {
       logger.error(`❌ StatPal live scores error (${sport}):`, error.message);

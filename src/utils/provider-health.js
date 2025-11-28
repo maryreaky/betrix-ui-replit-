@@ -61,4 +61,20 @@ export class ProviderHealth {
     // Default short backoff
     await this.markDisabled(name, 30, `failure:${code} ${message}`);
   }
+
+  async clear(name) {
+    // Remove any disabled markers for a provider (in-memory and Redis)
+    try {
+      this.mem.delete(name);
+    } catch (e) {
+      // ignore
+    }
+    try {
+      if (this.redis) {
+        await this.redis.del(this._redisKey(name)).catch(() => null);
+      }
+    } catch (e) {
+      // ignore redis delete failures
+    }
+  }
 }
