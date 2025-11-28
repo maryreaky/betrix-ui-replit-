@@ -27,6 +27,7 @@ import SportsAggregator from "./services/sports-aggregator.js";
 import OddsAnalyzer from "./services/odds-analyzer.js";
 import { MultiSportAnalyzer } from "./services/multi-sport-analyzer.js";
 import { startPrefetchScheduler } from "./tasks/prefetch-scheduler.js";
+import { APIBootstrap } from "./tasks/api-bootstrap.js";
 import CacheService from "./services/cache.js";
 import { AdvancedHandler } from "./advanced-handler.js";
 import { PremiumService } from "./services/premium.js";
@@ -220,6 +221,24 @@ const basicHandlers = new BotHandlers(telegram, userService, apiFootball, ai, re
   footballData: footballDataService,
   scrapers,
 });
+
+// ===== API BOOTSTRAP: Validate keys and immediately prefetch data =====
+let apiBootstrapSuccess = false;
+try {
+  const apiBootstrap = new APIBootstrap(sportsAggregator, oddsAnalyzer, redis);
+  const bootstrapResult = await apiBootstrap.initialize();
+  apiBootstrapSuccess = bootstrapResult.success;
+  
+  if (bootstrapResult.success) {
+    logger.info('✅ API Bootstrap successful', bootstrapResult.data);
+    // Start continuous prefetch after initial success
+    apiBootstrap.startContinuousPrefetch(Number(process.env.PREFETCH_INTERVAL_SECONDS || 60));
+  } else {
+    logger.warn('⚠️  API Bootstrap warning', bootstrapResult);
+  }
+} catch (e) {
+  logger.warn('API Bootstrap initialization failed', e?.message || String(e));
+}
 
 // Start prefetch scheduler (runs in-worker). Interval controlled by PREFETCH_INTERVAL_SECONDS (default 60s).
 try {
