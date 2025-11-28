@@ -889,6 +889,63 @@ export class SportsAggregator {
         };
       }
 
+      // StatPal normalization: handle many possible field names/shapes
+      if (source === 'statpal') {
+        const pick = (...keys) => {
+          for (const k of keys) {
+            if (!k) continue;
+            // nested path support (e.g., 'teams.home.name')
+            if (k.indexOf('.') > -1) {
+              const parts = k.split('.');
+              let cur = m;
+              let ok = true;
+              for (const p of parts) {
+                if (cur && Object.prototype.hasOwnProperty.call(cur, p)) {
+                  cur = cur[p];
+                } else { ok = false; break; }
+              }
+              if (ok && (typeof cur === 'string' || typeof cur === 'number')) return cur;
+              if (ok && cur && typeof cur === 'object' && cur.name) return cur.name;
+              continue;
+            }
+            if (Object.prototype.hasOwnProperty.call(m, k)) {
+              const v = m[k];
+              if (v === null || typeof v === 'undefined') continue;
+              if (typeof v === 'string' || typeof v === 'number') return v;
+              if (typeof v === 'object') {
+                if (v.name) return v.name;
+                if (v.title) return v.title;
+                if (v.fullName) return v.fullName;
+                // attempt to stringify small objects
+                try { return JSON.stringify(v); } catch (e) { continue; }
+              }
+            }
+          }
+          return null;
+        };
+
+        const home = pick('home', 'home_team', 'homeTeam', 'localteam', 'team_home', 'teams.home', 'home.name', 'home.team', 'home_team_name');
+        const away = pick('away', 'away_team', 'awayTeam', 'visitorteam', 'team_away', 'teams.away', 'away.name', 'away.team', 'away_team_name');
+
+        const homeScore = pick('homeScore', 'home_score', 'score.home', 'scores.home', 'goals.home', 'home.goals');
+        const awayScore = pick('awayScore', 'away_score', 'score.away', 'scores.away', 'goals.away', 'away.goals');
+
+        const status = pick('status', 'match_status', 'state', 'status_text');
+        const time = pick('time', 'match_time', 'start_time', 'minute', 'elapsed', 'status_time');
+
+        return {
+          id: m.id || m.match_id || null,
+          home: safe(home, 'Home'),
+          away: safe(away, 'Away'),
+          homeScore: (typeof homeScore === 'number') ? homeScore : (homeScore ? Number(homeScore) : null),
+          awayScore: (typeof awayScore === 'number') ? awayScore : (awayScore ? Number(awayScore) : null),
+          status: safe(status, 'UNKNOWN'),
+          time: safe(time, 'TBA'),
+          provider: 'statpal',
+          raw: m
+        };
+      }
+
       // default: try to coerce obvious fields and return a safe minimal object
       return {
         id: m.id || m.fixture?.id || null,
