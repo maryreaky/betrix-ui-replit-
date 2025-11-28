@@ -32,7 +32,7 @@ class StartupInitializer {
 
     // Check if StatPal is enabled
     if (!CONFIG.STATPAL.ENABLED || !CONFIG.STATPAL.KEY) {
-      console.warn('⚠️  [Startup] StatPal API not configured, using fallback providers');
+      console.warn('⚠️  [Startup] StatPal API not configured (STATPAL_API env var), using fallback providers');
       return {};
     }
 
