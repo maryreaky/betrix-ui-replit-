@@ -12,15 +12,18 @@
  * API Versions: v1 (most sports), v2 (soccer advanced features)
  */
 
-const CONFIG = require('../config');
-const HttpClient = require('./http-client');
-const logger = require('../utils/logger');
-const ProviderHealth = require('../utils/provider-health');
+import { CONFIG } from '../config.js';
+import { HttpClient } from './http-client.js';
+import { Logger } from '../utils/logger.js';
+import { ProviderHealth } from '../utils/provider-health.js';
+
+const logger = new Logger('StatPalService');
 
 class StatPalService {
   constructor(redis = null) {
     this.redis = redis;
-    this.httpClient = new HttpClient();
+    // HttpClient exposes a static `fetch` helper; use the class as the client namespace
+    this.httpClient = HttpClient;
     this.providerHealth = new ProviderHealth(redis);
     this.apiKey = CONFIG.STATPAL.KEY;
     this.baseUrl = CONFIG.STATPAL.BASE;
@@ -530,4 +533,4 @@ class StatPalService {
   }
 }
 
-module.exports = StatPalService;
+export default StatPalService;
