@@ -16,7 +16,7 @@ import { CONFIG, validateConfig } from "./config.js";
 import { Logger } from "./utils/logger.js";
 import { TelegramService } from "./services/telegram.js";
 import { UserService } from "./services/user.js";
-import { APIFootballService } from "./services/api-football.js";
+// API-Football removed from runtime per operator request — prefer SportMonks and Football-Data
 import { GeminiService } from "./services/gemini.js";
 import { LocalAIService } from "./services/local-ai.js";
 import { HuggingFaceService } from "./services/huggingface.js";
@@ -59,7 +59,7 @@ const logger = new Logger("FinalWorker");
 
 try {
   validateConfig();
-  logger.info("✅ Configuration validated (API_FOOTBALL_KEY or API_SPORTS_KEY required)");
+  logger.info("✅ Configuration validated (SPORTSMONKS or FOOTBALLDATA keys accepted)");
 } catch (err) {
   logger.error("Configuration failed", err);
   process.exit(1);
@@ -90,7 +90,8 @@ setInterval(async () => {
 // Initialize all services
 const telegram = new TelegramService(CONFIG.TELEGRAM_TOKEN, CONFIG.TELEGRAM.SAFE_CHUNK);
 const userService = new UserService(redis);
-const apiFootball = new APIFootballService(redis);
+// Do not instantiate API-Football service — set to null so handlers fall back to SportMonks/Football-Data
+const apiFootball = null;
 const gemini = new GeminiService(CONFIG.GEMINI.API_KEY);
 const hfModels = process.env.HUGGINGFACE_MODELS || process.env.HUGGINGFACE_MODEL || null;
 const huggingface = new HuggingFaceService(hfModels, process.env.HUGGINGFACE_TOKEN);
@@ -108,7 +109,8 @@ const rssAggregator = new RSSAggregator(cache, { ttlSeconds: 60 });
 const footballDataService = new FootballDataService();
 const scorebatService = new ScoreBatService(process.env.SCOREBAT_TOKEN || null, cache, { retries: Number(process.env.SCOREBAT_RETRIES || 3), cacheTtlSeconds: Number(process.env.SCOREBAT_CACHE_TTL || 60) });
 const scrapers = new Scrapers(redis);
-const sportsAggregator = new SportsAggregator(redis, { scorebat: scorebatService, rss: rssAggregator, openLiga });
+// Initialize SportsAggregator with enforced provider priority: only SportMonks and Football-Data
+const sportsAggregator = new SportsAggregator(redis, { scorebat: scorebatService, rss: rssAggregator, openLiga, allowedProviders: ['SPORTSMONKS','FOOTBALLDATA'] });
 const oddsAnalyzer = new OddsAnalyzer(redis, sportsAggregator, null);
 const multiSportAnalyzer = new MultiSportAnalyzer(redis, sportsAggregator, null);
 const sportMonksAPI = new SportMonksAPI();
@@ -274,7 +276,7 @@ try {
 
 // Start prefetch scheduler (runs in-worker). Interval controlled by PREFETCH_INTERVAL_SECONDS (default 60s).
 try {
-  startPrefetchScheduler({ redis, openLiga, rss: rssAggregator, scorebat: scorebatService, footballData: footballDataService, intervalSeconds: Number(process.env.PREFETCH_INTERVAL_SECONDS || 60) });
+  startPrefetchScheduler({ redis, openLiga, rss: rssAggregator, scorebat: scorebatService, footballData: footballDataService, sportsAggregator: sportsAggregator, intervalSeconds: Number(process.env.PREFETCH_INTERVAL_SECONDS || 60) });
   logger.info('Prefetch scheduler started', { intervalSeconds: Number(process.env.PREFETCH_INTERVAL_SECONDS || 60) });
 } catch (e) {
   logger.warn('Prefetch scheduler failed to start', e?.message || String(e));

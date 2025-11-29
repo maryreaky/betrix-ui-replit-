@@ -5,7 +5,7 @@
  */
 import { setTimeout as wait } from 'timers/promises';
 
-export function startPrefetchScheduler({ redis, openLiga, rss, scorebat, footballData, intervalSeconds = null } = {}) {
+export function startPrefetchScheduler({ redis, openLiga, rss, scorebat, footballData, sportsAggregator, intervalSeconds = null } = {}) {
   if (!redis) throw new Error('redis required');
   intervalSeconds = intervalSeconds || Number(process.env.PREFETCH_INTERVAL_SECONDS || 60);
 
@@ -116,6 +116,31 @@ export function startPrefetchScheduler({ redis, openLiga, rss, scorebat, footbal
           await redis.publish('prefetch:updates', JSON.stringify({ type: 'footballdata', ts }));
         } catch (e) {
           await redis.publish('prefetch:error', JSON.stringify({ type: 'footballdata', error: e.message || String(e), ts }));
+        }
+      }
+
+      // 5) SportMonks & Football-Data live/fixtures - main providers, prefetch every 60s
+      if (sportsAggregator) {
+        try {
+          if (!await isAllowedToRun('sportsmonks')) { /* skip due to backoff */ }
+          else {
+            const live = await sportsAggregator.getLiveMatches('football').catch(async (err) => { await recordFailure('sportsmonks'); throw err; });
+            if (live && live.length > 0) {
+              await safeSet('prefetch:sportsmonks:live', { fetchedAt: ts, count: live.length, data: live.slice(0, 50) }, 30);
+              await recordSuccess('sportsmonks');
+            }
+            const today = new Date().toISOString().split('T')[0];
+            const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+            const fixtures = await sportsAggregator.getFixtures(today, tomorrow).catch(async (err) => { await recordFailure('sportsmonks-fixtures'); return []; });
+            if (fixtures && fixtures.length > 0) {
+              await safeSet('prefetch:sportsmonks:fixtures', { fetchedAt: ts, count: fixtures.length, data: fixtures.slice(0, 50) }, 60);
+              await recordSuccess('sportsmonks-fixtures');
+            }
+            await redis.publish('prefetch:updates', JSON.stringify({ type: 'sportsmonks', ts, live: live ? live.length : 0, fixtures: fixtures ? fixtures.length : 0 }));
+          }
+        } catch (e) {
+          await redis.publish('prefetch:error', JSON.stringify({ type: 'sportsmonks', error: e.message || String(e), ts }));
+          await recordFailure('sportsmonks');
         }
       }
 
