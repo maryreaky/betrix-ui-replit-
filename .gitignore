@@ -78,3 +78,5 @@ docker-compose.yml
 # If your team prefers to commit lockfiles, keep package-lock.json tracked.
 # If you intentionally want to ignore lockfiles, uncomment the next line:
 # package-lock.json.history/
+
+.history/
