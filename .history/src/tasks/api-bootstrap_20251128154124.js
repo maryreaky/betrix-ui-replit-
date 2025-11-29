@@ -118,59 +118,39 @@ export class APIBootstrap {
   }
 
   /**
-   * Immediately prefetch live matches from StatPal for multiple sports
+   * Immediately prefetch live matches from all providers
    */
   async prefetchLiveMatches() {
-    logger.info('🔄 Starting immediate live matches prefetch from StatPal...');
+    logger.info('🔄 Starting immediate live matches prefetch...');
     
-    // Supported sports in StatPal
-    const sports = [
-      'soccer',      // Football/Soccer
-      'nfl',         // American Football
-      'nba',         // Basketball
-      'nhl',         // Ice Hockey
-      'mlb',         // Baseball
-      'cricket',     // Cricket
-      'tennis',      // Tennis
-      'rugby',       // Rugby
-      'volleyball'   // Volleyball
-    ];
-
-    const leagueIds = [39, 140, 135, 61, 78, 2]; // Premier League, La Liga, Serie A, Ligue 1, Bundesliga, Champions League (for soccer)
+    const leagueIds = [39, 140, 135, 61, 78, 2]; // Premier League, La Liga, Serie A, Ligue 1, Bundesliga, Champions League
     const results = {
       timestamp: new Date().toISOString(),
-      sports: {},
-      totalMatches: 0
+      leagues: {}
     };
 
-    // Prefetch each sport
-    for (const sport of sports) {
-      const sportResults = {
-        count: 0,
-        samples: []
-      };
-
+    for (const leagueId of leagueIds) {
       try {
-        const matches = await this.sportsAggregator._getLiveFromStatPal(sport, 'v1');
-        if (matches && Array.isArray(matches) && matches.length > 0) {
-          sportResults.count = matches.length;
-          sportResults.samples = matches.slice(0, 2);
-          results.totalMatches += matches.length;
-          logger.info(`✅ ${sport.toUpperCase()}: Found ${matches.length} live matches`, {
+        const matches = await this.sportsAggregator.getLiveMatches(leagueId);
+        results.leagues[leagueId] = {
+          count: matches ? matches.length : 0,
+          matches: matches ? matches.slice(0, 3) : [] // Store first 3 for inspection
+        };
+        
+        if (matches && matches.length > 0) {
+          logger.info(`✅ League ${leagueId}: Found ${matches.length} live matches`, {
             samples: matches.slice(0, 2).map(m => ({ home: m.home, away: m.away, provider: m.provider }))
           });
         }
       } catch (e) {
-        logger.debug(`⚠️  ${sport.toUpperCase()}: Failed to fetch live matches`, e?.message);
-        sportResults.error = e.message;
+        results.leagues[leagueId] = { error: e.message };
+        logger.warn(`⚠️  League ${leagueId}: Failed to fetch live matches`, e.message);
       }
-
-      results.sports[sport] = sportResults;
     }
 
-    // Store results in Redis for UI access
+    // Store results in Redis
     try {
-      await this.redis.set('betrix:prefetch:live:by-sport', JSON.stringify(results), 'EX', 300);
+      await this.redis.set('betrix:prefetch:live:latest', JSON.stringify(results), 'EX', 300);
     } catch (e) {
       logger.warn('Failed to store live matches prefetch results', e?.message);
     }

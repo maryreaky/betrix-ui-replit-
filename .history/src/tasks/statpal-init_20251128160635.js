@@ -145,32 +145,6 @@ export class StatPalInit {
       const count = Array.isArray(matches) ? matches.length : 0;
       const samples = Array.isArray(matches) ? matches.slice(0, 3) : [];
 
-      // LOG RAW PAYLOAD STRUCTURE FOR DEBUGGING
-      if (count > 0 && samples.length > 0) {
-        const firstMatch = samples[0];
-        logger.info(`🔍 ${sport.toUpperCase()} RAW MATCH STRUCTURE (first match):`);
-        logger.info(`    Keys: ${Object.keys(firstMatch).join(', ')}`);
-        
-        // Log specific field values that might contain team names
-        const teamFields = Object.keys(firstMatch).filter(k => 
-          k.toLowerCase().includes('team') || 
-          k.toLowerCase().includes('home') || 
-          k.toLowerCase().includes('away') ||
-          k.toLowerCase().includes('visitor') ||
-          k.toLowerCase().includes('local') ||
-          k === 'team1' || k === 'team2'
-        );
-        if (teamFields.length > 0) {
-          logger.info(`    Team-related fields: ${teamFields.join(', ')}`);
-          teamFields.forEach(f => {
-            logger.info(`      ${f}: ${JSON.stringify(firstMatch[f])}`);
-          });
-        }
-        
-        // Log the entire first match as JSON for inspection
-        logger.debug(`    Full first match: ${JSON.stringify(firstMatch)}`);
-      }
-
       // Store in Redis cache
       const cacheKey = `betrix:statpal:${sport}:livescores`;
       if (this.redis && count > 0) {
