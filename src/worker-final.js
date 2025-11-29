@@ -233,18 +233,22 @@ const basicHandlers = new BotHandlers(telegram, userService, apiFootball, ai, re
 // ===== STATPAL INITIALIZATION: Test API key and prefetch ALL sports data =====
 let statpalInitSuccess = false;
 try {
-  const statpalInit = new StatPalInit(redis, CONFIG.STATPAL.KEY);
-  const statpalResult = await statpalInit.initialize();
-  statpalInitSuccess = statpalResult.success;
-  
-  if (statpalResult.success) {
-    logger.info('✅ StatPal Initialization successful', {
-      apiKey: statpalResult.results.apiKey,
-      totalDataPoints: statpalResult.results.totalDataPoints,
-      sportsWithData: Object.keys(statpalResult.results.sports).length
-    });
+  if (CONFIG.STATPAL && CONFIG.STATPAL.ENABLED) {
+    const statpalInit = new StatPalInit(redis, CONFIG.STATPAL.KEY);
+    const statpalResult = await statpalInit.initialize();
+    statpalInitSuccess = statpalResult.success;
+
+    if (statpalResult.success) {
+      logger.info('✅ StatPal Initialization successful', {
+        apiKey: statpalResult.results.apiKey,
+        totalDataPoints: statpalResult.results.totalDataPoints,
+        sportsWithData: Object.keys(statpalResult.results.sports).length
+      });
+    } else {
+      logger.error('❌ StatPal Initialization failed', statpalResult.results.errors);
+    }
   } else {
-    logger.error('❌ StatPal Initialization failed', statpalResult.results.errors);
+    logger.info('ℹ️ StatPal initialization skipped (disabled in config)');
   }
 } catch (e) {
   logger.error('StatPal initialization error', e?.message || String(e));

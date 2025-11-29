@@ -329,12 +329,21 @@ export class APIBootstrap {
 
       logger.info(`✅ Bootstrap found ${keyStatus.summary.enabledProviders} configured providers`);
 
-      // Step 2: Immediately prefetch data
+      // Step 2: Immediately prefetch data (only for providers enabled)
       logger.info('⏱️  Starting immediate data prefetch (this may take 10-30 seconds)...');
-      
-      const liveMatches = await this.prefetchLiveMatches();
-      const upcomingFixtures = await this.prefetchUpcomingFixtures();
-      const odds = await this.prefetchOdds();
+
+      let liveMatches = { sports: {} };
+      let upcomingFixtures = { sports: {} };
+      let odds = { sports: {} };
+
+      // Only prefetch StatPal endpoints when STATPAL is enabled
+      if (CONFIG.STATPAL && CONFIG.STATPAL.ENABLED) {
+        liveMatches = await this.prefetchLiveMatches();
+        upcomingFixtures = await this.prefetchUpcomingFixtures();
+        odds = await this.prefetchOdds();
+      } else {
+        logger.info('ℹ️ Skipping StatPal prefetch (STATPAL disabled in config)');
+      }
 
       const summaryData = {
         liveMatches: Object.values(liveMatches.sports || {}).reduce((sum, l) => sum + (l.count || 0), 0),
