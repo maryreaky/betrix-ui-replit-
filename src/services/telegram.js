@@ -32,6 +32,12 @@ class TelegramService {
         ...options,
       };
 
+      // Debug: log payload keys for troubleshooting reply_markup
+      try {
+        logger.debug('sendMessage payload keys', Object.keys(payload));
+      } catch (e) {
+        // ignore logging errors
+      }
       try {
         await HttpClient.fetch(`${this.baseUrl}/sendMessage`, {
           method: "POST",
