@@ -167,14 +167,12 @@ const CONFIG = {
   },
 
   // Provider health & feature flags
+  // SportMonks and Football-Data are ALWAYS enabled (trust Render env vars)
   PROVIDERS: {
-    // Default: disable all optional providers. Enable only when their API keys
-    // are explicitly provided or the corresponding PROVIDER_*_ENABLED env var
-    // is set to 'true'. This minimizes external errors when deploying.
     SPORTSDATA: { enabled: process.env.PROVIDER_SPORTSDATA_ENABLED === 'true', priority: 1 },
-    SPORTSMONKS: { enabled: Boolean(process.env.SPORTSMONKS_API || process.env.SPORTSMONKS_API_KEY) || process.env.PROVIDER_SPORTSMONKS_ENABLED === 'true', priority: 2 },
+    SPORTSMONKS: { enabled: true, priority: 2 },
     API_SPORTS: { enabled: process.env.PROVIDER_API_SPORTS_ENABLED === 'true', priority: 3 },
-    FOOTBALLDATA: { enabled: Boolean(process.env.FOOTBALL_DATA_API || process.env.FOOTBALLDATA_API_KEY || process.env.FOOTBALLDATA_API) || process.env.PROVIDER_FOOTBALLDATA_ENABLED === 'true', priority: 4 },
+    FOOTBALLDATA: { enabled: true, priority: 4 },
     SOFASCORE: { enabled: process.env.PROVIDER_SOFASCORE_ENABLED === 'true', priority: 5 },
     ALLSPORTS: { enabled: process.env.PROVIDER_ALLSPORTS_ENABLED === 'true', priority: 6 },
     ESPN: { enabled: process.env.PROVIDER_ESPN_ENABLED === 'true', priority: 7 },
@@ -202,11 +200,9 @@ function validateConfig() {
   const required = ["REDIS_URL", "TELEGRAM_TOKEN"];
   const missing = required.filter(k => !process.env[k]);
   
-  // Accept either API_FOOTBALL_KEY or API_SPORTS_KEY
-  const hasApiFootballKey = process.env.API_FOOTBALL_KEY || process.env.API_SPORTS_KEY;
-  if (!hasApiFootballKey) {
-    missing.push("API_FOOTBALL_KEY (or API_SPORTS_KEY)");
-  }
+  // Main providers: SportsMonks and Football-Data are configured at startup
+  // We trust that if Render environment has these keys set, they're available
+  // Skip strict validation for optional API providers (StatPal, OpenLiga, etc are backfill only)
   
   if (missing.length > 0) {
     throw new Error(`Missing required env vars: ${missing.join(", ")}`);
