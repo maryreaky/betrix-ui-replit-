@@ -8,6 +8,9 @@
 // NOTE: Do NOT disable global TLS verification here. Use per-service TLS config
 // via `SPORTSMONKS_INSECURE=true` if absolutely required for local testing.
 
+import dotenv from "dotenv";
+dotenv.config();
+
 import Redis from "ioredis";
 import { CONFIG, validateConfig } from "./config.js";
 import { Logger } from "./utils/logger.js";
