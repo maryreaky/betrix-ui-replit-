@@ -1,4 +1,128 @@
 /**
+ * Sports Aggregator
+ * Unifies live matches (SportMonks) and fixtures (Football-Data.org)
+ */
+
+import { Logger } from '../utils/logger.js';
+import { HttpClient } from './http-client.js';
+import SportMonksAPI from './sportmonks-api.js';
+
+const logger = new Logger('SportsAggregator');
+
+class SportsAggregator {
+  constructor(redis = null, options = {}) {
+    this.redis = redis;
+    this.options = options || {};
+    this.sportMonks = options.sportMonks || new SportMonksAPI();
+  }
+
+  async _cacheGet(key) {
+    try {
+      if (!this.redis) return null;
+      const v = await this.redis.get(key);
+      return v ? JSON.parse(v) : null;
+    } catch (e) {
+      logger.debug('cache get failed', e?.message);
+      return null;
+    }
+  }
+
+  async _cacheSet(key, value, ttlSeconds) {
+    try {
+      if (!this.redis) return;
+      await this.redis.set(key, JSON.stringify(value));
+      if (ttlSeconds) await this.redis.expire(key, ttlSeconds);
+    } catch (e) {
+      logger.debug('cache set failed', e?.message);
+    }
+  }
+
+  /**
+   * Get live matches (SportMonks)
+   * Returns unified array of matches
+   */
+  async getLiveMatches(sport = 'football') {
+    const cacheKey = `sports:live:${sport}`;
+    const ttl = 30; // cache live for 30s
+
+    const cached = await this._cacheGet(cacheKey);
+    if (cached) return cached;
+
+    try {
+      // Use injected SportMonks client if provided
+      const client = this.options.sportMonks || this.sportMonks;
+      const raw = (client && typeof client.getLivescores === 'function')
+        ? await client.getLivescores({ sport })
+        : [];
+
+      const matches = (Array.isArray(raw) ? raw : raw.data || [])
+        .map(m => ({
+          id: m.id || m.fixture_id || String(Math.random()),
+          home: m.home_team?.name || m.home || m.homeName || m.home_team || 'Unknown',
+          away: m.away_team?.name || m.away || m.awayName || m.away_team || 'Unknown',
+          status: m.status || m.time || 'LIVE',
+          score: (m.score && (m.score.home !== undefined || m.score.away !== undefined)) ? `${m.score.home}-${m.score.away}` : (m.goals_home && m.goals_away ? `${m.goals_home}-${m.goals_away}` : null),
+          league: m.league?.name || m.competition || m.competition_name || 'Unknown',
+          venue: m.venue || m.location || null,
+          odds: m.odds || null,
+          provider: 'SportMonks'
+        }));
+
+      await this._cacheSet(cacheKey, matches, ttl);
+      return matches;
+    } catch (e) {
+      logger.warn('getLiveMatches failed', e?.message);
+      return [];
+    }
+  }
+
+  /**
+   * Get fixtures between two dates (Football-Data.org)
+   */
+  async getFixtures(dateFrom, dateTo) {
+    const cacheKey = `sports:fixtures:${dateFrom}:${dateTo}`;
+    const ttl = 3600; // 1 hour
+
+    const cached = await this._cacheGet(cacheKey);
+    if (cached) return cached;
+
+    try {
+      // Prefer injected footballData client if provided
+      const fdClient = this.options.footballData || this.options.footballDataService || null;
+      let raw = null;
+
+      if (fdClient && typeof fdClient.getMatches === 'function') {
+        raw = await fdClient.getMatches(dateFrom, dateTo);
+      } else {
+        // Try Football-Data.org API directly if token present
+        const token = process.env.FOOTBALLDATA_API_TOKEN || process.env.API_FOOTBALL_KEY || process.env.FOOTBALL_DATA_KEY;
+        if (!token) throw new Error('Football-Data token missing');
+        const url = `https://api.football-data.org/v4/matches?dateFrom=${dateFrom}&dateTo=${dateTo}`;
+        raw = await HttpClient.fetch(url, { method: 'GET', headers: { 'X-Auth-Token': token } }, 'football-data matches');
+      }
+
+      const matches = (Array.isArray(raw.matches) ? raw.matches : raw || []).map(m => ({
+        id: m.id || m.match?.id || String(Math.random()),
+        home: m.homeTeam?.name || m.homeTeam || m.match?.homeTeam || 'Unknown',
+        away: m.awayTeam?.name || m.awayTeam || m.match?.awayTeam || 'Unknown',
+        status: m.status || (m.match && m.match.status) || 'SCHEDULED',
+        kickoff: m.utcDate || m.kickoff || (m.match && m.match.utcDate) || null,
+        competition: m.competition?.name || m.competition || 'Unknown',
+        venue: m.venue || null,
+        provider: 'Football-Data.org'
+      }));
+
+      await this._cacheSet(cacheKey, matches, ttl);
+      return matches;
+    } catch (e) {
+      logger.warn('getFixtures failed', e?.message);
+      return [];
+    }
+  }
+}
+
+export default SportsAggregator;
+/**
  * Sports Data Aggregator
  * Fetches and normalizes data from multiple sports APIs with priority order:
  * 0. StatPal (All Sports Data) - Primary source for all sports

@@ -13,8 +13,13 @@ const logger = new Logger('HandlerComplete');
 /**
  * Fetch live matches from SportMonks
  */
-async function getLiveMatches(sport = 'football') {
+async function getLiveMatches(services = {}, sport = 'football') {
   try {
+    // Prefer injected sportsAggregator if available (provides caching and fixtures integration)
+    if (services && services.sportsAggregator && typeof services.sportsAggregator.getLiveMatches === 'function') {
+      return await services.sportsAggregator.getLiveMatches(sport);
+    }
+
     const sportMonks = new SportMonksService();
     const matches = await sportMonks.getLivescores();
     
@@ -43,7 +48,7 @@ async function getLiveMatches(sport = 'football') {
 /**
  * Handle /start command - show main menu
  */
-export async function handleStart(chatId) {
+export async function handleStart(chatId, services = {}) {
   return {
     method: 'sendMessage',
     chat_id: chatId,
@@ -56,7 +61,7 @@ export async function handleStart(chatId) {
 /**
  * Handle /menu command - show main menu
  */
-export async function handleMenu(chatId) {
+export async function handleMenu(chatId, services = {}) {
   return {
     method: 'sendMessage',
     chat_id: chatId,
@@ -69,7 +74,7 @@ export async function handleMenu(chatId) {
 /**
  * Handle /live command - show sports selector or live games
  */
-export async function handleLive(chatId, sport = null) {
+export async function handleLive(chatId, sport = null, services = {}) {
   if (!sport) {
     return {
       method: 'sendMessage',
@@ -80,7 +85,7 @@ export async function handleLive(chatId, sport = null) {
     };
   }
 
-  const matches = await getLiveMatches(sport);
+  const matches = await getLiveMatches(services, sport);
   const menu = completeMenus.buildLiveGamesMenu(matches, sport, 1);
 
   return {
@@ -145,7 +150,7 @@ export async function handleCallbackQuery(cq, redis, services) {
     // Sport selection
     if (data.startsWith('sport:')) {
       const sport = data.split(':')[1];
-      const matches = await getLiveMatches(sport);
+      const matches = await getLiveMatches(services, sport);
       const menu = completeMenus.buildLiveGamesMenu(matches, sport, 1);
 
       return {
@@ -163,7 +168,7 @@ export async function handleCallbackQuery(cq, redis, services) {
       const parts = data.split(':');
       const sport = parts[1];
       const page = parseInt(parts[2], 10) || 1;
-      const matches = await getLiveMatches(sport);
+      const matches = await getLiveMatches(services, sport);
       const menu = completeMenus.buildLiveGamesMenu(matches, sport, page);
 
       return {
@@ -181,7 +186,7 @@ export async function handleCallbackQuery(cq, redis, services) {
       const parts = data.split(':');
       const matchId = parts[1];
       // Fetch match details from SportMonks
-      const matches = await getLiveMatches('football');
+      const matches = await getLiveMatches(services, 'football');
       const match = matches.find(m => String(m.id) === matchId) || matches[0] || {};
       const menu = completeMenus.buildMatchDetailsMenu(match);
 
@@ -200,7 +205,7 @@ export async function handleCallbackQuery(cq, redis, services) {
     // ========================================================================
 
     if (data === 'odds_analysis') {
-      const matches = await getLiveMatches('football');
+      const matches = await getLiveMatches(services, 'football');
       const menu = completeMenus.buildOddsMenu(matches);
 
       return {

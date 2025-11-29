@@ -624,10 +624,11 @@ async function handleCommand(chatId, userId, cmd, args, fullText) {
     const start = Date.now();
 
     // Basic commands - routed through complete handler for full menu system
+    const sharedServices = { openLiga, footballData: footballDataService, rss: rssAggregator, scrapers, sportsAggregator, oddsAnalyzer, multiSportAnalyzer, cache, sportMonks: sportMonksAPI, sportsData: sportsDataAPI, redis };
     const basicCommands = {
       "/start": async () => {
         try {
-          const result = await completeHandler.handleStart(chatId);
+          const result = await completeHandler.handleStart(chatId, sharedServices);
           await telegram.sendMessage(chatId, result.text, { reply_markup: result.reply_markup, parse_mode: result.parse_mode || 'Markdown' });
         } catch (e) {
           logger.warn('/start handler error', e?.message);
@@ -636,7 +637,7 @@ async function handleCommand(chatId, userId, cmd, args, fullText) {
       },
       "/menu": async () => {
         try {
-          const result = await completeHandler.handleMenu(chatId);
+          const result = await completeHandler.handleMenu(chatId, sharedServices);
           await telegram.sendMessage(chatId, result.text, { reply_markup: result.reply_markup, parse_mode: result.parse_mode || 'Markdown' });
         } catch (e) {
           logger.warn('/menu handler error', e?.message);
@@ -645,7 +646,7 @@ async function handleCommand(chatId, userId, cmd, args, fullText) {
       },
       "/live": async () => {
         try {
-          const result = await completeHandler.handleLive(chatId);
+          const result = await completeHandler.handleLive(chatId, null, sharedServices);
           await telegram.sendMessage(chatId, result.text, { reply_markup: result.reply_markup, parse_mode: result.parse_mode || 'Markdown' });
         } catch (e) {
           logger.warn('/live handler error', e?.message);
@@ -654,7 +655,7 @@ async function handleCommand(chatId, userId, cmd, args, fullText) {
       },
       "/help": async () => {
         try {
-          const result = await completeHandler.handleLive(chatId, 'help');
+          const result = await completeHandler.handleMenu(chatId, sharedServices);
           if (result && result.text) {
             await telegram.sendMessage(chatId, result.text, { reply_markup: result.reply_markup, parse_mode: result.parse_mode || 'Markdown' });
           } else {
@@ -667,11 +668,12 @@ async function handleCommand(chatId, userId, cmd, args, fullText) {
       },
       "/about": () => basicHandlers.about(chatId),
       "/live": async () => {
-        const services = { openLiga, footballData: footballDataService, rss: rssAggregator, scrapers, sportsAggregator, oddsAnalyzer, multiSportAnalyzer, cache, sportMonks: sportMonksAPI, sportsData: sportsDataAPI };
-        const text = '/live';
-        const msg = await v2Handler.handleCommand(text, chatId, userId, redis, services);
-        if (msg && msg.chat_id) {
-          await telegram.sendMessage(chatId, msg.text || '', { reply_markup: msg.reply_markup, parse_mode: msg.parse_mode || 'Markdown' });
+        // route /live to the complete handler (same as above)
+        try {
+          const result = await completeHandler.handleLive(chatId, null, sharedServices);
+          await telegram.sendMessage(chatId, result.text, { reply_markup: result.reply_markup, parse_mode: result.parse_mode || 'Markdown' });
+        } catch (e) {
+          logger.warn('/live handler (duplicate) error', e?.message);
         }
       },
       "/news": () => basicHandlers.news(chatId),
