@@ -49,11 +49,11 @@ const CONFIG = {
 
   // StatPal (All Sports Data API - Primary Provider)
   STATPAL: {
-    KEY: process.env.STATPAL_API || process.env.STATPAL_API_KEY || process.env.STATPAL_ACCESS_KEY || '4c9cee6b-cf19-4b68-a122-48120fe855b5',
+    KEY: process.env.STATPAL_API || process.env.STATPAL_API_KEY || process.env.STATPAL_ACCESS_KEY || null,
     BASE: process.env.STATPAL_BASE || 'https://statpal.io/api',
     V1: 'v1',
     V2: 'v2',
-    ENABLED: Boolean(process.env.STATPAL_API || process.env.STATPAL_API_KEY || process.env.STATPAL_ACCESS_KEY),
+    ENABLED: false,
   },
 
   // Telegram
@@ -168,14 +168,17 @@ const CONFIG = {
 
   // Provider health & feature flags
   PROVIDERS: {
-    SPORTSDATA: { enabled: process.env.PROVIDER_SPORTSDATA_ENABLED !== 'false', priority: 1 },
-    SPORTSMONKS: { enabled: process.env.PROVIDER_SPORTSMONKS_ENABLED !== 'false', priority: 2 },
-    API_SPORTS: { enabled: process.env.PROVIDER_API_SPORTS_ENABLED !== 'false', priority: 3 },
-    FOOTBALLDATA: { enabled: process.env.PROVIDER_FOOTBALLDATA_ENABLED !== 'false', priority: 4 },
-    SOFASCORE: { enabled: process.env.PROVIDER_SOFASCORE_ENABLED !== 'false', priority: 5 },
-    ALLSPORTS: { enabled: process.env.PROVIDER_ALLSPORTS_ENABLED !== 'false', priority: 6 },
-    ESPN: { enabled: process.env.PROVIDER_ESPN_ENABLED !== 'false', priority: 7 },
-    CLAUDE: { enabled: process.env.PROVIDER_CLAUDE_ENABLED !== 'false', priority: 0 }
+    // Default: disable all optional providers. Enable only when their API keys
+    // are explicitly provided or the corresponding PROVIDER_*_ENABLED env var
+    // is set to 'true'. This minimizes external errors when deploying.
+    SPORTSDATA: { enabled: process.env.PROVIDER_SPORTSDATA_ENABLED === 'true', priority: 1 },
+    SPORTSMONKS: { enabled: Boolean(process.env.SPORTSMONKS_API || process.env.SPORTSMONKS_API_KEY) || process.env.PROVIDER_SPORTSMONKS_ENABLED === 'true', priority: 2 },
+    API_SPORTS: { enabled: process.env.PROVIDER_API_SPORTS_ENABLED === 'true', priority: 3 },
+    FOOTBALLDATA: { enabled: Boolean(process.env.FOOTBALL_DATA_API || process.env.FOOTBALLDATA_API_KEY || process.env.FOOTBALLDATA_API) || process.env.PROVIDER_FOOTBALLDATA_ENABLED === 'true', priority: 4 },
+    SOFASCORE: { enabled: process.env.PROVIDER_SOFASCORE_ENABLED === 'true', priority: 5 },
+    ALLSPORTS: { enabled: process.env.PROVIDER_ALLSPORTS_ENABLED === 'true', priority: 6 },
+    ESPN: { enabled: process.env.PROVIDER_ESPN_ENABLED === 'true', priority: 7 },
+    CLAUDE: { enabled: process.env.PROVIDER_CLAUDE_ENABLED === 'true', priority: 0 }
   },
 
   // Provider diagnostics (Redis key prefix)
@@ -214,7 +217,7 @@ function validateConfig() {
 CONFIG.STARTUP = {
   FETCH_ON_START: process.env.FETCH_ON_START !== 'false', // Default: true
   PRIORITY_SPORTS: (process.env.PRIORITY_SPORTS || 'soccer,nfl,nba,cricket,tennis').split(',').map(s => s.trim()),
-  USE_STATPAL_PRIORITY: process.env.USE_STATPAL_PRIORITY !== 'false', // Default: true - use StatPal as primary
+  USE_STATPAL_PRIORITY: process.env.USE_STATPAL_PRIORITY === 'true', // Default: false - do not prefer StatPal
 };
 
 export { CONFIG, validateConfig };
