@@ -1,12 +1,13 @@
 /**
  * Telegram Handler v2 (clean)
  * Minimal, robust handler to restore worker startup and preserve core flows:
- * - /live command renders paginated soccer menu
+ * - /live command renders paginated soccer menu with REAL SportMonks data
  * - callback routes: match:<id>:<sport>, odds:<id>, menu_live_page:<sport>:<page>
  */
 
 import { Logger } from '../utils/logger.js';
 import { formatOdds, buildLiveMenuPayload } from './menu-handler.js';
+import SportMonksService from '../services/sportmonks-service.js';
 
 const logger = new Logger('TelegramHandlerV2');
 
@@ -14,14 +15,63 @@ function tryParseJson(s) {
   try { return JSON.parse(s); } catch (e) { return null; }
 }
 
-async function getLiveMatchesBySport(sport, redis, sportsAggregator) {
+async function getLiveMatchesBySport(sport, redis, sportsAggregator, sportMonksAPI) {
   try {
+    // For soccer/football, always fetch LIVE data from SportMonks
+    if (sport === 'soccer' || sport === 'football') {
+      try {
+        logger.info('🔄 Fetching LIVE soccer matches from SportMonks...');
+        
+        // Try to use SportMonks service directly
+        let matches = [];
+        
+        // Try via sportMonksAPI if available
+        if (sportMonksAPI && typeof sportMonksAPI.getLivescores === 'function') {
+          try {
+            matches = await sportMonksAPI.getLivescores();
+            logger.info(`✅ Got ${matches.length} live matches from sportMonksAPI`);
+          } catch (e) {
+            logger.debug('sportMonksAPI.getLivescores failed', e?.message);
+          }
+        }
+
+        // Fallback: Try via SportMonksService directly
+        if (!matches || matches.length === 0) {
+          try {
+            const sportMonksService = new SportMonksService();
+            matches = await sportMonksService.getLivescores();
+            logger.info(`✅ Got ${matches.length} live matches from SportMonksService`);
+          } catch (e) {
+            logger.debug('SportMonksService direct fetch failed', e?.message);
+          }
+        }
+
+        // Normalize matches to expected format
+        if (Array.isArray(matches) && matches.length > 0) {
+          const normalized = matches.map(m => ({
+            id: m.id || m.fixture_id || String(Math.random()),
+            home: m.home_team || m.homeName || m.home || 'Unknown',
+            away: m.away_team || m.awayName || m.away || 'Unknown',
+            status: m.status || m.state || 'TBA',
+            homeScore: m.homeScore !== undefined ? m.homeScore : m.score?.home,
+            awayScore: m.awayScore !== undefined ? m.awayScore : m.score?.away,
+            provider: 'SportMonks'
+          }));
+          logger.info(`✅ Normalized ${normalized.length} matches for display`);
+          return normalized;
+        }
+      } catch (e) {
+        logger.warn('SportMonks fetch error', e?.message || String(e));
+      }
+    }
+
+    // Fallback: Try cached data
     const cacheKey = 'betrix:prefetch:live:by-sport';
     const cached = await redis.get(cacheKey).catch(() => null);
     if (cached) {
       const data = tryParseJson(cached);
       if (data && data.sports && data.sports[sport] && Array.isArray(data.sports[sport].samples)) {
-        logger.info(`📦 Got cached ${sport} matches from prefetch (${data.sports[sport].count || 0} total)`);
+        logger.info(`📦 Got cached ${sport} matches (${data.sports[sport].count || 0} total)`);
         return data.sports[sport].samples;
       }
     }
@@ -30,32 +80,13 @@ async function getLiveMatchesBySport(sport, redis, sportsAggregator) {
       const live39 = await redis.get('live:39').catch(() => null);
       const parsed = tryParseJson(live39);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        logger.info('📦 Got cached soccer matches from live:39 fallback');
+        logger.info('📦 Got cached soccer matches from live:39');
         return parsed;
       }
     }
 
-    // Only support football/soccer via SportMonks for now
-    if (sport === 'soccer' || sport === 'football') {
-      if (sportsAggregator && typeof sportsAggregator._getLiveFromSportsMonks === 'function') {
-        try {
-          const sportmonks = await sportsAggregator._getLiveFromSportsMonks('football');
-          if (Array.isArray(sportmonks) && sportmonks.length > 0) return sportmonks;
-        } catch (e) {
-          logger.debug('SportMonks fetch failed', e?.message || String(e));
-        }
-      }
-    }
-
-    const demoEnabled = (process.env.DEMO_FALLBACK === 'true' || process.env.FORCE_DEMO_FALLBACK === '1');
-    if (demoEnabled) {
-      logger.info('Returning demo fallback matches');
-      return [
-        { id: 'demo-1', home: 'Demo FC', away: 'Sample United', status: "15'" },
-        { id: 'demo-2', home: 'Example Town', away: 'Test Rovers', status: 'HT' }
-      ];
-    }
-
+    // Last resort: return empty array (not demo data)
+    logger.warn(`⚠️ No live ${sport} matches available from any source`);
     return [];
   } catch (e) {
     logger.warn('getLiveMatchesBySport failed', e?.message || String(e));
@@ -71,7 +102,8 @@ export async function handleMessage(update, redis, services) {
     const text = message.text || '';
 
     if (text && text.startsWith('/live')) {
-      const games = await getLiveMatchesBySport('soccer', redis, services && services.sportsAggregator);
+      const sportMonksAPI = services && services.sportMonks;
+      const games = await getLiveMatchesBySport('soccer', redis, services && services.sportsAggregator, sportMonksAPI);
       const payload = buildLiveMenuPayload(games, 'Soccer', 'FREE', 1, 6);
       return { method: 'sendMessage', chat_id: chatId, text: payload.text, reply_markup: payload.reply_markup, parse_mode: 'Markdown' };
     }
@@ -128,7 +160,8 @@ export async function handleCallbackQuery(update, redis, services) {
         const parts = data.split(':');
         const sport = parts[1] || 'soccer';
         const page = parseInt(parts[2], 10) || 1;
-        const games = await getLiveMatchesBySport(sport, redis, services && services.sportsAggregator);
+        const sportMonksAPI = services && services.sportMonks;
+        const games = await getLiveMatchesBySport(sport, redis, services && services.sportsAggregator, sportMonksAPI);
         const payload = buildLiveMenuPayload(games, sport.charAt(0).toUpperCase() + sport.slice(1), 'FREE', page, 6);
         if (cq && cq.message && typeof cq.message.message_id !== 'undefined') {
           return [
@@ -158,7 +191,8 @@ export async function handleCommand(command, chatId, userId, redis, services) {
     logger.info(`Handling command: ${command}`);
 
     if (command === '/start' || command === '/menu' || command === '/help' || command.startsWith('/live')) {
-      const games = await getLiveMatchesBySport('soccer', redis, services && services.sportsAggregator);
+      const sportMonksAPI = services && services.sportMonks;
+      const games = await getLiveMatchesBySport('soccer', redis, services && services.sportsAggregator, sportMonksAPI);
       const payload = buildLiveMenuPayload(games, 'Soccer', 'FREE', 1, 6);
       return {
         chat_id: chatId,
@@ -177,7 +211,7 @@ export async function handleCommand(command, chatId, userId, redis, services) {
     logger.warn('handleCommand failed', e?.message || String(e));
     return {
       chat_id: chatId,
-      text: 'Error processing command.',
+      text: '❌ Error processing command. Try /live',
       parse_mode: 'Markdown'
     };
   }
