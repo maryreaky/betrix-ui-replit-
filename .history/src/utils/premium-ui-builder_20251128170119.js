@@ -55,14 +55,10 @@ export function buildMatchCard(match, index = 1, includeOdds = true) {
   
   // Additional fallback from raw data for teams
   if ((home === 'Home' || !home) && match.raw) {
-    home = (match.raw.teams && match.raw.teams.home && match.raw.teams.home.name) || 
-           (match.raw.teams && match.raw.teams[0] && match.raw.teams[0].name) || 
-           match.raw.main_team || match.home || 'Home';
+    home = match.raw.teams?.home?.name || match.raw.teams?.0?.name || match.raw.main_team || match.home || 'Home';
   }
   if ((away === 'Away' || !away) && match.raw) {
-    away = (match.raw.teams && match.raw.teams.away && match.raw.teams.away.name) || 
-           (match.raw.teams && match.raw.teams[1] && match.raw.teams[1].name) || 
-           match.raw.visitor_team || match.away || 'Away';
+    away = match.raw.teams?.away?.name || match.raw.teams?.1?.name || match.raw.visitor_team || match.away || 'Away';
   }
   
   const score = match.score || `${match.homeScore || '-'}-${match.awayScore || '-'}`;
