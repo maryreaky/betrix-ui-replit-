@@ -551,6 +551,7 @@ async function handleUpdate(update) {
               const target = action.chat_id || chatId;
               const text = action.text || '';
               const opts = { reply_markup: action.reply_markup, parse_mode: action.parse_mode || 'HTML' };
+              logger.debug('Callback dispatch sendMessage opts', { target, has_reply_markup: !!opts.reply_markup, parse_mode: opts.parse_mode });
               await telegram.sendMessage(target, text, opts);
               logger.info('Dispatched sendMessage', { target });
               continue;
