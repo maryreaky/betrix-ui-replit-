@@ -142,10 +142,9 @@ class StatPalService {
    * @returns {Promise<Object>} Fixtures data
    */
   async getFixtures(sport = 'soccer', version = 'v1') {
-    const healthKey = `statpal:${sport}:fixtures`;
     try {
-      if (await this.providerHealth.isDisabled(healthKey)) {
-        logger.info(`StatPal ${sport} fixtures provider currently disabled`);
+      if (await this.providerHealth.isDisabled('statpal-fixtures')) {
+        logger.info('StatPal fixtures provider currently disabled');
         return null;
       }
 
@@ -164,13 +163,9 @@ class StatPalService {
       return data;
     } catch (error) {
       logger.error(`❌ StatPal fixtures error (${sport}):`, error.message);
-      const statusCode = error.statusCode || error.status || (error.message?.includes('404') ? 404 : 500);
-      if (statusCode === 404) {
-        logger.info(`⚠️  ${sport} fixtures not available on StatPal (404)`);
-        try { await this.providerHealth.markDisabled(healthKey, 600, `sport-not-supported:${statusCode}`); } catch (e) {}
-      } else {
-        try { await this.providerHealth.markFailure(healthKey, statusCode, error.message); } catch (e) {}
-      }
+      try {
+        await this.providerHealth.markFailure('statpal-fixtures', error.statusCode || 500, error.message);
+      } catch (e) {}
       return null;
     }
   }
