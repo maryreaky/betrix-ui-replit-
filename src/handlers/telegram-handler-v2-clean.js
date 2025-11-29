@@ -160,7 +160,8 @@ export async function handleMessage(update, redis, services) {
         method: 'sendMessage',
         chat_id: chatId,
         text: mainMenu.text,
-        reply_markup: mainMenu.reply_markup
+        reply_markup: mainMenu.reply_markup,
+        parse_mode: 'Markdown'
       };
     }
 
@@ -169,7 +170,8 @@ export async function handleMessage(update, redis, services) {
         method: 'sendMessage',
         chat_id: chatId,
         text: mainMenu.text,
-        reply_markup: mainMenu.reply_markup
+        reply_markup: mainMenu.reply_markup,
+        parse_mode: 'Markdown'
       };
     }
 
@@ -198,7 +200,8 @@ export async function handleMessage(update, redis, services) {
       method: 'sendMessage',
       chat_id: chatId,
       text: mainMenu.text,
-      reply_markup: mainMenu.reply_markup
+      reply_markup: mainMenu.reply_markup,
+      parse_mode: 'Markdown'
     };
   } catch (e) {
     logger.warn('handleMessage error', e?.message || String(e));
@@ -225,7 +228,8 @@ export async function handleCallbackQuery(update, redis, services) {
         chat_id: chatId,
         message_id: cq.message.message_id,
         text: mainMenu.text,
-        reply_markup: mainMenu.reply_markup
+        reply_markup: mainMenu.reply_markup,
+        parse_mode: 'Markdown'
       };
     }
 
@@ -238,7 +242,8 @@ export async function handleCallbackQuery(update, redis, services) {
         chat_id: chatId,
         message_id: cq.message.message_id,
         text: liveMenu.text,
-        reply_markup: liveMenu.reply_markup
+        reply_markup: liveMenu.reply_markup,
+        parse_mode: 'HTML'
       };
     }
 
@@ -404,7 +409,8 @@ export async function handleCommand(command, chatId, userId, redis, services) {
       return {
         chat_id: chatId,
         text: mainMenu.text,
-        reply_markup: mainMenu.reply_markup
+        reply_markup: mainMenu.reply_markup,
+        parse_mode: 'Markdown'
       };
     }
 
