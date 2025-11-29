@@ -239,6 +239,30 @@ export class SportsAggregator {
         };
 
         let matches = extractMatches(statpalData);
+
+        // StatPal sometimes returns an array of competitions where each element
+        // contains a `match` array with actual match objects. Detect and flatten
+        // that shape so downstream normalization sees raw match objects.
+        if (Array.isArray(matches) && matches.length > 0) {
+          const first = matches[0];
+          // If first item looks like a competition wrapper with a `match` array
+          if (first && typeof first === 'object' && Array.isArray(first.match)) {
+            matches = matches.flatMap(c => Array.isArray(c.match) ? c.match : []);
+          }
+          // Some payloads have the matches under a nested array name like `matches` or `data.match`
+          if (matches.length === 0 && Array.isArray(statpalData)) {
+            // try to find any nested arrays named 'match' or 'matches' and flatten
+            const flattened = [];
+            for (const item of statpalData) {
+              if (item && typeof item === 'object') {
+                if (Array.isArray(item.match)) flattened.push(...item.match);
+                else if (Array.isArray(item.matches)) flattened.push(...item.matches);
+                else if (item.data && Array.isArray(item.data.match)) flattened.push(...item.data.match);
+              }
+            }
+            if (flattened.length > 0) matches = flattened;
+          }
+        }
         
         if (matches.length > 0) {
           // Validate that matches have team data
