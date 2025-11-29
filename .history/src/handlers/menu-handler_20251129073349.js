@@ -260,32 +260,24 @@ Check back later for exciting matchups! ⚽`;
  * Build a live menu payload with inline keyboard for Telegram.
  * Returns an object { text, reply_markup } ready to send as a Telegram message.
  */
-export function buildLiveMenuPayload(games, sport = 'Football', userTier = 'FREE', page = 1, pageSize = 6) {
+export function buildLiveMenuPayload(games, sport = 'Football', userTier = 'FREE') {
   const header = BETRIX_HEADER;
   if (!games || games.length === 0) {
     return { text: `${header}\n\n*No live ${sport.toLowerCase()} matches right now.*\n\nCheck back later for exciting matchups! ⚽`, reply_markup: { inline_keyboard: [[{ text: '🔙 Back', callback_data: 'menu_main' }]] } };
   }
 
-  // Pagination calculations
-  const total = games.length;
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const currentPage = Math.min(Math.max(1, parseInt(page, 10) || 1), totalPages);
-  const start = (currentPage - 1) * pageSize;
-  const end = start + pageSize;
-  const pageGames = games.slice(start, end);
-
-  let text = `${header}\n\n*🔴 LIVE ${sport.toUpperCase()} MATCHES* (Page ${currentPage}/${totalPages})\n`;
+  let text = `${header}\n\n*🔴 LIVE ${sport.toUpperCase()} MATCHES*\n`;
   const keyboard = [];
 
-  pageGames.forEach((game, i) => {
-    const idx = start + i + 1;
+  games.slice(0, 20).forEach((game, i) => {
+    const idx = i + 1;
     text += `\n${idx}. *${game.home}* vs *${game.away}*`;
     if (game.score) text += `\n   • Score: ${game.score}`;
     if (game.time) text += `\n   • ⏱ ${game.time}`;
     text += `\n   — Tap Details to analyze or ⭐ to add to Favorites\n`;
 
-    // action buttons per match: Details, Odds
-    const matchId = game.id || `${sport}_${idx}`;
+    // action buttons per match: Details, Odds, Favorite
+    const matchId = game.id || `${sport}_${i}`;
     const row = [
       { text: '🔎 Details', callback_data: `match:${matchId}:${sport.toLowerCase()}` },
       { text: '💰 Odds', callback_data: `odds:${matchId}` }
@@ -293,14 +285,8 @@ export function buildLiveMenuPayload(games, sport = 'Football', userTier = 'FREE
     keyboard.push(row);
   });
 
-  // Navigation row: Prev / Refresh / Next / Back
-  const navRow = [];
-  if (currentPage > 1) navRow.push({ text: '◀️ Prev', callback_data: `menu_live_page:${sport.toLowerCase()}:${currentPage - 1}` });
-  navRow.push({ text: '🔄 Refresh', callback_data: `menu_live_refresh:${sport.toLowerCase()}:${currentPage}` });
-  if (currentPage < totalPages) navRow.push({ text: 'Next ▶️', callback_data: `menu_live_page:${sport.toLowerCase()}:${currentPage + 1}` });
-  // Wrap into inline keyboard row(s)
-  if (navRow.length > 0) keyboard.push(navRow);
-  keyboard.push([{ text: '🔙 Back', callback_data: 'menu_main' }]);
+  // Add navigation row
+  keyboard.push([{ text: '🔄 Refresh', callback_data: 'menu_live_refresh' }, { text: '🔙 Back', callback_data: 'menu_main' }]);
 
   const reply_markup = { inline_keyboard: keyboard };
   return { text, reply_markup };

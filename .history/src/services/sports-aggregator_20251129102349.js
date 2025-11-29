@@ -189,25 +189,6 @@ export class SportsAggregator {
         }
       }
 
-      // Determine sport (default to football). Prefer SportMonks for football live data.
-      const sport = (options && options.sport) ? options.sport : 'football';
-
-      if (sport === 'football' && CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) {
-        try {
-          logger.debug('📡 Fetching live matches from SportMonks (preferred for football)');
-          const smMatches = await this.sportmonks.getLivescores(leagueId);
-          if (smMatches && smMatches.length > 0) {
-            logger.info(`✅ SportMonks: Found ${smMatches.length} live matches (preferred)`);
-            this._setCached(cacheKey, smMatches);
-            await this._recordProviderHealth('sportsmonks', true, `Found ${smMatches.length} live matches`);
-            return this._formatMatches(smMatches, 'sportsmonks');
-          }
-        } catch (e) {
-          logger.warn('SportMonks preferred fetch failed', e?.message || String(e));
-          try { await this._recordProviderHealth('sportsmonks', false, e?.message || String(e)); } catch(_) {}
-        }
-      }
-
       if (!CONFIG.STATPAL.KEY) {
         logger.error('❌ StatPal API Key (STATPAL_API env var) not configured');
         return [];
@@ -776,81 +757,147 @@ export class SportsAggregator {
 
   // ==================== SportsMonks ====================
 
-  async _getLiveFromSportsMonks(sport = 'football') {
-    try {
-      if (!CONFIG.SPORTSMONKS || !CONFIG.SPORTSMONKS.KEY) {
-        logger.warn('⚠️  SportMonks API Key not configured');
-        return [];
-      }
+  async _getLiveFromSportsMonks() {
+    // Robust fetch: try /livescores first, then fallback to /fixtures
+    if (!CONFIG.SPORTSMONKS.KEY) return [];
+    const endpoints = [
+      `${CONFIG.SPORTSMONKS.BASE}/football/livescores?api_token=${CONFIG.SPORTSMONKS.KEY}`,
+      `${CONFIG.SPORTSMONKS.BASE}/football/fixtures?include=teams,league,scores&filters=status_code:1&api_token=${CONFIG.SPORTSMONKS.KEY}`
+    ];
 
-      const apiToken = CONFIG.SPORTSMONKS.KEY;
-      const url = `${SPORTSMONKS_BASE_URL}/football/livescores?api_token=${apiToken}`;
-      
-      logger.info(`[INFO] Fetching SportMonks livescores from: ${url}`);
-      
-      const res = await axios.get(url, {
-        timeout: 10000,
-        headers: { 'Accept': 'application/json' }
-      });
+    // If a local relay is configured, use it first (dev-only)
+    const relay = process.env.SPORTSMONKS_RELAY_URL || process.env.SPORTSMONKS_RELAY;
+    if (relay) {
+      try {
+        logger.info(`Using SportMonks relay at ${relay}`);
+        const r = await fetch(`${relay.replace(/\/$/, '')}/v3/football/livescores?api_token=${CONFIG.SPORTSMONKS.KEY}`);
+        if (r && r.ok) {
+          const j = await r.json().catch(() => null);
+          if (j && Array.isArray(j.data) && j.data.length > 0) {
+            // Normalize relay items to internal shape (same as direct SportMonks normalization)
+            const normalizedRelay = j.data.slice(0, 10).map((it) => {
+              let home = it.home_team || it.home || undefined;
+              let away = it.away_team || it.away || undefined;
+              if ((!home || !away) && it.name && typeof it.name === 'string' && it.name.includes(' vs ')) {
+                const parts = it.name.split(' vs ');
+                home = home || parts[0];
+                away = away || parts[1];
+              }
 
-      const items = res.data && res.data.data ? res.data.data : [];
-      
-      if (!Array.isArray(items) || items.length === 0) {
-        logger.warn(`⚠️  SportMonks returned no live matches (${items.length} items)`);
-        return [];
-      }
+              let home_score = undefined;
+              let away_score = undefined;
+              if (it.scores && it.scores.localteam_score !== undefined) {
+                home_score = it.scores.localteam_score;
+                away_score = it.scores.visitorteam_score;
+              } else if (it.result && typeof it.result === 'object') {
+                home_score = it.result.home || undefined;
+                away_score = it.result.away || undefined;
+              }
 
-      logger.info(`✅ SportMonks: Found ${items.length} live matches`);
+              const status = it.result_info || it.state || (`Starts ${it.starting_at || it.starting_at_timestamp || ''}`);
 
-      // Normalize SportMonks fixture shape to internal shape used by menu builder
-      const normalized = items.slice(0, 10).map((it) => {
-        // SportMonks returns `name`: "Home vs Away" format
-        let home = it.home_team || it.home || undefined;
-        let away = it.away_team || it.away || undefined;
-        
-        if ((!home || !away) && it.name && typeof it.name === 'string' && it.name.includes(' vs ')) {
-          const parts = it.name.split(' vs ');
-          home = home || parts[0]?.trim();
-          away = away || parts[1]?.trim();
+              return {
+                id: it.id || `${it.fixture_id || Math.random().toString(36).slice(2, 9)}`,
+                home,
+                away,
+                home_team: home,
+                away_team: away,
+                home_score,
+                away_score,
+                status,
+                league: (it.league && it.league.name) || it.league_id || undefined,
+                start_time: it.starting_at || it.starting_at_timestamp || undefined,
+                raw: it
+              };
+            });
+            return normalizedRelay;
+          }
+        } else {
+          logger.warn('Relay fetch failed', r && r.status);
         }
-
-        // Scores may be present under `scores` or `result` fields
-        let home_score = undefined;
-        let away_score = undefined;
-        if (it.scores && it.scores.localteam_score !== undefined) {
-          home_score = it.scores.localteam_score;
-          away_score = it.scores.visitorteam_score;
-        } else if (it.result && typeof it.result === 'object') {
-          home_score = it.result.home || undefined;
-          away_score = it.result.away || undefined;
-        }
-
-        const status = it.result_info || it.state || (`Starts ${it.starting_at || it.starting_at_timestamp || ''}`);
-
-        return {
-          id: it.id || `${it.fixture_id || Math.random().toString(36).slice(2, 9)}`,
-          home,
-          away,
-          home_team: home,
-          away_team: away,
-          home_score,
-          away_score,
-          status,
-          league: (it.league && it.league.name) || it.league_id || undefined,
-          start_time: it.starting_at || it.starting_at_timestamp || undefined,
-          raw: it
-        };
-      });
-
-      return normalized;
-    } catch (error) {
-      logger.error(`❌ SportMonks fetch failed: ${error.message}`);
-      if (error.response) {
-        logger.error(`  Status: ${error.response.status}`);
-        logger.error(`  Data: ${JSON.stringify(error.response.data).substring(0, 200)}`);
+      } catch (e) {
+        logger.warn('SportMonks relay error', e?.message || String(e));
       }
-      return [];
     }
+
+    for (const url of endpoints) {
+      try {
+        logger.info(`Attempting SportMonks endpoint: ${url}`);
+        // Direct fetch to capture response metadata
+        const resp = await fetch(url, { method: 'GET' });
+        const status = resp.status;
+        const headers = {};
+        for (const [k, v] of resp.headers) headers[k] = v;
+
+        let bodyText = null;
+        try {
+          bodyText = await resp.text();
+        } catch (parseErr) {
+          bodyText = null;
+        }
+
+        logger.info(`SportMonks response: ${url} -> status=${status}`);
+        logger.debug('SportMonks headers:', JSON.stringify(headers));
+        if (bodyText) logger.debug('SportMonks body snippet:', bodyText.substring(0, 800));
+
+        if (resp.ok) {
+          try {
+            const json = JSON.parse(bodyText);
+            const items = (json && json.data) ? json.data : (Array.isArray(json) ? json : []);
+            if (Array.isArray(items) && items.length > 0) {
+              // Normalize SportMonks fixture shape to internal shape used by menu builder
+              const normalized = items.slice(0, 10).map((it) => {
+                // SportMonks sometimes returns `name`: "Home vs Away". Try to split.
+                let home = it.home_team || it.home || undefined;
+                let away = it.away_team || it.away || undefined;
+                if (!home || !away) {
+                  if (it.name && typeof it.name === 'string' && it.name.includes(' vs ')) {
+                    const parts = it.name.split(' vs ');
+                    home = home || parts[0];
+                    away = away || parts[1];
+                  }
+                }
+
+                // Scores may be present under `scores` or `result` fields
+                let home_score = undefined;
+                let away_score = undefined;
+                if (it.scores && it.scores.localteam_score !== undefined) {
+                  home_score = it.scores.localteam_score;
+                  away_score = it.scores.visitorteam_score;
+                } else if (it.result && typeof it.result === 'object') {
+                  home_score = it.result.home || undefined;
+                  away_score = it.result.away || undefined;
+                }
+
+                const status = it.result_info || it.state || (`Starts ${it.starting_at || it.starting_at_timestamp || ''}`);
+
+                return {
+                  id: it.id || `${it.fixture_id || Math.random().toString(36).slice(2, 9)}`,
+                  home,
+                  away,
+                  home_team: home,
+                  away_team: away,
+                  home_score,
+                  away_score,
+                  status,
+                  league: (it.league && it.league.name) || it.league_id || undefined,
+                  start_time: it.starting_at || it.starting_at_timestamp || undefined,
+                  raw: it
+                };
+              });
+
+              return normalized;
+            }
+          } catch (e) {
+            logger.warn('Failed to parse JSON from SportMonks response', e.message);
+          }
+        }
+      } catch (e) {
+        logger.warn('SportsMonks live endpoint failed', e?.message || String(e));
+      }
+    }
+
+    return [];
   }
 
   async _getOddsFromSportsMonks() {
@@ -1530,27 +1577,15 @@ export class SportsAggregator {
       }
 
       // 2) try SportMonks livescores (football only)
-      if (sport === 'soccer' || sport === 'football') {
-        // Prefer the aggregator's direct SportMonks fetch (more tolerant to env/config)
+      if ((sport === 'soccer' || sport === 'football') && this.sportmonks && CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) {
         try {
-          const arr = await this._getLiveFromSportsMonks(sport);
-          const f = findIn(arr);
-          if (f) return this._formatMatches([f], 'sportsmonks')[0];
-        } catch (e) {
-          logger.debug('Aggregator SportMonks live lookup failed', e?.message || String(e));
-        }
-
-        // Fallback: try wrapper service if present
-        if (this.sportmonks && CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) {
-          try {
-            const sm = await this.sportmonks.getLivescores();
-            if (Array.isArray(sm)) {
-              const f2 = findIn(sm);
-              if (f2) return this._formatMatches([f2], 'sportsmonks')[0];
-            }
-          } catch (e) {
-            logger.debug('SportMonks service match lookup failed', e?.message || String(e));
+          const sm = await this.sportmonks.getLivescores();
+          if (Array.isArray(sm)) {
+            const f = findIn(sm);
+            if (f) return this._formatMatches([f], 'sportsmonks')[0];
           }
+        } catch (e) {
+          logger.debug('SportMonks match lookup failed', e?.message || String(e));
         }
       }
 

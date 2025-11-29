@@ -1,144 +1,384 @@
 /**
- * Minimal Telegram handler implementation
+ * Telegram Handler v2 (clean)
+ * Minimal, robust handler to restore worker startup and preserve core flows:
+ * - /live command renders paginated soccer menu
+ * - callback routes: match:<id>:<sport>, odds:<id>, menu_live_page:<sport>:<page>
  */
 
-async function getLiveMatchesBySport(sport, redis, sportsAggregator) {
-  try {
-    const cacheKey = 'betrix:prefetch:live:by-sport';
-    const cached = await redis.get(cacheKey).catch(() => null);
-    if (cached) {
-      const data = tryParseJson(cached);
-      if (data && data.sports && data.sports[sport] && Array.isArray(data.sports[sport].samples)) {
-        logger.info(`📦 Got cached ${sport} matches from prefetch (${data.sports[sport].count || 0} total)`);
-        return data.sports[sport].samples;
-      }
-    }
+import { Logger } from '../utils/logger.js';
+import { formatOdds, buildLiveMenuPayload } from './menu-handler.js';
 
-    if (sport === 'soccer') {
-      const live39 = await redis.get('live:39').catch(() => null);
-      const parsed = tryParseJson(live39);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        logger.info('📦 Got cached soccer matches from live:39 fallback');
-        return parsed;
-      }
-    }
+const logger = new Logger('TelegramHandlerV2');
 
-    if (sportsAggregator && typeof sportsAggregator._getLiveFromStatPal === 'function') {
-      try {
-        const statpal = await sportsAggregator._getLiveFromStatPal(sport, 'v1');
-        if (Array.isArray(statpal) && statpal.length > 0) return statpal;
-      } catch (e) {
-        logger.debug('StatPal fetch failed', e?.message || String(e));
-      }
-    }
-
-    const demoEnabled = (process.env.DEMO_FALLBACK === 'true' || process.env.FORCE_DEMO_FALLBACK === '1');
-    if (demoEnabled) {
-      logger.info('Returning demo fallback matches');
-      return [
-        { id: 'demo-1', home: 'Demo FC', away: 'Sample United', status: "15'" },
-        { id: 'demo-2', home: 'Example Town', away: 'Test Rovers', status: 'HT' }
-      ];
-    }
-
-    return [];
-  } catch (e) {
-    logger.warn('getLiveMatchesBySport failed', e?.message || String(e));
-    return [];
-  }
+function tryParseJson(s) {
+  try { return JSON.parse(s); } catch (e) { return null; }
 }
 
-export async function handleMessage(update, redis, services) {
-  try {
-    const message = update.message || update.edited_message;
-    if (!message) return null;
-    const chatId = message.chat.id;
-    const text = message.text || '';
-
-    if (text && text.startsWith('/live')) {
-      const games = await getLiveMatchesBySport('soccer', redis, services && services.sportsAggregator);
-      const payload = buildLiveMenuPayload(games, 'Soccer', 'FREE', 1, 6);
-      return { method: 'sendMessage', chat_id: chatId, text: payload.text, reply_markup: payload.reply_markup, parse_mode: 'Markdown' };
-    }
-
-    return { method: 'sendMessage', chat_id: chatId, text: 'Send /live to view live soccer matches.' };
-  } catch (e) {
-    logger.warn('handleMessage error', e?.message || String(e));
-    return null;
-  }
-}
-
-export async function handleCallbackQuery(update, redis, services) {
-  try {
-    const cq = update.callback_query;
-    if (!cq || !cq.data) return null;
-    const data = cq.data;
-    const chatId = cq.message && cq.message.chat && cq.message.chat.id;
-
-    if (data.startsWith('match:')) {
-      const parts = data.split(':');
-      const matchId = parts[1];
-      const sport = parts[2] || 'soccer';
-      const agg = services && services.sportsAggregator;
-      if (!agg) return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Service unavailable.' };
+    /**
+     * Helper: Fetch live matches for a sport from Redis cache (if available),
+     * otherwise fall back to real-time aggregator fetch. This is simplified
+     * compared to the original but keeps the same external behavior.
+     */
+    async function getLiveMatchesBySport(sport, redis, sportsAggregator) {
       try {
-        const match = await agg.getMatchById(matchId, sport);
-        if (!match) return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Match not found.' };
-        const home = match.home || match.home_team || match.homeName || 'Home';
-        const away = match.away || match.away_team || match.awayName || 'Away';
-        const score = (match.homeScore != null || match.awayScore != null) ? `${match.homeScore || 0}-${match.awayScore || 0}` : '';
-        const text = `*${home}* vs *${away}*\n${score}\nProvider: ${match.provider || 'unknown'}`;
-        return { method: 'editMessageText', chat_id: chatId, message_id: cq.message.message_id, text, parse_mode: 'Markdown' };
-      } catch (e) {
-        return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Failed to load match details', show_alert: true };
-      }
-    }
+        const cacheKey = 'betrix:prefetch:live:by-sport';
+        const cached = await redis.get(cacheKey).catch(() => null);
+        if (cached) {
+          const data = tryParseJson(cached);
+          if (data && data.sports && data.sports[sport] && Array.isArray(data.sports[sport].samples)) {
+            logger.info(`📦 Got cached ${sport} matches from prefetch (${data.sports[sport].count || 0} total)`);
+            return data.sports[sport].samples;
+          }
+        }
 
-    if (data.startsWith('odds:')) {
-      const parts = data.split(':');
-      const matchId = parts[1];
-      const agg = services && services.sportsAggregator;
-      if (!agg) return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Service unavailable.' };
-      try {
-        const odds = await agg.getOdds(matchId);
-        const text = (odds && odds.length > 0) ? formatOdds(odds) : 'No odds available for this match.';
-        return { method: 'editMessageText', chat_id: chatId, message_id: cq.message.message_id, text, parse_mode: 'Markdown' };
-      } catch (e) {
-        return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Failed to load odds', show_alert: true };
-      }
-    }
+        // Fallback to live:39 (legacy sample) for soccer
+        if (sport === 'soccer') {
+          const live39 = await redis.get('live:39').catch(() => null);
+          const parsed = tryParseJson(live39);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            logger.info('📦 Got cached soccer matches from live:39 fallback');
+            return parsed;
+          }
+        }
 
-    if (data.startsWith('menu_live_page') || data.startsWith('menu_live_refresh')) {
-      try {
-        const parts = data.split(':');
-        const sport = parts[1] || 'soccer';
-        const page = parseInt(parts[2], 10) || 1;
-        const games = await getLiveMatchesBySport(sport, redis, services && services.sportsAggregator);
-        const payload = buildLiveMenuPayload(games, sport.charAt(0).toUpperCase() + sport.slice(1), 'FREE', page, 6);
-        if (cq && cq.message && typeof cq.message.message_id !== 'undefined') {
+        // Realtime aggregator fallback (if available)
+        if (sportsAggregator && typeof sportsAggregator._getLiveFromStatPal === 'function') {
+          try {
+            const statpal = await sportsAggregator._getLiveFromStatPal(sport, 'v1');
+            if (Array.isArray(statpal) && statpal.length > 0) return statpal;
+          } catch (e) {
+            logger.debug('StatPal fetch failed', e?.message || String(e));
+          }
+        }
+
+        // Demo fallback when configured
+        const demoEnabled = (process.env.DEMO_FALLBACK === 'true' || process.env.FORCE_DEMO_FALLBACK === '1');
+        if (demoEnabled) {
+          logger.info('Returning demo fallback matches');
           return [
-            { method: 'editMessageText', chat_id: chatId, message_id: cq.message.message_id, text: payload.text, reply_markup: payload.reply_markup, parse_mode: 'Markdown' },
-            { method: 'answerCallbackQuery', callback_query_id: cq.id, text: '' }
+            { id: 'demo-1', home: 'Demo FC', away: 'Sample United', status: "15'" },
+            { id: 'demo-2', home: 'Example Town', away: 'Test Rovers', status: 'HT' }
           ];
         }
-        return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Unable to update message.' };
+
+        return [];
       } catch (e) {
-        logger.warn('Failed to handle pagination', e?.message || String(e));
-        return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Unable to load page.' };
+        logger.warn('getLiveMatchesBySport failed', e?.message || String(e));
+        return [];
       }
     }
 
-    return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Unknown action' };
-  } catch (e) {
-    logger.warn('handleCallbackQuery failed', e?.message || String(e));
-    return null;
+    /**
+     * Handle incoming Telegram message (minimal wrapper)
+     */
+    export async function handleMessage(update, redis, services) {
+      try {
+        const message = update.message || update.edited_message;
+        if (!message) return null;
+        const chatId = message.chat.id;
+        const text = message.text || '';
+
+        // Simple commands handling: /live shows first page of soccer
+        if (text && text.startsWith('/live')) {
+          const games = await getLiveMatchesBySport('soccer', redis, services && services.sportsAggregator);
+          const payload = buildLiveMenuPayload(games, 'Soccer', 'FREE', 1, 6);
+          return { method: 'sendMessage', chat_id: chatId, text: payload.text, reply_markup: payload.reply_markup, parse_mode: 'Markdown' };
+        }
+
+        // default: simple help
+        return { method: 'sendMessage', chat_id: chatId, text: 'Send /live to view live soccer matches.' };
+      } catch (e) {
+        logger.warn('handleMessage error', e?.message || String(e));
+        return null;
+      }
+    }
+
+    /**
+     * Handle callback_query updates (inline button presses).
+     * Supported callback data: match:<id>:<sport>, odds:<id>, menu_live_page:<sport>:<page>
+     */
+    export async function handleCallbackQuery(update, redis, services) {
+      try {
+        const cq = update.callback_query;
+        if (!cq || !cq.data) return null;
+        const data = cq.data;
+        const chatId = cq.message && cq.message.chat && cq.message.chat.id;
+
+        // match details
+        if (data.startsWith('match:')) {
+          const parts = data.split(':');
+          const matchId = parts[1];
+          const sport = parts[2] || 'soccer';
+          const agg = services && services.sportsAggregator;
+          if (!agg) return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Service unavailable.' };
+          try {
+            const match = await agg.getMatchById(matchId, sport);
+            if (!match) return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Match not found.' };
+            // Build a simple textual card
+            const home = match.home || match.home_team || match.homeName || 'Home';
+            const away = match.away || match.away_team || match.awayName || 'Away';
+            const score = (match.homeScore != null || match.awayScore != null) ? `${match.homeScore || 0}-${match.awayScore || 0}` : '';
+            const text = `*${home}* vs *${away}*\n${score}\nProvider: ${match.provider || 'unknown'}`;
+            return { method: 'editMessageText', chat_id: chatId, message_id: cq.message.message_id, text, parse_mode: 'Markdown' };
+          } catch (e) {
+            return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Failed to load match details', show_alert: true };
+          }
+        }
+
+        // odds
+        if (data.startsWith('odds:')) {
+          const parts = data.split(':');
+          const matchId = parts[1];
+          const agg = services && services.sportsAggregator;
+          if (!agg) return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Service unavailable.' };
+          try {
+            const odds = await agg.getOdds(matchId);
+            const text = (odds && odds.length > 0) ? formatOdds(odds) : 'No odds available for this match.';
+            return { method: 'editMessageText', chat_id: chatId, message_id: cq.message.message_id, text, parse_mode: 'Markdown' };
+          } catch (e) {
+            return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Failed to load odds', show_alert: true };
+          }
+        }
+
+        // Pagination
+        if (data.startsWith('menu_live_page') || data.startsWith('menu_live_refresh')) {
+          try {
+            const parts = data.split(':');
+            const sport = parts[1] || 'soccer';
+            const page = parseInt(parts[2], 10) || 1;
+            const games = await getLiveMatchesBySport(sport, redis, services && services.sportsAggregator);
+            const payload = buildLiveMenuPayload(games, sport.charAt(0).toUpperCase() + sport.slice(1), 'FREE', page, 6);
+            if (cq && cq.message && typeof cq.message.message_id !== 'undefined') {
+              return [
+                { method: 'editMessageText', chat_id: chatId, message_id: cq.message.message_id, text: payload.text, reply_markup: payload.reply_markup, parse_mode: 'Markdown' },
+                { method: 'answerCallbackQuery', callback_query_id: cq.id, text: '' }
+              ];
+            }
+            return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Unable to update message.' };
+          } catch (e) {
+            logger.warn('Failed to handle pagination', e?.message || String(e));
+            return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Unable to load page.' };
+          }
+        }
+
+        // unknown
+        return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Unknown action' };
+      } catch (e) {
+        logger.warn('handleCallbackQuery failed', e?.message || String(e));
+        return null;
+      }
+    }
+
+    export default {
+      handleMessage,
+      handleCallbackQuery
+    };
+        };
+      }
+      try {
+        const key = `betrix:provider:enabled:${providerName}`;
+        const value = action === 'on' ? 'true' : 'false';
+        await redis.set(key, value);
+        await redis.expire(key, 86400); // 24h TTL
+        logger.info(`Provider toggle: ${providerName} -> ${action}`, { userId, adminId });
+        return {
+          chat_id: chatId,
+          text: `✅ Provider \`${providerName}\` toggled **${action.toUpperCase()}**`,
+          parse_mode: 'Markdown'
+        };
+      } catch (e) {
+        logger.error('Provider toggle failed', e);
+        return {
+          chat_id: chatId,
+          text: `❌ Toggle failed: ${e.message}`,
+          parse_mode: 'Markdown'
+        };
+      }
+    }
+
+    default:
+      return {
+        chat_id: chatId,
+        text: `🌀 *BETRIX* - Command not recognized\n\nTry:\n/live - Live games\n/odds - Current odds\n/standings - League tables\n/news - Latest news\n/help - Full guide`,
+        parse_mode: 'Markdown'
+      };
   }
 }
 
-export default {
-  handleMessage,
-  handleCallbackQuery
-};
+/**
+ * Handle natural language queries
+ */
+async function handleNaturalLanguage(text, chatId, userId, redis, services) {
+  try {
+    // Parse user intent
+    const parsed = parseMessage(text);
+
+    if (!parsed.intent) {
+      // Generic AI response
+      return await handleGenericAI(text, chatId, userId, redis, services);
+    }
+
+    // Route by intent
+    const query = extractQuery(parsed);
+
+    switch (query.type) {
+      case 'live_games':
+        return await handleLiveGames(chatId, userId, redis, services, query);
+
+      case 'odds':
+        return await handleOdds(chatId, userId, redis, services, query);
+
+      case 'standings':
+        return await handleStandings(chatId, userId, redis, services, query);
+
+      case 'news':
+        return await handleNews(chatId, userId, redis, services, query);
+
+      case 'profile':
+        return await handleProfile(chatId, userId, redis, services);
+
+      case 'upgrade':
+        return {
+          chat_id: chatId,
+          text: subscriptionMenu.text,
+          reply_markup: subscriptionMenu.reply_markup,
+          parse_mode: 'Markdown'
+        };
+
+      default:
+        return await handleGenericAI(text, chatId, userId, redis, services);
+    }
+  } catch (err) {
+    logger.error('NLP handling error', err);
+    return await handleGenericAI(text, chatId, userId, redis, services);
+  }
+}
+
+/**
+ * Handle live games request
+ */
+async function handleLiveGames(chatId, userId, redis, services, query = {}) {
+  try {
+    // If an aggregator instance is provided, run a quick health check to detect
+    // whether the primary live-feed provider is healthy. If degraded, set a
+    // warning flag so we can surface a short notice to the user.
+    let liveFeedWarning = false;
+    try {
+      if (services && services.sportsAggregator && typeof services.sportsAggregator.isLiveFeedHealthy === 'function') {
+        const healthy = await services.sportsAggregator.isLiveFeedHealthy().catch(() => false);
+        if (!healthy) {
+          liveFeedWarning = true;
+          logger.warn('Primary live feed appears degraded (aggregator health check)');
+        }
+      }
+    } catch (e) {
+      // non-fatal: continue to attempt fallbacks
+      logger.debug('Aggregator health check failed', e?.message || String(e));
+    }
+    const { openLiga, rss, footballData, sportMonks, sportsData } = services;
+
+    // Try SportMonks first for premium live data
+    let gamesRaw = [];
+    if (sportMonks && sportMonks.enabled) {
+      try {
+        const sport = query.sport || 'football';
+        const liveMatches = await sportMonks.getLiveMatches(sport, 15).catch(() => []);
+        gamesRaw = gamesRaw.concat(liveMatches || []);
+        logger.info(`Fetched ${liveMatches?.length || 0} live matches from SportMonks`);
+      } catch (e) {
+        logger.warn('Failed to fetch from SportMonks', e.message);
+      }
+    }
+
+    // Fall back to SportsData.io for alternative data source
+    if (sportsData && sportsData.enabled && gamesRaw.length === 0) {
+      try {
+        const sport = query.sport || 'soccer';
+        const liveGames = await sportsData.getLiveGames(sport).catch(() => []);
+        gamesRaw = gamesRaw.concat(liveGames || []);
+        logger.info(`Fetched ${liveGames?.length || 0} live games from SportsData`);
+      } catch (e) {
+        logger.warn('Failed to fetch from SportsData', e.message);
+      }
+    }
+
+    // Fall back to OpenLiga DB
+    if (openLiga && gamesRaw.length === 0) {
+      try {
+        const recent = await openLiga.getRecentMatches(query.sport || 'BL1', new Date().getFullYear(), 5).catch(() => []);
+        gamesRaw = gamesRaw.concat(recent || []);
+      } catch (e) {
+        logger.warn('Failed to fetch live games from openLiga', e);
+      }
+    }
+
+    // Fall back to footballData
+    if (footballData && gamesRaw.length === 0) {
+      try {
+        const fd = await footballData.fixturesFromCsv(query.sport || 'E0', String(new Date().getFullYear()));
+        const fixtures = (fd && fd.fixtures) ? fd.fixtures : [];
+        gamesRaw = gamesRaw.concat(fixtures.slice(0, 5));
+      } catch (e) {
+        logger.warn('Failed to fetch live games from footballData', e);
+      }
+    }
+
+    // Normalize into simplified game objects
+    const games = gamesRaw.slice(0, 10).map(it => {
+      // detect source shape and pick normalizer
+      if (!it) return { home: 'Home', away: 'Away', score: null, time: null };
+      if (it.Team1 || it.MatchDateTime) return normalizeOpenLigaMatch(it);
+      if (it.fixture || it.teams || it.league) return normalizeApiFootballFixture(it);
+      if (it.homeTeam || it.homeTeamName || it.home_team || it.away_team || it.eventName) return normalizeAllSportsMatch(it);
+      if (it.homeScore !== undefined || it.homeTeam || it.awayTeam || it.matchId || it.score) return normalizeSportsDataEvent(it);
+      return normalizeFootballDataFixture(it);
+    }).slice(0, 5);
+
+    // Demo fallback only if absolutely no data available
+    if ((games == null || games.length === 0)) {
+      const demoGames = [
+        { home: 'Arsenal', away: 'Chelsea', score: '2-1', time: '78\'', odds: null },
+        { home: 'Manchester United', away: 'Liverpool', score: '1-1', time: '45\'', odds: null },
+        { home: 'Tottenham', away: 'Newcastle', score: null, time: '30\'', odds: null },
+        { home: 'Brighton', away: 'Fulham', score: '0-0', time: '15\'', odds: null },
+        { home: 'Aston Villa', away: 'Everton', score: '3-2', time: 'FT', odds: null }
+      ];
+      return {
+        chat_id: chatId,
+        text: formatLiveGames(demoGames, query.sport || 'Football'),
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '📊 Get Odds', callback_data: 'menu_odds' }],
+            [{ text: '🔙 Main Menu', callback_data: 'menu_main' }]
+          ]
+        }
+      };
+    }
+
+    const response = formatLiveGames(games, query.sport || 'Football');
+    const responseText = (liveFeedWarning ? ('⚠️ Live feed currently degraded — showing best available data.\n\n') : '') + response;
+
+    return {
+      chat_id: chatId,
+      text: responseText,
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '📊 Get Odds', callback_data: 'menu_odds' }],
+          [{ text: '🔙 Main Menu', callback_data: 'menu_main' }]
+        ]
+      }
+    };
+  } catch (err) {
+    logger.error('Live games handler error', err);
+    return {
+      chat_id: chatId,
+      text: '🌀 *BETRIX* - Unable to fetch live games. Try again later.',
+      parse_mode: 'Markdown'
+    };
+  }
+}
 
 /**
  * Handle odds request

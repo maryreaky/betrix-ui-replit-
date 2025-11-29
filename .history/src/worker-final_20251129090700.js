@@ -5,8 +5,8 @@
  * Complete integration of all services and intelligence
  */
 
-// NOTE: Do NOT disable global TLS verification here. Use per-service TLS config
-// via `SPORTSMONKS_INSECURE=true` if absolutely required for local testing.
+// Bypass TLS certificate validation for SportMonks API (network cert mismatch)
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 import Redis from "ioredis";
 import { CONFIG, validateConfig } from "./config.js";

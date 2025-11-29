@@ -189,25 +189,6 @@ export class SportsAggregator {
         }
       }
 
-      // Determine sport (default to football). Prefer SportMonks for football live data.
-      const sport = (options && options.sport) ? options.sport : 'football';
-
-      if (sport === 'football' && CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) {
-        try {
-          logger.debug('📡 Fetching live matches from SportMonks (preferred for football)');
-          const smMatches = await this.sportmonks.getLivescores(leagueId);
-          if (smMatches && smMatches.length > 0) {
-            logger.info(`✅ SportMonks: Found ${smMatches.length} live matches (preferred)`);
-            this._setCached(cacheKey, smMatches);
-            await this._recordProviderHealth('sportsmonks', true, `Found ${smMatches.length} live matches`);
-            return this._formatMatches(smMatches, 'sportsmonks');
-          }
-        } catch (e) {
-          logger.warn('SportMonks preferred fetch failed', e?.message || String(e));
-          try { await this._recordProviderHealth('sportsmonks', false, e?.message || String(e)); } catch(_) {}
-        }
-      }
-
       if (!CONFIG.STATPAL.KEY) {
         logger.error('❌ StatPal API Key (STATPAL_API env var) not configured');
         return [];
@@ -1530,27 +1511,15 @@ export class SportsAggregator {
       }
 
       // 2) try SportMonks livescores (football only)
-      if (sport === 'soccer' || sport === 'football') {
-        // Prefer the aggregator's direct SportMonks fetch (more tolerant to env/config)
+      if ((sport === 'soccer' || sport === 'football') && this.sportmonks && CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) {
         try {
-          const arr = await this._getLiveFromSportsMonks(sport);
-          const f = findIn(arr);
-          if (f) return this._formatMatches([f], 'sportsmonks')[0];
-        } catch (e) {
-          logger.debug('Aggregator SportMonks live lookup failed', e?.message || String(e));
-        }
-
-        // Fallback: try wrapper service if present
-        if (this.sportmonks && CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) {
-          try {
-            const sm = await this.sportmonks.getLivescores();
-            if (Array.isArray(sm)) {
-              const f2 = findIn(sm);
-              if (f2) return this._formatMatches([f2], 'sportsmonks')[0];
-            }
-          } catch (e) {
-            logger.debug('SportMonks service match lookup failed', e?.message || String(e));
+          const sm = await this.sportmonks.getLivescores();
+          if (Array.isArray(sm)) {
+            const f = findIn(sm);
+            if (f) return this._formatMatches([f], 'sportsmonks')[0];
           }
+        } catch (e) {
+          logger.debug('SportMonks match lookup failed', e?.message || String(e));
         }
       }
 

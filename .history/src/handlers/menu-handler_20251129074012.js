@@ -287,8 +287,8 @@ export function buildLiveMenuPayload(games, sport = 'Football', userTier = 'FREE
     // action buttons per match: Details, Odds
     const matchId = game.id || `${sport}_${idx}`;
     const row = [
-      { text: '🔎 Details', callback_data: `match:${matchId}:${sport.toLowerCase()}` },
-      { text: '💰 Odds', callback_data: `odds:${matchId}` }
+      { text: '🔎 Details', callback_data: validateCallbackData ? validateCallbackData(`match:${matchId}:${sport.toLowerCase()}`) : `match:${matchId}:${sport.toLowerCase()}` },
+      { text: '💰 Odds', callback_data: validateCallbackData ? validateCallbackData(`odds:${matchId}`) : `odds:${matchId}` }
     ];
     keyboard.push(row);
   });

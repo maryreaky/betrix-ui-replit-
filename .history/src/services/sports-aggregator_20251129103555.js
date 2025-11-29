@@ -189,25 +189,6 @@ export class SportsAggregator {
         }
       }
 
-      // Determine sport (default to football). Prefer SportMonks for football live data.
-      const sport = (options && options.sport) ? options.sport : 'football';
-
-      if (sport === 'football' && CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) {
-        try {
-          logger.debug('📡 Fetching live matches from SportMonks (preferred for football)');
-          const smMatches = await this.sportmonks.getLivescores(leagueId);
-          if (smMatches && smMatches.length > 0) {
-            logger.info(`✅ SportMonks: Found ${smMatches.length} live matches (preferred)`);
-            this._setCached(cacheKey, smMatches);
-            await this._recordProviderHealth('sportsmonks', true, `Found ${smMatches.length} live matches`);
-            return this._formatMatches(smMatches, 'sportsmonks');
-          }
-        } catch (e) {
-          logger.warn('SportMonks preferred fetch failed', e?.message || String(e));
-          try { await this._recordProviderHealth('sportsmonks', false, e?.message || String(e)); } catch(_) {}
-        }
-      }
-
       if (!CONFIG.STATPAL.KEY) {
         logger.error('❌ StatPal API Key (STATPAL_API env var) not configured');
         return [];
