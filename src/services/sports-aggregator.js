@@ -58,7 +58,7 @@ export class SportsAggregator {
     this.scorebat = extras.scorebat || null;
     this.rss = extras.rss || null;
     this.openLiga = extras.openLiga || null;
-    this.statpal = new StatPalService(redis); // Initialize StatPal service
+    this.statpal = (CONFIG.STATPAL && CONFIG.STATPAL.ENABLED) ? new StatPalService(redis) : null; // Initialize StatPal only when enabled
     this.sportmonks = new SportMonksService(redis);
     this.providerHealth = new ProviderHealth(redis);
     // API-Sports adaptive strategy (will pick the first working strategy)
