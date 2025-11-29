@@ -122,50 +122,45 @@ export class SportsAggregator {
 
       // Prefer StatPal as the single authoritative source for leagues
       if (CONFIG.STATPAL && CONFIG.STATPAL.KEY) {
-        if (await this.providerHealth.isDisabled('statpal')) {
-          logger.warn('⚠️  StatPal provider currently disabled for leagues');
-        } else {
-          try {
-            logger.debug('📡 Fetching leagues via StatPal (derived from fixtures)');
-            const fixtures = await this.statpal.getFixtures(sport === 'football' ? 'soccer' : sport, CONFIG.STATPAL.V1 || 'v1');
-            let leaguesFromStatpal = [];
-            if (fixtures && Array.isArray(fixtures)) {
-              const map = new Map();
-              fixtures.forEach(f => {
-                const league = f.league || f.competition || f.tournament || null;
-                if (league) {
-                  const id = String(league.id || league.league_id || league.name || JSON.stringify(league));
-                  if (!map.has(id)) {
-                    map.set(id, {
-                      id: id,
-                      name: league.name || league.title || league.code || 'Unknown',
-                      country: league.country || league.area || ''
-                    });
-                  }
+        try {
+          logger.debug('📡 Fetching leagues via StatPal (derived from fixtures)');
+          const fixtures = await this.statpal.getFixtures(sport === 'football' ? 'soccer' : sport, CONFIG.STATPAL.V1 || 'v1');
+          let leaguesFromStatpal = [];
+          if (fixtures && Array.isArray(fixtures)) {
+            const map = new Map();
+            fixtures.forEach(f => {
+              const league = f.league || f.competition || f.tournament || null;
+              if (league) {
+                const id = String(league.id || league.league_id || league.name || JSON.stringify(league));
+                if (!map.has(id)) {
+                  map.set(id, {
+                    id: id,
+                    name: league.name || league.title || league.code || 'Unknown',
+                    country: league.country || league.area || ''
+                  });
                 }
-              });
-              leaguesFromStatpal = Array.from(map.values());
-            } else if (fixtures && fixtures.data && Array.isArray(fixtures.data)) {
-              // some StatPal responses wrap data under `data`
-              const map = new Map();
-              fixtures.data.forEach(f => {
-                const league = f.league || f.competition || null;
-                if (league) {
-                  const id = String(league.id || league.name || JSON.stringify(league));
-                  if (!map.has(id)) map.set(id, { id, name: league.name || 'Unknown', country: league.country || '' });
-                }
-              });
-              leaguesFromStatpal = Array.from(map.values());
-            }
-
-            if (leaguesFromStatpal.length > 0) {
-              this._setCached(cacheKey, leaguesFromStatpal);
-              return leaguesFromStatpal;
-            }
-          } catch (e) {
-            logger.warn('StatPal league derivation failed', e?.message || String(e));
-            try { await this.providerHealth.markFailure('statpal', e.status || e.statusCode || 0, e.message); } catch (e2) {}
+              }
+            });
+            leaguesFromStatpal = Array.from(map.values());
+          } else if (fixtures && fixtures.data && Array.isArray(fixtures.data)) {
+            // some StatPal responses wrap data under `data`
+            const map = new Map();
+            fixtures.data.forEach(f => {
+              const league = f.league || f.competition || null;
+              if (league) {
+                const id = String(league.id || league.name || JSON.stringify(league));
+                if (!map.has(id)) map.set(id, { id, name: league.name || 'Unknown', country: league.country || '' });
+              }
+            });
+            leaguesFromStatpal = Array.from(map.values());
           }
+
+          if (leaguesFromStatpal.length > 0) {
+            this._setCached(cacheKey, leaguesFromStatpal);
+            return leaguesFromStatpal;
+          }
+        } catch (e) {
+          logger.warn('StatPal league derivation failed', e?.message || String(e));
         }
       }
 
@@ -195,11 +190,6 @@ export class SportsAggregator {
         return [];
       }
 
-      if (await this.providerHealth.isDisabled('statpal-live')) {
-        logger.warn('⚠️  StatPal provider currently disabled');
-        return [];
-      }
-
       try {
         logger.debug(`📡 Fetching live matches from StatPal for league ${leagueId}`);
         const statpalData = await this.statpal.getLiveScores('soccer', 'v1');
@@ -208,6 +198,7 @@ export class SportsAggregator {
           logger.warn('⚠️  StatPal returned null data');
           return [];
         }
+        
         // Normalize StatPal response shapes. StatPal responses vary between
         // - an array of matches
         // - { data: [...] }
@@ -250,6 +241,29 @@ export class SportsAggregator {
         let matches = extractMatches(statpalData);
         
         if (matches.length > 0) {
+          // Validate that matches have team data
+          const validMatches = matches.filter(m => {
+            // Check if match has home/away or similar fields
+            const hasTeams = m && (
+              (m.home && m.away) ||
+              (m.teams && ((m.teams.home || m.teams[0]) && (m.teams.away || m.teams[1]))) ||
+              (m.homeTeam && m.awayTeam) ||
+              (m.main_team && m.visitor_team) ||
+              (m.participants && m.participants.length >= 2) ||
+              (m.title && m.title.includes(' vs '))
+            );
+            return hasTeams;
+          });
+          
+          if (validMatches.length === 0) {
+            logger.warn('⚠️  StatPal returned matches but none have valid team data. Sample:', 
+              matches.slice(0, 1).map(m => Object.keys(m)));
+            // Try formatting anyway - it'll use fallbacks
+            const formatted = this._formatMatches(matches, 'statpal');
+            this._setCached(cacheKey, formatted);
+            return formatted;
+          }
+          
           logger.info(`✅ StatPal: Found ${matches.length} live matches (soccer)`);
           this._setCached(cacheKey, matches);
           await this._recordProviderHealth('statpal', true, `Found ${matches.length} live matches`);
@@ -931,19 +945,31 @@ export class SportsAggregator {
           return null;
         };
 
-        const home = pick('home', 'home_team', 'homeTeam', 'localteam', 'team_home', 'teams.home', 'home.name', 'home.team', 'home_team_name');
-        const away = pick('away', 'away_team', 'awayTeam', 'visitorteam', 'team_away', 'teams.away', 'away.name', 'away.team', 'away_team_name');
+        const home = pick('home', 'home_team', 'homeTeam', 'localteam', 'team_home', 'teams.home', 'home.name', 'home.team', 'home_team_name', 'main_team', 'fixture.home', 'teams.0', 'participants.0.name');
+        const away = pick('away', 'away_team', 'awayTeam', 'visitorteam', 'team_away', 'teams.away', 'away.name', 'away.team', 'away_team_name', 'visitor_team', 'fixture.away', 'teams.1', 'participants.1.name');
 
-        const homeScore = pick('homeScore', 'home_score', 'score.home', 'scores.home', 'goals.home', 'home.goals');
-        const awayScore = pick('awayScore', 'away_score', 'score.away', 'scores.away', 'goals.away', 'away.goals');
+        const homeScore = pick('homeScore', 'home_score', 'score.home', 'scores.home', 'goals.home', 'home.goals', 'main_score', 'fixture.home_score');
+        const awayScore = pick('awayScore', 'away_score', 'score.away', 'scores.away', 'goals.away', 'away.goals', 'visitor_score', 'fixture.away_score');
 
-        const status = pick('status', 'match_status', 'state', 'status_text');
-        const time = pick('time', 'match_time', 'start_time', 'minute', 'elapsed', 'status_time');
+        const status = pick('status', 'match_status', 'state', 'status_text', 'stage');
+        const time = pick('time', 'match_time', 'start_time', 'minute', 'elapsed', 'status_time', 'kick_off', 'utc_date');
+
+        // If home/away still null, try to extract from title or other fields
+        let homeVal = home;
+        let awayVal = away;
+        if (!homeVal || !awayVal) {
+          const title = m.title || m.event_title || m.fixture_title || '';
+          if (title && title.includes(' vs ')) {
+            const parts = title.split(' vs ');
+            if (!homeVal) homeVal = parts[0]?.trim();
+            if (!awayVal) awayVal = parts[1]?.trim();
+          }
+        }
 
         return {
-          id: m.id || m.match_id || null,
-          home: safe(home, 'Home'),
-          away: safe(away, 'Away'),
+          id: m.id || m.match_id || m.fixture_id || null,
+          home: safe(homeVal, 'Home'),
+          away: safe(awayVal, 'Away'),
           homeScore: (typeof homeScore === 'number') ? homeScore : (homeScore ? Number(homeScore) : null),
           awayScore: (typeof awayScore === 'number') ? awayScore : (awayScore ? Number(awayScore) : null),
           status: safe(status, 'UNKNOWN'),
