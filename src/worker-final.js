@@ -43,6 +43,7 @@ import { AnalyticsService } from "./services/analytics.js";
 import { RateLimiter } from "./middleware/rate-limiter.js";
 import { ContextManager } from "./middleware/context-manager.js";
 import v2Handler from "./handlers/telegram-handler-v2-clean.js";
+import completeHandler from "./handlers/handler-complete.js";
 import SportMonksAPI from "./services/sportmonks-api.js";
 import SportsDataAPI from "./services/sportsdata-api.js";
 
@@ -504,7 +505,7 @@ async function handleUpdate(update) {
 
       try {
         const services = { openLiga, footballData: footballDataService, rss: rssAggregator, scrapers, sportsAggregator, oddsAnalyzer, multiSportAnalyzer, cache, sportMonks: sportMonksAPI, sportsData: sportsDataAPI };
-        const res = await v2Handler.handleCallbackQuery(callbackQuery, redis, services);
+        const res = await completeHandler.handleCallbackQuery(callbackQuery, redis, services);
         if (!res) return;
 
         // Normalize to array for uniform processing
@@ -621,29 +622,45 @@ async function handleCommand(chatId, userId, cmd, args, fullText) {
     // Track command
     const start = Date.now();
 
-    // Basic commands - most routed to v2Handler for unified branding and flow
+    // Basic commands - routed through complete handler for full menu system
     const basicCommands = {
       "/start": async () => {
-        const services = { openLiga, footballData: footballDataService, rss: rssAggregator, scrapers, sportsAggregator, oddsAnalyzer, multiSportAnalyzer, cache, sportMonks: sportMonksAPI, sportsData: sportsDataAPI };
-        const msg = await v2Handler.handleCommand('/start', chatId, userId, redis, services);
-        if (msg && msg.chat_id) {
-          await telegram.sendMessage(chatId, msg.text || '', { reply_markup: msg.reply_markup, parse_mode: msg.parse_mode || 'Markdown' });
+        try {
+          const result = await completeHandler.handleStart(chatId);
+          await telegram.sendMessage(chatId, result.text, { reply_markup: result.reply_markup, parse_mode: result.parse_mode || 'Markdown' });
+        } catch (e) {
+          logger.warn('/start handler error', e?.message);
+          await telegram.sendMessage(chatId, '❌ Error loading menu');
         }
       },
       "/menu": async () => {
-        const services = { openLiga, footballData: footballDataService, rss: rssAggregator, scrapers, sportsAggregator, oddsAnalyzer, multiSportAnalyzer, cache, sportMonks: sportMonksAPI, sportsData: sportsDataAPI };
-        const text = '/menu';
-        const msg = await v2Handler.handleCommand(text, chatId, userId, redis, services);
-        if (msg && msg.chat_id) {
-          await telegram.sendMessage(chatId, msg.text || '', { reply_markup: msg.reply_markup, parse_mode: msg.parse_mode || 'Markdown' });
+        try {
+          const result = await completeHandler.handleMenu(chatId);
+          await telegram.sendMessage(chatId, result.text, { reply_markup: result.reply_markup, parse_mode: result.parse_mode || 'Markdown' });
+        } catch (e) {
+          logger.warn('/menu handler error', e?.message);
+          await telegram.sendMessage(chatId, '❌ Error loading menu');
+        }
+      },
+      "/live": async () => {
+        try {
+          const result = await completeHandler.handleLive(chatId);
+          await telegram.sendMessage(chatId, result.text, { reply_markup: result.reply_markup, parse_mode: result.parse_mode || 'Markdown' });
+        } catch (e) {
+          logger.warn('/live handler error', e?.message);
+          await telegram.sendMessage(chatId, '⚽ Error loading live games');
         }
       },
       "/help": async () => {
-        const services = { openLiga, footballData: footballDataService, rss: rssAggregator, scrapers, sportsAggregator, oddsAnalyzer, multiSportAnalyzer, cache, sportMonks: sportMonksAPI, sportsData: sportsDataAPI };
-        const msg = await v2Handler.handleCommand('/help', chatId, userId, redis, services);
-        if (msg && msg.chat_id) {
-          await telegram.sendMessage(chatId, msg.text || '', { reply_markup: msg.reply_markup, parse_mode: msg.parse_mode || 'Markdown' });
-        } else {
+        try {
+          const result = await completeHandler.handleLive(chatId, 'help');
+          if (result && result.text) {
+            await telegram.sendMessage(chatId, result.text, { reply_markup: result.reply_markup, parse_mode: result.parse_mode || 'Markdown' });
+          } else {
+            await basicHandlers.help(chatId);
+          }
+        } catch (e) {
+          logger.warn('/help handler error', e?.message);
           await basicHandlers.help(chatId);
         }
       },
