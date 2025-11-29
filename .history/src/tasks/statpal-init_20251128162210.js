@@ -139,18 +139,12 @@ export class StatPalInit {
       let matches = [];
       if (Array.isArray(data)) {
         matches = data;
-        logger.debug(`    ✅ Extracted from top-level array: ${matches.length} items`);
       } else if (data.data && Array.isArray(data.data)) {
         matches = data.data;
-        logger.debug(`    ✅ Extracted from .data array: ${matches.length} items`);
       } else if (data.matches && Array.isArray(data.matches)) {
         matches = data.matches;
-        logger.debug(`    ✅ Extracted from .matches array: ${matches.length} items`);
       } else if (data.results && Array.isArray(data.results)) {
         matches = data.results;
-        logger.debug(`    ✅ Extracted from .results array: ${matches.length} items`);
-      } else {
-        logger.warn(`    ⚠️  Could not extract array from StatPal ${sport} response. Available keys: ${Object.keys(data || {}).join(', ')}`);
       }
 
       const count = Array.isArray(matches) ? matches.length : 0;
