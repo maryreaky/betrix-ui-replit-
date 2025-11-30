@@ -222,13 +222,13 @@ export class SportsAggregator {
   async getFixtures(leagueId = null, options = {}) {
     try {
       if (!leagueId) {
-        // Fetch from all major football competitions
+        // Fetch upcoming fixtures from all major football competitions
         const competitions = [39, 140, 135, 61, 78, 2]; // PL, LaLiga, SerieA, Ligue1, Bundesliga, CL
         let allFixtures = [];
 
         for (const compId of competitions) {
           try {
-            const fixtures = await this.getLiveMatches(compId, { sport: 'football' });
+            const fixtures = await this.getUpcomingMatches(compId, { sport: 'football' });
             if (fixtures && Array.isArray(fixtures)) {
               allFixtures.push(...fixtures);
             }
@@ -240,10 +240,68 @@ export class SportsAggregator {
         return allFixtures;
       }
 
-      // Single league fixture fetch
-      return await this.getLiveMatches(leagueId, options);
+      // Single league upcoming fixture fetch
+      return await this.getUpcomingMatches(leagueId, options);
     } catch (err) {
       logger.warn('getFixtures failed:', err.message);
+      return [];
+    }
+  }
+
+  /**
+   * Get upcoming matches from SportMonks and Football-Data
+   * @param {number} leagueId - League ID
+   * @param {object} options - Optional parameters
+   */
+  async getUpcomingMatches(leagueId, options = {}) {
+    try {
+      const cacheKey = `upcoming:${leagueId}`;
+      if (this.cache.has(cacheKey)) {
+        const cached = this.cache.get(cacheKey);
+        if (Date.now() - cached.timestamp < 5 * 60 * 1000) { // 5 min cache for upcoming
+          return cached.data;
+        }
+      }
+
+      // ONLY fetch from SportMonks and Football-Data
+      // Try SportMonks first (preferred for upcoming fixtures)
+      if (CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) {
+        try {
+          logger.debug('📡 Fetching upcoming matches from SportMonks');
+          const smFixtures = await this.sportmonks.getFixtures({ league_id: leagueId });
+          if (smFixtures && smFixtures.length > 0) {
+            logger.info(`✅ SportMonks: Found ${smFixtures.length} upcoming matches`);
+            this._setCached(cacheKey, smFixtures);
+            await this._recordProviderHealth('sportsmonks', true, `Found ${smFixtures.length} upcoming matches`);
+            return this._formatMatches(smFixtures, 'sportsmonks');
+          }
+        } catch (e) {
+          logger.warn('SportMonks upcoming fetch failed', e?.message || String(e));
+          try { await this._recordProviderHealth('sportsmonks', false, e?.message || String(e)); } catch(_) {}
+        }
+      }
+
+      // Fallback to Football-Data if SportMonks unavailable
+      if (CONFIG.FOOTBALLDATA && CONFIG.FOOTBALLDATA.KEY) {
+        try {
+          logger.debug('📡 Fetching upcoming matches from Football-Data');
+          const fdMatches = await this._getUpcomingFromFootballData(leagueId);
+          if (fdMatches && fdMatches.length > 0) {
+            logger.info(`✅ Football-Data: Found ${fdMatches.length} upcoming matches`);
+            this._setCached(cacheKey, fdMatches);
+            await this._recordProviderHealth('footballdata', true, `Found ${fdMatches.length} upcoming matches`);
+            return this._formatMatches(fdMatches, 'footballdata');
+          }
+        } catch (e) {
+          logger.warn('Football-Data upcoming fetch failed', e?.message || String(e));
+          try { await this._recordProviderHealth('footballdata', false, e?.message || String(e)); } catch(_) {}
+        }
+      }
+
+      logger.warn('⚠️  No upcoming matches available from SportMonks or Football-Data');
+      return [];
+    } catch (err) {
+      logger.error('getUpcomingMatches failed:', err.message);
       return [];
     }
   }
@@ -551,6 +609,23 @@ export class SportsAggregator {
       return (response.standings || [{ table: [] }])[0].table || [];
     } catch (e) {
       logger.warn(`Football-Data standings for league ${fdLeagueId} failed: ${e.message}`);
+      return [];
+    }
+  }
+
+  async _getUpcomingFromFootballData(leagueId) {
+    // Map API-Sports league ID to Football-Data league code
+    const mapping = LEAGUE_MAPPINGS[String(leagueId)];
+    const fdLeagueId = mapping ? mapping.footballDataId : String(leagueId);
+    
+    const url = `${CONFIG.FOOTBALLDATA.BASE}/competitions/${fdLeagueId}/matches?status=SCHEDULED`;
+    try {
+      const response = await this._fetchWithRetry(url, {
+        headers: { 'X-Auth-Token': CONFIG.FOOTBALLDATA.KEY }
+      }, 2);
+      return (response.matches || []).slice(0, 20); // Return up to 20 upcoming matches
+    } catch (e) {
+      logger.warn(`Football-Data upcoming matches for league ${fdLeagueId} failed: ${e.message}`);
       return [];
     }
   }
