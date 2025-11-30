@@ -192,7 +192,7 @@ export class SportsAggregator {
       if (CONFIG.FOOTBALLDATA && CONFIG.FOOTBALLDATA.KEY) {
         try {
           logger.debug('📡 Fetching live matches from Football-Data');
-          const fdMatches = await this._getLiveFromFootballData();
+          const fdMatches = await this._getLiveFromFootballData(leagueId);
           if (fdMatches && fdMatches.length > 0) {
             logger.info(`✅ Football-Data: Found ${fdMatches.length} live matches`);
             this._setCached(cacheKey, fdMatches);
