@@ -1285,11 +1285,15 @@ export class SportsAggregator {
         let homeScore = null;
         let awayScore = null;
         
-        // DEBUG: Log raw match structure to understand SportMonks API response
+        // DEBUG/INFO: Log raw match structure to understand SportMonks API response
         if (!m._logged) {
-          logger.debug(`[SPORTSMONKS_RAW] Match ID: ${m.id} | Keys: ${Object.keys(m).join(', ')}`);
-          if (m.participants) logger.debug(`[SPORTSMONKS_RAW] Participants structure: ${JSON.stringify(m.participants?.slice(0, 2))}`);
-          if (m.teams) logger.debug(`[SPORTSMONKS_RAW] Teams structure: ${JSON.stringify(m.teams)}`);
+          logger.info(`[SPORTSMONKS_RAW] Match ID: ${m.id} | Keys: ${Object.keys(m).join(', ')}`);
+          try {
+            if (m.participants) logger.info(`[SPORTSMONKS_RAW] Participants structure: ${JSON.stringify(m.participants?.slice(0, 2))}`);
+            if (m.teams) logger.info(`[SPORTSMONKS_RAW] Teams structure: ${JSON.stringify(m.teams)}`);
+          } catch (e) {
+            logger.info('[SPORTSMONKS_RAW] Failed to stringify nested structures');
+          }
           m._logged = true; // prevent duplicate logging
         }
         
