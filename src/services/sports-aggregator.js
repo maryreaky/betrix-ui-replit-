@@ -215,6 +215,81 @@ export class SportsAggregator {
   }
 
   /**
+   * Get all live matches globally (across all leagues and sports)
+   * Best for "Watch All Live Matches" Telegram command
+   */
+  async getAllLiveMatches() {
+    try {
+      const cacheKey = 'live:all';
+      if (this.cache.has(cacheKey)) {
+        const cached = this.cache.get(cacheKey);
+        if (Date.now() - cached.timestamp < 2 * 60 * 1000) { // 2 min cache for live
+          return cached.data;
+        }
+      }
+
+      let allLive = [];
+
+      // Try SportMonks first (preferred for global live data)
+      if (CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) {
+        try {
+          logger.debug('📡 Fetching ALL live matches from SportMonks');
+          const smMatches = await this.sportmonks.getAllLiveMatches();
+          if (smMatches && smMatches.length > 0) {
+            logger.info(`✅ SportMonks: Found ${smMatches.length} total live matches globally`);
+            const formatted = this._formatMatches(smMatches, 'sportsmonks');
+            // Filter to only LIVE status matches
+            const liveOnly = formatted.filter(m => m.status === 'LIVE');
+            allLive.push(...liveOnly);
+            this._setCached(cacheKey, formatted);
+            await this._recordProviderHealth('sportsmonks', true, `Found ${liveOnly.length} live matches globally`);
+            return formatted;
+          }
+        } catch (e) {
+          logger.warn('SportMonks global live fetch failed', e?.message || String(e));
+          try { await this._recordProviderHealth('sportsmonks', false, e?.message || String(e)); } catch(_) {}
+        }
+      }
+
+      // Fallback to Football-Data for major competitions
+      if (CONFIG.FOOTBALLDATA && CONFIG.FOOTBALLDATA.KEY && allLive.length === 0) {
+        try {
+          logger.debug('📡 Fetching live matches from Football-Data major competitions');
+          const competitions = ['39', '140', '135', '61', '78', '2']; // PL, LaLiga, SerieA, Ligue1, Bundesliga, CL
+          
+          for (const compId of competitions) {
+            try {
+              const fdLive = await this._getLiveFromFootballData(compId);
+              if (fdLive && fdLive.length > 0) {
+                const formatted = this._formatMatches(fdLive, 'football-data');
+                allLive.push(...formatted);
+              }
+            } catch (e) {
+              logger.debug(`Football-Data live for ${compId} failed: ${e?.message}`);
+            }
+          }
+
+          if (allLive.length > 0) {
+            logger.info(`✅ Football-Data: Found ${allLive.length} live matches across major competitions`);
+            this._setCached(cacheKey, allLive);
+            await this._recordProviderHealth('footballdata', true, `Found ${allLive.length} live matches`);
+            return allLive;
+          }
+        } catch (e) {
+          logger.warn('Football-Data global live fetch failed', e?.message || String(e));
+          try { await this._recordProviderHealth('footballdata', false, e?.message || String(e)); } catch(_) {}
+        }
+      }
+
+      logger.warn('⚠️  No live matches available globally from either provider');
+      return [];
+    } catch (err) {
+      logger.error('getAllLiveMatches failed:', err.message);
+      return [];
+    }
+  }
+
+  /**
    * Get upcoming fixtures from SportMonks and Football-Data
    * @param {string} leagueId - Optional league ID (if omitted, fetches from all major competitions)
    * @param {object} options - Optional parameters
@@ -995,6 +1070,51 @@ export class SportsAggregator {
           time: (m.status === 'LIVE' && m.minute) ? `${m.minute}'` : safe(m.utcDate, 'TBA'),
           venue: safe(m.venue, 'TBA'),
           provider: 'football-data',
+          raw: m
+        };
+      }
+
+      // SportMonks provider
+      if (source === 'sportsmonks') {
+        // SportMonks typically returns { id, name, starting_at, league_id, state_id, result_info, participants[] }
+        const participants = m.participants || m.teams || [];
+        let homeName = 'Home';
+        let awayName = 'Away';
+        let homeScore = null;
+        let awayScore = null;
+        
+        if (Array.isArray(participants) && participants.length >= 2) {
+          // Participants are usually [home, away] order
+          homeName = safe(participants[0] && (participants[0].name || participants[0].fullName), 'Home');
+          awayName = safe(participants[1] && (participants[1].name || participants[1].fullName), 'Away');
+          homeScore = participants[0] && (participants[0].score || participants[0].goals) || null;
+          awayScore = participants[1] && (participants[1].score || participants[1].goals) || null;
+        }
+        
+        // SportMonks state mapping: 1=not started, 2=in progress, 3=finished, etc
+        let status = 'UNKNOWN';
+        if (m.state_id === 1) status = 'SCHEDULED';
+        else if (m.state_id === 2) status = 'LIVE';
+        else if (m.state_id === 3 || m.state_id === 4) status = 'FINISHED';
+        else if (m.state_id === 5) status = 'POSTPONED';
+        
+        // Extract time: if LIVE, use minute; otherwise use starting_at
+        let timeStr = 'TBA';
+        if (status === 'LIVE' && m.minute) timeStr = `${m.minute}'`;
+        else if (m.starting_at) timeStr = safe(m.starting_at);
+        else if (m.scheduled_at) timeStr = safe(m.scheduled_at);
+        
+        return {
+          id: m.id || null,
+          home: homeName,
+          away: awayName,
+          homeScore: (typeof homeScore === 'number') ? homeScore : (homeScore ? Number(homeScore) : null),
+          awayScore: (typeof awayScore === 'number') ? awayScore : (awayScore ? Number(awayScore) : null),
+          status: status,
+          time: timeStr,
+          league: (m.league && (m.league.name || m.league.fullName)) || (m.league_id || 'Unknown'),
+          venue: safe(m.venue && (m.venue.name || m.venue.fullName), 'TBA'),
+          provider: 'sportsmonks',
           raw: m
         };
       }

@@ -76,6 +76,24 @@ export default class SportMonksService {
     }
   }
 
+  /**
+   * Get all live matches globally (no league filter)
+   * Used for comprehensive live feed
+   */
+  async getAllLiveMatches() {
+    try {
+      const data = await this._fetch('livescores', {});
+      if (!data) return [];
+      if (Array.isArray(data)) return data;
+      if (data && Array.isArray(data.data)) return data.data;
+      if (data && Array.isArray(data.results)) return data.results;
+      return [];
+    } catch (e) {
+      logger.warn('getAllLiveMatches error', e?.message || String(e));
+      return [];
+    }
+  }
+
   async getFixtures(params = {}) {
     return await this._fetch('fixtures', params) || [];
   }
