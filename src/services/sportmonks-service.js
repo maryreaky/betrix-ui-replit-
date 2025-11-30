@@ -45,7 +45,16 @@ export default class SportMonksService {
         }
         return data && (data.data || data) ? (data.data || data) : data;
       } catch (e) {
-        logger.warn('SportMonks fetch attempt', attempt, 'failed for', endpoint, e?.message || String(e));
+        try {
+          // Redact token for logs
+          const safeUrl = (e && e.config && e.config.url) ? String(e.config.url).replace(/(api_token=[^&]+)/gi, 'api_token=REDACTED') : this._buildUrl(endpoint, query).replace(/(api_token=[^&]+)/gi, 'api_token=REDACTED');
+          const status = e && e.response && e.response.status ? e.response.status : 'N/A';
+          const dataSnippet = e && e.response && e.response.data ? (typeof e.response.data === 'string' ? e.response.data.substring(0,200) : JSON.stringify(e.response.data).substring(0,200)) : null;
+          logger.warn(`[SportMonksService] attempt ${attempt}/${attempts} failed | endpoint:${endpoint} | status:${status} | error:${e?.message || String(e)}`);
+          if (dataSnippet) logger.info(`[SportMonksService] response body: ${dataSnippet}`);
+        } catch (logErr) {
+          logger.error('Error logging SportMonks fetch failure:', logErr.message);
+        }
         if (attempt < attempts) {
           // exponential backoff
           const waitMs = 300 * Math.pow(2, attempt - 1);

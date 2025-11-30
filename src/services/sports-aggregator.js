@@ -180,9 +180,10 @@ export class SportsAggregator {
           const smMatches = await this.sportmonks.getLivescores(leagueId);
           if (smMatches && smMatches.length > 0) {
             logger.info(`✅ SportMonks: Found ${smMatches.length} live matches (raw)`);
-            const formatted = this._formatMatches(smMatches, 'sportsmonks');
-            const liveOnly = formatted.filter(m => String(m.status).toUpperCase() === 'LIVE');
-            logger.info(`🔍 SportMonks formatted:${formatted.length} live:${liveOnly.length}`);
+            await this.dataCache.storeLiveMatches('sportsmonks', smMatches);
+            const formatted = this._formatMatches(smMatches, 'sportsmonks') || [];
+            const liveOnly = formatted.filter(m => String(m.status || '').toUpperCase() === 'LIVE');
+            logger.info(`🔍 SportMonks DIAGNOSTIC [league:${leagueId}]: raw:${smMatches.length} | formatted:${formatted.length} | live:${liveOnly.length}`);
             if (liveOnly.length > 0) {
               this._setCached(cacheKey, liveOnly);
               await this._recordProviderHealth('sportsmonks', true, `Found ${liveOnly.length} live matches`);
@@ -205,9 +206,13 @@ export class SportsAggregator {
           const fdMatches = await this._getLiveFromFootballData(leagueId);
           if (fdMatches && fdMatches.length > 0) {
             logger.info(`✅ Football-Data: Found ${fdMatches.length} live matches`);
-            this._setCached(cacheKey, fdMatches);
-            await this._recordProviderHealth('footballdata', true, `Found ${fdMatches.length} live matches`);
-            return this._formatMatches(fdMatches, 'footballdata');
+            await this.dataCache.storeLiveMatches('footballdata', fdMatches);
+            const formatted = this._formatMatches(fdMatches, 'footballdata') || [];
+            const liveCount = formatted.filter(m => String(m.status || '').toUpperCase() === 'LIVE').length;
+            logger.info(`🔍 Football-Data DIAGNOSTIC [league:${leagueId}]: raw:${fdMatches.length} | formatted:${formatted.length} | live:${liveCount}`);
+            this._setCached(cacheKey, formatted);
+            await this._recordProviderHealth('footballdata', true, `Found ${formatted.length} live matches`);
+            return formatted;
           }
         } catch (e) {
           logger.warn('Football-Data live fetch failed', e?.message || String(e));
@@ -244,18 +249,17 @@ export class SportsAggregator {
       if (CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) {
         try {
           logger.debug('📡 Fetching ALL live matches from SportMonks');
-          const smMatches = await this.sportmonks.getAllLiveMatches();
+          const smMatches = await this.sportmonks.getLivescores();
           if (smMatches && smMatches.length > 0) {
             logger.info(`✅ SportMonks: Found ${smMatches.length} total live matches globally`);
             // Store raw data
             await this.dataCache.storeLiveMatches('sportsmonks', smMatches);
-            const formatted = this._formatMatches(smMatches, 'sportsmonks');
+            const formatted = this._formatMatches(smMatches, 'sportsmonks') || [];
             // Filter to only LIVE status matches (allow multiple possible live state codes)
-            const liveOnly = formatted.filter(m => String(m.status).toUpperCase() === 'LIVE');
-            logger.info(`🔍 SportMonks raw:${smMatches.length} formatted:${formatted.length} live:${liveOnly.length}`);
+            const liveOnly = formatted.filter(m => String(m.status || '').toUpperCase() === 'LIVE');
+            logger.info(`🔍 SportMonks DIAGNOSTIC: raw:${smMatches.length} | formatted:${formatted.length} | live:${liveOnly.length}`);
             // Cache and return only the live matches for the global live feed
             if (liveOnly.length > 0) {
-              await this.dataCache.storeLiveMatches('sportsmonks', smMatches);
               this._setCached(cacheKey, liveOnly);
               await this._recordProviderHealth('sportsmonks', true, `Found ${liveOnly.length} live matches globally`);
               return liveOnly;
