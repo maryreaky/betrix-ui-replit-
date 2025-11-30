@@ -245,7 +245,7 @@ export class SportsAggregator {
 
       let allLive = [];
 
-      // Try SportMonks first (preferred for global live data)
+      // Try SportMonks first (primary source for comprehensive live data)
       if (CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) {
         try {
           logger.debug('📡 Fetching ALL live matches from SportMonks');

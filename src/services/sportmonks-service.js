@@ -7,6 +7,7 @@ import fetch from 'node-fetch';
 import axios from 'axios';
 import https from 'https';
 import dns from 'dns';
+import { URL } from 'url';
 import { CONFIG } from '../config.js';
 import { Logger } from '../utils/logger.js';
 
@@ -19,15 +20,19 @@ export default class SportMonksService {
     // Accept multiple possible env var names for the API token to be resilient
     this.key = (CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) || process.env.SPORTSMONKS_API_KEY || process.env.SPORTSMONKS_API || process.env.SPORTSMONKS_TOKEN || null;
     
+    // Use Cloudflare DNS (1.1.1.1) to bypass DNS poisoning on Render
+    // This ensures we bypass local DNS misconfiguration that routes to B2C Solutions
+    dns.setServers(['1.1.1.1', '1.0.0.1']);
+    
     // Log DNS resolution for debugging
     try {
-      const url = new URL(this.base);
-      const hostname = url.hostname;
+      const urlObj = new URL(this.base);
+      const hostname = urlObj.hostname;
       dns.resolve4(hostname, (err, addresses) => {
         if (err) {
           logger.warn(`[SportMonksService] DNS resolution failed for ${hostname}: ${err.message}`);
         } else {
-          logger.info(`[SportMonksService] DNS resolved ${hostname} to ${addresses.join(', ')}`);
+          logger.info(`[SportMonksService] ✅ DNS resolved ${hostname} to ${addresses.join(', ')} (using Cloudflare DNS)`);
         }
       });
     } catch (e) {
@@ -56,8 +61,23 @@ export default class SportMonksService {
         }
         // Use axios for better TLS control per-service
         const insecure = (process.env.SPORTSMONKS_INSECURE === 'true');
-        const agent = new https.Agent({ rejectUnauthorized: !insecure });
-        const resp = await axios.get(url, { timeout: 15000, httpsAgent: agent, headers: { Accept: 'application/json' } });
+        const agent = new https.Agent({ 
+          rejectUnauthorized: !insecure,
+          keepAlive: true,
+          maxSockets: 50
+        });
+        const resp = await axios.get(url, { 
+          timeout: 15000, 
+          httpsAgent: agent, 
+          headers: { Accept: 'application/json' },
+          // Force Cloudflare DNS for this request
+          lookup: (hostname, opts, cb) => {
+            dns.resolve4(hostname, (err, addresses) => {
+              if (err) return cb(err);
+              cb(null, addresses[0], 4);
+            });
+          }
+        });
         const data = resp && resp.data ? resp.data : null;
         // axios throws for non-2xx; still guard
         if (!data) {
