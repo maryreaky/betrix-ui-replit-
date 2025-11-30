@@ -18,6 +18,9 @@ export function startPrefetchScheduler({ redis, openLiga, rss, scorebat, footbal
     } catch (e) { /* noop */ }
   };
 
+  // Maximum number of items to keep in the prefetch cache for large responses
+  const MAX_PREFETCH_STORE = Number(process.env.PREFETCH_STORE_MAX || 1000);
+
   const job = async () => {
     if (running) return; // avoid overlap
     running = true;
@@ -124,14 +127,22 @@ export function startPrefetchScheduler({ redis, openLiga, rss, scorebat, footbal
         try {
           if (!await isAllowedToRun('sportsmonks')) { /* skip due to backoff */ }
           else {
+            // Fetch full lists (but cap to MAX_PREFETCH_STORE to avoid unbounded Redis usage)
             const live = await sportsAggregator.getAllLiveMatches().catch(async (err) => { await recordFailure('sportsmonks'); throw err; });
             if (live && live.length > 0) {
-              await safeSet('prefetch:sportsmonks:live', { fetchedAt: ts, count: live.length, data: live.slice(0, 50) }, 30);
+              const cappedLive = Array.isArray(live) ? live.slice(0, Math.min(MAX_PREFETCH_STORE, live.length)) : [];
+              await safeSet('prefetch:sportsmonks:live', { fetchedAt: ts, count: live.length, data: cappedLive }, 30);
+              // Also write a consolidated key expected by Telegram handler: betrix:prefetch:live:by-sport
+              const bySport = { sports: { soccer: { fetchedAt: ts, count: live.length, samples: cappedLive } } };
+              await safeSet('betrix:prefetch:live:by-sport', bySport, 30);
               await recordSuccess('sportsmonks');
             }
             const fixtures = await sportsAggregator.getFixtures().catch(async (err) => { await recordFailure('sportsmonks-fixtures'); return []; });
             if (fixtures && fixtures.length > 0) {
-              await safeSet('prefetch:sportsmonks:fixtures', { fetchedAt: ts, count: fixtures.length, data: fixtures.slice(0, 50) }, 60);
+              const cappedFixtures = Array.isArray(fixtures) ? fixtures.slice(0, Math.min(MAX_PREFETCH_STORE, fixtures.length)) : [];
+              await safeSet('prefetch:sportsmonks:fixtures', { fetchedAt: ts, count: fixtures.length, data: cappedFixtures }, 60);
+              // Also publish an easy-to-read consolidated upcoming fixtures key
+              await safeSet('betrix:prefetch:upcoming:by-sport', { sports: { soccer: { fetchedAt: ts, count: fixtures.length, samples: cappedFixtures } } }, 60);
               await recordSuccess('sportsmonks-fixtures');
             }
             await redis.publish('prefetch:updates', JSON.stringify({ type: 'sportsmonks', ts, live: live ? live.length : 0, fixtures: fixtures ? fixtures.length : 0 }));

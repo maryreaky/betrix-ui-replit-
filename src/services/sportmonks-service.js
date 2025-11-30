@@ -125,16 +125,64 @@ export default class SportMonksService {
   }
 
   /**
+   * Generic paginated fetch helper - will iterate pages until exhausted or until a safety cap
+   */
+  async _fetchAll(endpoint, query = {}) {
+    try {
+      const perPage = Number(process.env.SPORTSMONKS_PER_PAGE || 250);
+      const maxPages = Number(process.env.SPORTSMONKS_MAX_PAGES || 20);
+      let page = 1;
+      let results = [];
+
+      while (page <= maxPages) {
+        const q = Object.assign({}, query, { page, per_page: perPage });
+        const pageData = await this._fetch(endpoint, q);
+        if (!pageData) break;
+
+        // pageData may be array or object with data[]
+        const arr = Array.isArray(pageData) ? pageData : (Array.isArray(pageData.data) ? pageData.data : (Array.isArray(pageData.results) ? pageData.results : null));
+        if (arr && arr.length > 0) {
+          results = results.concat(arr);
+        } else if (Array.isArray(pageData) && pageData.length === 0) {
+          break;
+        } else if (!arr && page === 1) {
+          // single-page non-array response - return it as-is
+          return pageData;
+        }
+
+        // Try to detect explicit pagination metadata
+        const meta = pageData && pageData.meta ? pageData.meta : (pageData && pageData.pagination ? pageData.pagination : null);
+        if (meta && meta.pagination && meta.pagination.total_pages) {
+          if (page >= meta.pagination.total_pages) break;
+        }
+
+        // If returned items are less than perPage, assume last page
+        if (arr && arr.length < perPage) break;
+
+        page += 1;
+      }
+
+      return results;
+    } catch (e) {
+      logger.warn('_fetchAll failed', e?.message || String(e));
+      return null;
+    }
+  }
+
+  /**
    * Get all live matches globally (no league filter)
    * Used for comprehensive live feed
    */
   async getAllLiveMatches() {
     try {
-      const data = await this._fetch('livescores', {});
-      if (!data) return [];
-      if (Array.isArray(data)) return data;
-      if (data && Array.isArray(data.data)) return data.data;
-      if (data && Array.isArray(data.results)) return data.results;
+      // Try to fetch all pages where supported. Fallback to single _fetch if pagination isn't supported.
+      const paged = await this._fetchAll('livescores', {});
+      if (paged && Array.isArray(paged) && paged.length > 0) return paged;
+      const single = await this._fetch('livescores', {});
+      if (!single) return [];
+      if (Array.isArray(single)) return single;
+      if (single && Array.isArray(single.data)) return single.data;
+      if (single && Array.isArray(single.results)) return single.results;
       return [];
     } catch (e) {
       logger.warn('getAllLiveMatches error', e?.message || String(e));
@@ -143,7 +191,11 @@ export default class SportMonksService {
   }
 
   async getFixtures(params = {}) {
-    return await this._fetch('fixtures', params) || [];
+    // Use paginated fetch to retrieve a large set of fixtures when available
+    const paged = await this._fetchAll('fixtures', params);
+    if (paged && Array.isArray(paged)) return paged;
+    const single = await this._fetch('fixtures', params);
+    return single || [];
   }
 
   async getLeagues(params = {}) {
