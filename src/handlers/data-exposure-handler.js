@@ -211,6 +211,62 @@ export class DataExposureHandler {
      * GET /api/data/schema
      * Returns the API schema/documentation
      */
+
+    /**
+     * GET /api/data/debug/raw-lives
+     * Debug endpoint: returns latest raw live payloads from RawDataCache (sanitized + truncated)
+     * Query params: `source` (sportsmonks|footballdata), `limit` (number, default 20)
+     */
+    this.router.get('/api/data/debug/raw-lives', async (req, res) => {
+      try {
+        const { source = 'sportsmonks', limit = '20' } = req.query;
+        const max = Math.min(200, Math.max(1, parseInt(limit, 10) || 20));
+
+        // Get raw live matches from RawDataCache via aggregator.dataCache
+        const raw = await this.aggregator.dataCache.getLiveMatches(source);
+        const count = (raw || []).length;
+
+        // Sanitizer: shallow clone and truncate long strings, remove suspicious keys
+        function sanitize(obj) {
+          if (obj == null) return obj;
+          if (typeof obj === 'string') return obj.length > 1000 ? obj.substring(0, 1000) + '...<truncated>' : obj;
+          if (typeof obj !== 'object') return obj;
+          const out = Array.isArray(obj) ? [] : {};
+          const keys = Object.keys(obj).slice(0, 200);
+          for (const k of keys) {
+            if (/token|api_token|password|secret/i.test(k)) {
+              out[k] = 'REDACTED';
+              continue;
+            }
+            const v = obj[k];
+            if (typeof v === 'string' && v.length > 1000) {
+              out[k] = v.substring(0, 1000) + '...<truncated>';
+            } else if (typeof v === 'object' && v !== null) {
+              // shallow stringify nested arrays/objects up to one level
+              try {
+                if (Array.isArray(v)) {
+                  out[k] = v.slice(0, 50).map(it => (typeof it === 'string' ? (it.length>300?it.substring(0,300)+'...':it) : (typeof it==='object'? JSON.stringify(it).substring(0,300) : it)));
+                } else {
+                  out[k] = Object.keys(v).slice(0,50).reduce((acc, kk) => { acc[kk] = (typeof v[kk] === 'string' && v[kk].length>300) ? v[kk].substring(0,300)+'...' : v[kk]; return acc; }, {});
+                }
+              } catch (e) {
+                out[k] = String(v).substring(0,300);
+              }
+            } else {
+              out[k] = v;
+            }
+          }
+          return out;
+        }
+
+        const sample = (raw || []).slice(0, max).map(sanitize);
+        res.json({ source, count, returned: sample.length, sample });
+      } catch (e) {
+        logger.error('Debug raw-lives failed:', e?.message || String(e));
+        res.status(500).json({ error: e?.message || String(e) });
+      }
+    });
+
     this.router.get('/api/data/schema', (req, res) => {
       const schema = {
         version: '1.0',
