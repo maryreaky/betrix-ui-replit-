@@ -274,13 +274,23 @@ export class SportsAggregator {
 
       let allLive = [];
 
-      // Try Football-Data FIRST since SportMonks DNS is globally misconfigured on Render
-      // SportMonks works locally but resolves to B2C Solutions on Render (infrastructure issue)
+      // Primary: try Football-Data global matches endpoint first (less prone to per-league 404s)
       if (CONFIG.FOOTBALLDATA && CONFIG.FOOTBALLDATA.KEY) {
         try {
-          logger.debug('📡 Fetching live matches from Football-Data (PRIMARY - SportMonks DNS broken on Render)');
+          logger.debug('📡 Fetching live matches from Football-Data (GLOBAL endpoint)');
+          const fdGlobal = await this._getLiveFromFootballDataGlobal();
+          if (fdGlobal && fdGlobal.length > 0) {
+            const formatted = this._formatMatches(fdGlobal, 'football-data');
+            logger.info(`✅ Football-Data (global): Found ${formatted.length} live matches`);
+            await this.dataCache.storeLiveMatches('footballdata', formatted);
+            this._setCached(cacheKey, formatted);
+            await this._recordProviderHealth('footballdata', true, `Found ${formatted.length} live matches (global)`);
+            return formatted;
+          }
+
+          // If global fetch returned nothing, fallback to per-competition fetch
+          logger.debug('📡 Football-Data global returned no live matches; falling back to per-competition fetch');
           const competitions = ['39', '140', '135', '61', '78', '2']; // PL, LaLiga, SerieA, Ligue1, Bundesliga, CL
-          
           for (const compId of competitions) {
             try {
               const fdLive = await this._getLiveFromFootballData(compId);
@@ -295,14 +305,13 @@ export class SportsAggregator {
 
           if (allLive.length > 0) {
             logger.info(`✅ Football-Data: Found ${allLive.length} live matches across major competitions`);
-            // Store raw Football-Data live
             await this.dataCache.storeLiveMatches('footballdata', allLive);
             this._setCached(cacheKey, allLive);
             await this._recordProviderHealth('footballdata', true, `Found ${allLive.length} live matches`);
             return allLive;
           }
         } catch (e) {
-          logger.warn('Football-Data global live fetch failed', e?.message || String(e));
+          logger.warn('Football-Data live fetch failed', e?.message || String(e));
           try { await this._recordProviderHealth('footballdata', false, e?.message || String(e)); } catch(_) {}
         }
       }
@@ -798,6 +807,25 @@ export class SportsAggregator {
     }));
   }
 
+  /**
+   * Global Football-Data live fetch (date range)
+   * Uses the Football-Data global matches endpoint to reduce per-league 404s
+   */
+  async _getLiveFromFootballDataGlobal() {
+    try {
+      if (!CONFIG.FOOTBALLDATA || !CONFIG.FOOTBALLDATA.KEY) return [];
+      const today = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const url = `${CONFIG.FOOTBALLDATA.BASE}/matches?dateFrom=${today}&dateTo=${tomorrow}`;
+      const response = await this._fetchWithRetry(url, { headers: { 'X-Auth-Token': CONFIG.FOOTBALLDATA.KEY } }, 2);
+      const matches = (response.matches || []).filter(m => (m.status === 'LIVE' || m.status === 'IN_PLAY'));
+      return matches.slice(0, 200);
+    } catch (e) {
+      logger.warn('Football-Data global live fetch failed', e?.message || String(e));
+      return [];
+    }
+  }
+
   async _getLiveFromFootballData(leagueId) {
     // Map API-Sports league ID to Football-Data league code
     const mapping = LEAGUE_MAPPINGS[String(leagueId)];
@@ -1204,15 +1232,44 @@ export class SportsAggregator {
       }
 
       if (source === 'football-data') {
+        // Football-Data provides consistent structure but ensure we handle all field variations
+        let homeName = safe(m.homeTeam && (m.homeTeam.name || m.homeTeam.fullName || m.homeTeam.shortName), 'Home');
+        let awayName = safe(m.awayTeam && (m.awayTeam.name || m.awayTeam.fullName || m.awayTeam.shortName), 'Away');
+        
+        // Fallback to direct team properties if nested structure missing
+        if (homeName === 'Home' && m.homeTeamName) homeName = safe(m.homeTeamName, 'Home');
+        if (awayName === 'Away' && m.awayTeamName) awayName = safe(m.awayTeamName, 'Away');
+        
+        // Try different score field locations
+        let homeScore = null;
+        let awayScore = null;
+        
+        if (m.score && typeof m.score === 'object') {
+          if (m.score.fullTime) {
+            homeScore = (typeof m.score.fullTime.home === 'number') ? m.score.fullTime.home : null;
+            awayScore = (typeof m.score.fullTime.away === 'number') ? m.score.fullTime.away : null;
+          } else if (m.score.current) {
+            homeScore = (typeof m.score.current.home === 'number') ? m.score.current.home : null;
+            awayScore = (typeof m.score.current.away === 'number') ? m.score.current.away : null;
+          }
+        }
+        
+        // Fallback for direct score properties
+        if (homeScore === null && (typeof m.homeTeamScore === 'number')) homeScore = m.homeTeamScore;
+        if (awayScore === null && (typeof m.awayTeamScore === 'number')) awayScore = m.awayTeamScore;
+        
+        logger.debug(`[FOOTBALLDATA_FORMAT] ${homeName} vs ${awayName} | status:${m.status} | score:${homeScore}:${awayScore}`);
+        
         return {
           id: m.id || null,
-          home: safe(m.homeTeam && m.homeTeam.name, 'Home'),
-          away: safe(m.awayTeam && m.awayTeam.name, 'Away'),
-          homeScore: (m.score && m.score.fullTime && (typeof m.score.fullTime.home === 'number' ? m.score.fullTime.home : null)) || null,
-          awayScore: (m.score && m.score.fullTime && (typeof m.score.fullTime.away === 'number' ? m.score.fullTime.away : null)) || null,
+          home: homeName,
+          away: awayName,
+          homeScore: homeScore,
+          awayScore: awayScore,
           status: safe(m.status, 'UNKNOWN'),
           time: (m.status === 'LIVE' && m.minute) ? `${m.minute}'` : safe(m.utcDate, 'TBA'),
-          venue: safe(m.venue, 'TBA'),
+          venue: safe(m.venue || (m.stage && m.stage.name), 'TBA'),
+          league: safe(m.competition && (m.competition.name || m.competition.shortName), 'Unknown'),
           provider: 'football-data',
           raw: m
         };
@@ -1220,19 +1277,70 @@ export class SportsAggregator {
 
       // SportMonks provider
       if (source === 'sportsmonks') {
-        // SportMonks typically returns { id, name, starting_at, league_id, state_id, result_info, participants[] }
-        const participants = m.participants || m.teams || [];
+        // SportMonks API returns nested team data with various possible structures
+        // Priority order for team extraction:
+        // 1. participants[] array (primary structure)
+        // 2. teams object with home/away properties
+        // 3. homeTeam/awayTeam direct properties
+        // 4. league_stage.round.fixtures include relation with real_team data
+        
         let homeName = 'Home';
         let awayName = 'Away';
         let homeScore = null;
         let awayScore = null;
         
+        // Strategy 1: Try participants array (primary)
+        const participants = m.participants || m.teams || [];
         if (Array.isArray(participants) && participants.length >= 2) {
-          // Participants are usually [home, away] order
-          homeName = safe(participants[0] && (participants[0].name || participants[0].fullName), 'Home');
-          awayName = safe(participants[1] && (participants[1].name || participants[1].fullName), 'Away');
-          homeScore = participants[0] && (participants[0].score || participants[0].goals) || null;
-          awayScore = participants[1] && (participants[1].score || participants[1].goals) || null;
+          // Participants usually [home, away] order - each has { id, name, fullName, score, goals, etc }
+          const home = participants[0];
+          const away = participants[1];
+          
+          if (home) {
+            homeName = safe(
+              (home.name || home.fullName || (home.meta && home.meta.name) || (home.team && home.team.name) || 
+               (home.data && (home.data.name || home.data.fullName))),
+              'Home'
+            );
+            homeScore = (home.score !== undefined) ? home.score : 
+                       ((home.goals !== undefined) ? home.goals : 
+                       ((home.meta && home.meta.goals) || (home.result || null)));
+          }
+          
+          if (away) {
+            awayName = safe(
+              (away.name || away.fullName || (away.meta && away.meta.name) || (away.team && away.team.name) || 
+               (away.data && (away.data.name || away.data.fullName))),
+              'Away'
+            );
+            awayScore = (away.score !== undefined) ? away.score : 
+                       ((away.goals !== undefined) ? away.goals : 
+                       ((away.meta && away.meta.goals) || (away.result || null)));
+          }
+        }
+        
+        // Strategy 2: Try teams object if participants failed
+        if (homeName === 'Home' && m.teams && typeof m.teams === 'object' && !Array.isArray(m.teams)) {
+          if (m.teams.home) {
+            homeName = safe(m.teams.home.name || m.teams.home.fullName, 'Home');
+            homeScore = m.teams.home.goals || m.teams.home.score || null;
+          }
+          if (m.teams.away) {
+            awayName = safe(m.teams.away.name || m.teams.away.fullName, 'Away');
+            awayScore = m.teams.away.goals || m.teams.away.score || null;
+          }
+        }
+        
+        // Strategy 3: Try direct properties
+        if (homeName === 'Home' && (m.homeTeam || m.home_team)) {
+          const ht = m.homeTeam || m.home_team;
+          homeName = safe(ht.name || ht.fullName, 'Home');
+          homeScore = ht.goals || ht.score || null;
+        }
+        if (awayName === 'Away' && (m.awayTeam || m.away_team)) {
+          const at = m.awayTeam || m.away_team;
+          awayName = safe(at.name || at.fullName, 'Away');
+          awayScore = at.goals || at.score || null;
         }
         
         // SportMonks state mapping: map common state_id values to canonical statuses
@@ -1256,6 +1364,8 @@ export class SportsAggregator {
         if (status === 'LIVE' && m.minute) timeStr = `${m.minute}'`;
         else if (m.starting_at) timeStr = safe(m.starting_at);
         else if (m.scheduled_at) timeStr = safe(m.scheduled_at);
+        
+        logger.debug(`[SPORTSMONKS_FORMAT] ${homeName} vs ${awayName} | status:${status} | home:${homeScore} away:${awayScore}`);
         
         return {
           id: m.id || null,

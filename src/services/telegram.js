@@ -64,11 +64,33 @@ class TelegramService {
       ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
     };
 
-    return HttpClient.fetch(`${this.baseUrl}/editMessageText`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }, `editMessage ${messageId}`);
+    try {
+      return await HttpClient.fetch(`${this.baseUrl}/editMessageText`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }, `editMessage ${messageId}`);
+    } catch (err) {
+      // Normalize error string
+      const msg = String(err && (err.message || err) || '');
+      // Common benign Telegram responses
+      if (msg.includes('message is not modified') || msg.includes('Bad Request: message is not modified')) {
+        logger.info('Telegram editMessage: message not modified (no-op)');
+        return { ok: false, reason: 'not_modified' };
+      }
+      if (msg.includes("message to edit not found") || msg.includes("message can't be edited") || msg.includes("message to edit has no text")) {
+        logger.info('Telegram editMessage: message not editable, falling back to sendMessage', { chatId, messageId });
+        try {
+          await this.sendMessage(chatId, text, { reply_markup: replyMarkup });
+          return { ok: true, fallback: 'sent_new' };
+        } catch (e2) {
+          logger.warn('Fallback sendMessage after editMessage failure also failed', e2 && e2.message ? e2.message : e2);
+          return { ok: false, reason: 'edit_and_send_failed' };
+        }
+      }
+      // Unexpected: rethrow for upstream handling/logging
+      throw err;
+    }
   }
 
   /**
