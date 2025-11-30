@@ -23,6 +23,16 @@ async function getLiveMatchesBySport(sport, redis, sportsAggregator) {
       }
     }
 
+    // Try provider-specific prefetch keys if the consolidated key wasn't set
+    try {
+      const pm = await redis.get('prefetch:sportsmonks:live').catch(() => null);
+      const parsedPm = tryParseJson(pm);
+      if (parsedPm && Array.isArray(parsedPm.data)) {
+        logger.info(`📦 Got cached soccer matches from prefetch:sportsmonks:live (${parsedPm.count || parsedPm.data.length})`);
+        return parsedPm.data;
+      }
+    } catch (e) { /* ignore */ }
+
     if (sportsAggregator && typeof sportsAggregator._getLiveFromStatPal === 'function') {
       try {
         const statpal = await sportsAggregator._getLiveFromStatPal(sport, 'v1');
