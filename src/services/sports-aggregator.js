@@ -290,27 +290,12 @@ export class SportsAggregator {
           }
 
           // If global fetch returned nothing, fallback to per-competition fetch
-          logger.debug('📡 Football-Data global returned no live matches; falling back to per-competition fetch');
-          const competitions = ['39', '140', '135', '61', '78', '2']; // PL, LaLiga, SerieA, Ligue1, Bundesliga, CL
-          for (const compId of competitions) {
-            try {
-              const fdLive = await this._getLiveFromFootballData(compId);
-              if (fdLive && fdLive.length > 0) {
-                const formatted = this._formatMatches(fdLive, 'football-data');
-                allLive.push(...formatted);
-              }
-            } catch (e) {
-              logger.debug(`Football-Data live for ${compId} failed: ${e?.message}`);
-            }
-          }
-
-          if (allLive.length > 0) {
-            logger.info(`✅ Football-Data: Found ${allLive.length} live matches across major competitions`);
-            await this.dataCache.storeLiveMatches('footballdata', allLive);
-            this._setCached(cacheKey, allLive);
-            await this._recordProviderHealth('footballdata', true, `Found ${allLive.length} live matches`);
-            return allLive;
-          }
+          logger.debug('📡 Football-Data global returned no live matches; skipping per-league to avoid rate limits');
+          // NOTE: Commenting out per-league FD calls to avoid rate-limiting
+          // const competitions = ['39', '140', '135', '61', '78', '2'];
+          // for (const compId of competitions) { ... }
+          // Instead, fall through to SportMonks fallback
+          const allLive = [];
         } catch (e) {
           logger.warn('Football-Data live fetch failed', e?.message || String(e));
           try { await this._recordProviderHealth('footballdata', false, e?.message || String(e)); } catch(_) {}
