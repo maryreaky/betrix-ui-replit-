@@ -160,7 +160,7 @@ export class SportsAggregator {
   }
 
   /**
-   * Get live matches for a league - STATPAL ONLY
+   * Get live matches for a league
    */
   async getLiveMatches(leagueId, options = {}) {
     try {
@@ -172,37 +172,10 @@ export class SportsAggregator {
         }
       }
 
-      // ONLY fetch from SportMonks and Football-Data
-      // Try SportMonks first (preferred for live data)
-      if (CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) {
-        try {
-          logger.debug('📡 Fetching live matches from SportMonks');
-          const smMatches = await this.sportmonks.getLivescores(leagueId);
-          if (smMatches && smMatches.length > 0) {
-            logger.info(`✅ SportMonks: Found ${smMatches.length} live matches (raw)`);
-            await this.dataCache.storeLiveMatches('sportsmonks', smMatches);
-            const formatted = this._formatMatches(smMatches, 'sportsmonks') || [];
-            const liveOnly = formatted.filter(m => String(m.status || '').toUpperCase() === 'LIVE');
-            logger.info(`🔍 SportMonks DIAGNOSTIC [league:${leagueId}]: raw:${smMatches.length} | formatted:${formatted.length} | live:${liveOnly.length}`);
-            if (liveOnly.length > 0) {
-              this._setCached(cacheKey, liveOnly);
-              await this._recordProviderHealth('sportsmonks', true, `Found ${liveOnly.length} live matches`);
-              return liveOnly;
-            }
-            // Keep formatted results in cache for diagnostics if none marked LIVE
-            this._setCached(cacheKey, formatted);
-            await this._recordProviderHealth('sportsmonks', false, `No matches marked LIVE (raw:${smMatches.length})`);
-          }
-        } catch (e) {
-          logger.warn('SportMonks live fetch failed', e?.message || String(e));
-          try { await this._recordProviderHealth('sportsmonks', false, e?.message || String(e)); } catch(_) {}
-        }
-      }
-
-      // Fallback to Football-Data if SportMonks unavailable
+      // Football-Data FIRST (working, SportMonks DNS broken on Render)
       if (CONFIG.FOOTBALLDATA && CONFIG.FOOTBALLDATA.KEY) {
         try {
-          logger.debug('📡 Fetching live matches from Football-Data');
+          logger.debug(`📡 Fetching live matches from Football-Data for league ${leagueId}`);
           const fdMatches = await this._getLiveFromFootballData(leagueId);
           if (fdMatches && fdMatches.length > 0) {
             logger.info(`✅ Football-Data: Found ${fdMatches.length} live matches`);
@@ -215,8 +188,33 @@ export class SportsAggregator {
             return formatted;
           }
         } catch (e) {
-          logger.warn('Football-Data live fetch failed', e?.message || String(e));
+          logger.debug('Football-Data live fetch failed', e?.message || String(e));
           try { await this._recordProviderHealth('footballdata', false, e?.message || String(e)); } catch(_) {}
+        }
+      }
+
+      // SportMonks fallback (DNS broken on Render)
+      if (CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) {
+        try {
+          logger.debug(`📡 Fallback: Fetching live matches from SportMonks for league ${leagueId}`);
+          const smMatches = await this.sportmonks.getLivescores(leagueId);
+          if (smMatches && smMatches.length > 0) {
+            logger.info(`✅ SportMonks (fallback): Found ${smMatches.length} live matches (raw)`);
+            await this.dataCache.storeLiveMatches('sportsmonks', smMatches);
+            const formatted = this._formatMatches(smMatches, 'sportsmonks') || [];
+            const liveOnly = formatted.filter(m => String(m.status || '').toUpperCase() === 'LIVE');
+            logger.info(`🔍 SportMonks DIAGNOSTIC [league:${leagueId}]: raw:${smMatches.length} | formatted:${formatted.length} | live:${liveOnly.length}`);
+            if (liveOnly.length > 0) {
+              this._setCached(cacheKey, liveOnly);
+              await this._recordProviderHealth('sportsmonks', true, `Found ${liveOnly.length} live matches (fallback)`);
+              return liveOnly;
+            }
+            this._setCached(cacheKey, formatted);
+            await this._recordProviderHealth('sportsmonks', false, `No matches marked LIVE (raw:${smMatches.length})`);
+          }
+        } catch (e) {
+          logger.warn('SportMonks fallback failed', e?.message || String(e));
+          try { await this._recordProviderHealth('sportsmonks', false, e?.message || String(e)); } catch(_) {}
         }
       }
 
@@ -245,39 +243,11 @@ export class SportsAggregator {
 
       let allLive = [];
 
-      // Try SportMonks first (primary source for comprehensive live data)
-      if (CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) {
+      // Try Football-Data FIRST since SportMonks DNS is globally misconfigured on Render
+      // SportMonks works locally but resolves to B2C Solutions on Render (infrastructure issue)
+      if (CONFIG.FOOTBALLDATA && CONFIG.FOOTBALLDATA.KEY) {
         try {
-          logger.debug('📡 Fetching ALL live matches from SportMonks');
-          const smMatches = await this.sportmonks.getLivescores();
-          if (smMatches && smMatches.length > 0) {
-            logger.info(`✅ SportMonks: Found ${smMatches.length} total live matches globally`);
-            // Store raw data
-            await this.dataCache.storeLiveMatches('sportsmonks', smMatches);
-            const formatted = this._formatMatches(smMatches, 'sportsmonks') || [];
-            // Filter to only LIVE status matches (allow multiple possible live state codes)
-            const liveOnly = formatted.filter(m => String(m.status || '').toUpperCase() === 'LIVE');
-            logger.info(`🔍 SportMonks DIAGNOSTIC: raw:${smMatches.length} | formatted:${formatted.length} | live:${liveOnly.length}`);
-            // Cache and return only the live matches for the global live feed
-            if (liveOnly.length > 0) {
-              this._setCached(cacheKey, liveOnly);
-              await this._recordProviderHealth('sportsmonks', true, `Found ${liveOnly.length} live matches globally`);
-              return liveOnly;
-            }
-            // If there were formatted matches but none marked LIVE, keep the formatted cache for diagnostics
-            this._setCached(cacheKey, formatted);
-            await this._recordProviderHealth('sportsmonks', false, `No matches marked LIVE (raw:${smMatches.length})`);
-          }
-        } catch (e) {
-          logger.warn('SportMonks global live fetch failed', e?.message || String(e));
-          try { await this._recordProviderHealth('sportsmonks', false, e?.message || String(e)); } catch(_) {}
-        }
-      }
-
-      // Fallback to Football-Data for major competitions
-      if (CONFIG.FOOTBALLDATA && CONFIG.FOOTBALLDATA.KEY && allLive.length === 0) {
-        try {
-          logger.debug('📡 Fetching live matches from Football-Data major competitions');
+          logger.debug('📡 Fetching live matches from Football-Data (PRIMARY - SportMonks DNS broken on Render)');
           const competitions = ['39', '140', '135', '61', '78', '2']; // PL, LaLiga, SerieA, Ligue1, Bundesliga, CL
           
           for (const compId of competitions) {
@@ -303,6 +273,30 @@ export class SportsAggregator {
         } catch (e) {
           logger.warn('Football-Data global live fetch failed', e?.message || String(e));
           try { await this._recordProviderHealth('footballdata', false, e?.message || String(e)); } catch(_) {}
+        }
+      }
+
+      // SportMonks as fallback ONLY (DNS issue on Render, but works locally)
+      if (allLive.length === 0 && CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) {
+        try {
+          logger.debug('📡 Fallback: Fetching live matches from SportMonks');
+          const smMatches = await this.sportmonks.getAllLiveMatches();
+          if (smMatches && smMatches.length > 0) {
+            logger.info(`✅ SportMonks: Found ${smMatches.length} total live matches globally (fallback)`);
+            await this.dataCache.storeLiveMatches('sportsmonks', smMatches);
+            const formatted = this._formatMatches(smMatches, 'sportsmonks') || [];
+            const liveOnly = formatted.filter(m => String(m.status || '').toUpperCase() === 'LIVE');
+            logger.info(`🔍 SportMonks DIAGNOSTIC: raw:${smMatches.length} | formatted:${formatted.length} | live:${liveOnly.length}`);
+            if (liveOnly.length > 0) {
+              this._setCached(cacheKey, liveOnly);
+              await this._recordProviderHealth('sportsmonks', true, `Found ${liveOnly.length} live matches (fallback)`);
+              return liveOnly;
+            }
+            await this._recordProviderHealth('sportsmonks', false, `No matches marked LIVE (raw:${smMatches.length})`);
+          }
+        } catch (e) {
+          logger.warn('SportMonks fallback failed', e?.message || String(e));
+          try { await this._recordProviderHealth('sportsmonks', false, e?.message || String(e)); } catch(_) {}
         }
       }
 
