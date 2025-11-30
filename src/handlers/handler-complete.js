@@ -277,15 +277,22 @@ export async function handleCallbackQuery(cq, redis, services) {
     // ========================================================================
 
     if (data === 'menu_fixtures') {
-      // use sportsAggregator to fetch upcoming fixtures (no date params needed)
-      const fixtures = (services && services.sportsAggregator) ? await services.sportsAggregator.getFixtures() : [];
+      // use sportsAggregator to fetch upcoming fixtures
+      let fixtures = [];
+      try {
+        if (services && services.sportsAggregator) {
+          fixtures = await services.sportsAggregator.getFixtures().catch(() => []);
+        }
+      } catch (e) {
+        logger.warn('Failed to fetch fixtures from aggregator', e?.message);
+      }
 
       if (!fixtures || fixtures.length === 0) {
         return {
           method: 'editMessageText',
           chat_id: chatId,
           message_id: messageId,
-          text: `⚠️ No upcoming fixtures found`,
+          text: `📅 *Upcoming Fixtures*\n\nNo upcoming fixtures available at the moment.`,
           reply_markup: { inline_keyboard: [[{ text: '🏟 See Live Matches', callback_data: 'live_games' }, { text: '🔙 Back', callback_data: 'menu_main' }]] },
           parse_mode: 'Markdown'
         };
@@ -299,13 +306,19 @@ export async function handleCallbackQuery(cq, redis, services) {
         groups[comp].push(f);
       });
 
+      // Format date range for display
+      const now = new Date();
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+      const dateStr = now.toLocaleDateString();
+      const tomorrowStr = tomorrow.toLocaleDateString();
+
       // Build simple text and keyboard where each fixture gets a button
-      let text = `🗓 *Upcoming Fixtures (${today} - ${tomorrow})*\n\n`;
+      let text = `📅 *Upcoming Fixtures (${dateStr} - ${tomorrowStr})*\n\n`;
       const keyboard = [];
       Object.keys(groups).slice(0, 10).forEach(comp => {
         text += `🏆 *${comp}*\n`;
         groups[comp].slice(0, 8).forEach(f => {
-          const kickoff = f.kickoff ? new Date(f.kickoff).toUTCString() : 'TBA';
+          const kickoff = f.kickoff ? new Date(f.kickoff).toLocaleTimeString() : 'TBA';
           text += `• ${f.home} vs ${f.away} — ${kickoff}\n`;
           keyboard.push([{ text: `${f.home} vs ${f.away}`, callback_data: `fixture:${f.id}` }]);
         });

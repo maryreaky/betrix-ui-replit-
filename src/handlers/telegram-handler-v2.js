@@ -1110,88 +1110,114 @@ async function handleMatchCallback(data, chatId, userId, redis, services) {
 }
 
 /**
- * Analyze a match using premium analysis and UI modules
- * callback: analyze_match_{leagueId}_{index}
+ * Analyze a match using comprehensive SportsAggregator data
+ * Provides head-to-head, recent form, standings, and odds
+ * callback: analyze_match_{matchId}
  */
 async function handleAnalyzeMatch(data, chatId, userId, redis, services) {
   try {
     const parts = data.split('_');
-    const leagueId = parts[2] || null;
-    const idx = Number(parts[3] || 0);
+    const matchId = parts[2]; // analyze_match_{matchId}
 
     if (!services || !services.sportsAggregator) {
-      const errorText = brandingUtils.formatBetrixError('service_error', 'Analysis service unavailable');
+      const errorText = '❌ Analysis service unavailable';
       return { method: 'sendMessage', chat_id: chatId, text: errorText, parse_mode: 'Markdown' };
     }
 
-    const matches = await services.sportsAggregator.getLiveMatches(leagueId).catch(() => []);
-    const m = matches && matches[idx] ? matches[idx] : null;
-    if (!m) {
-      const errorText = brandingUtils.formatBetrixError('not_found', 'Match not found for analysis');
-      return { method: 'sendMessage', chat_id: chatId, text: errorText, parse_mode: 'Markdown' };
+    const agg = services.sportsAggregator;
+
+    // Step 1: get live matches from Football-Data (normalized)
+    const liveMatches = await agg._getLiveFromFootballData().catch(() => []);
+    const match = (liveMatches || []).find(m => String(m.id) === String(matchId));
+
+    if (!match) {
+      return { method: 'sendMessage', chat_id: chatId, text: '⚠️ Match not found or not live.', parse_mode: 'Markdown' };
     }
 
-    const subscription = await getUserSubscription(redis, userId).catch(() => ({ tier: 'FREE' }));
-    
+    // Derive team identifiers for SportMonks where possible
+    const homeId = (match.raw && (match.raw.homeTeam && (match.raw.homeTeam.id || match.raw.homeTeam.name)) || match.home);
+    const awayId = (match.raw && (match.raw.awayTeam && (match.raw.awayTeam.id || match.raw.awayTeam.name)) || match.away);
+
+    // Step 2: Head-to-head (SportMonks)
+    let h2h = {};
     try {
-      const home = m.home || m.homeTeam || m.home_name || m.teams?.home || 'Home';
-      const away = m.away || m.awayTeam || m.away_name || m.teams?.away || 'Away';
-
-      // 🎯 USE PREMIUM ANALYSIS MODULE
-      const analysis = await advancedAnalysis.analyzeMatch(m, {}, {});
-      
-      // Build header with BETRIX branding
-      const header = brandingUtils.generateBetrixHeader(subscription.tier);
-      
-      // 🎯 USE PREMIUM UI BUILDER
-      const betAnalysis = premiumUI.buildBetAnalysis(analysis, subscription.tier);
-      
-      // Build action buttons based on subscription
-      const actionButtons = premiumUI.buildMatchActionButtons(subscription.tier, leagueId, idx);
-      
-      // Build complete response with branding
-      let formatted = `${header}\n\n`;
-      formatted += `⚽ *${home}* vs *${away}*\n`;
-      formatted += `Score: ${m.score || 'N/A'} | Time: ${m.time || 'N/A'}\n\n`;
-      formatted += betAnalysis;
-      formatted += `\n\n${actionButtons}`;
-      formatted += `\n\n${brandingUtils.generateBetrixFooter()}`;
-
-      // Upgrade prompt for FREE tier if analysis is premium
-      if (subscription.tier === 'FREE' && analysis.confidence > 75) {
-        formatted += `\n\n_💎 Premium predictions limited. Upgrade to PRO for full analysis._`;
-      }
-
-      return { method: 'sendMessage', chat_id: chatId, text: formatted, parse_mode: 'Markdown' };
+      h2h = await agg.getHeadToHead(homeId, awayId).catch(() => ({}));
     } catch (e) {
-      logger.warn('Premium analysis failed, using multiSportAnalyzer fallback', e.message);
-      
-      // Fallback to existing multiSportAnalyzer if available
-      if (services.multiSportAnalyzer && typeof services.multiSportAnalyzer.analyzeMatch === 'function') {
-        try {
-          const sport = m.sport || m.sportKey || 'football';
-          const home = m.home || m.homeTeam || m.home_name || m.teams?.home || 'Home';
-          const away = m.away || m.awayTeam || m.away_name || m.teams?.away || 'Away';
-          
-          const analysis = await services.multiSportAnalyzer.analyzeMatch(sport, home, away, leagueId);
-          let formatted = services.multiSportAnalyzer.formatForTelegram ? 
-            services.multiSportAnalyzer.formatForTelegram(analysis) : 
-            JSON.stringify(analysis, null, 2);
-          
-          return { method: 'sendMessage', chat_id: chatId, text: formatted, parse_mode: 'Markdown' };
-        } catch (innerE) {
-          logger.warn('MultiSportAnalyzer also failed', innerE.message);
-        }
-      }
-      
-      // Last resort fallback
-      const summary = `🤖 *Match Analysis*\n\n*${m.home}* vs *${m.away}*\nScore: ${m.score || 'N/A'}\nTime: ${m.time || 'N/A'}\n\n_Analysis service temporarily unavailable._`;
-      return { method: 'sendMessage', chat_id: chatId, text: summary, parse_mode: 'Markdown' };
+      logger.warn('Head-to-head fetch failed:', e?.message || e);
     }
+
+    // Step 3: Recent form (SportMonks)
+    let recentFormHome = [];
+    let recentFormAway = [];
+    try {
+      recentFormHome = await agg.getRecentForm(homeId, 5).catch(() => []);
+      recentFormAway = await agg.getRecentForm(awayId, 5).catch(() => []);
+    } catch (e) {
+      logger.warn('Recent form fetch failed:', e?.message || e);
+    }
+
+    // Step 4: Standings (Football-Data)
+    let standings = [];
+    try {
+      const comp = match.raw && (match.raw.competition && (match.raw.competition.id || match.raw.competition.code)) || match.competition || null;
+      if (comp) standings = await agg.getStandings(comp).catch(() => []);
+    } catch (e) {
+      logger.warn('Standings fetch failed:', e?.message || e);
+    }
+
+    // Step 5: Odds (SportMonks)
+    let odds = [];
+    try {
+      odds = await agg.getOdds(match.id).catch(() => []);
+    } catch (e) {
+      logger.warn('Odds fetch failed:', e?.message || e);
+    }
+
+    // Format analysis text
+    let analysisText = `*⚽ Match Analysis: ${match.home} vs ${match.away}*\n\n`;
+    analysisText += `📍 Status: ${match.status}\n`;
+    analysisText += `📊 Score: ${match.homeScore ?? '-'}-${match.awayScore ?? '-'}\n`;
+    analysisText += `🏆 Competition: ${match.competition || (match.raw && match.raw.competition && match.raw.competition.name) || 'Unknown'}\n`;
+    analysisText += `⏰ Kickoff: ${match.time || match.kickoff || 'TBA'}\n`;
+    analysisText += `🏟️ Venue: ${match.venue || 'TBA'}\n\n`;
+
+    if (h2h && h2h.totalMatches !== undefined) {
+      analysisText += `*Head-to-Head:*\n`;
+      analysisText += `Total: ${h2h.totalMatches} | Home wins: ${h2h.homeWins} | Away wins: ${h2h.awayWins} | Draws: ${h2h.draws}\n\n`;
+    }
+
+    if (recentFormHome && recentFormHome.length > 0) {
+      analysisText += `*Recent Form (${match.home}):*\n`;
+      analysisText += recentFormHome.slice(0, 5).map(m => `${m.starting_at || m.date || m.date_time || m.utcDate || 'N/A'}: ${m.result || (m.score ? JSON.stringify(m.score) : 'N/A')}`).join('\n') + '\n\n';
+    }
+
+    if (recentFormAway && recentFormAway.length > 0) {
+      analysisText += `*Recent Form (${match.away}):*\n`;
+      analysisText += recentFormAway.slice(0, 5).map(m => `${m.starting_at || m.date || m.date_time || m.utcDate || 'N/A'}: ${m.result || (m.score ? JSON.stringify(m.score) : 'N/A')}`).join('\n') + '\n\n';
+    }
+
+    if (standings && standings.length > 0) {
+      const homeStanding = standings.find(t => t.team && (t.team.name === match.home || t.team.id === match.homeId || t.team.id === match.raw?.homeTeam?.id));
+      const awayStanding = standings.find(t => t.team && (t.team.name === match.away || t.team.id === match.awayId || t.team.id === match.raw?.awayTeam?.id));
+      if (homeStanding || awayStanding) {
+        analysisText += `*League Standings:*\n`;
+        if (homeStanding) analysisText += `${match.home}: #${homeStanding.position || 'N/A'} (${homeStanding.points || 0} pts)\n`;
+        if (awayStanding) analysisText += `${match.away}: #${awayStanding.position || 'N/A'} (${awayStanding.points || 0} pts)\n`;
+        analysisText += '\n';
+      }
+    }
+
+    if (odds && odds.length > 0) {
+      analysisText += `*Odds Available:*\n`;
+      analysisText += `${odds.length} bookmakers with odds for this match\n`;
+    }
+
+    analysisText += `\n_Data from Football-Data & SportMonks_`;
+
+    return { method: 'editMessageText', chat_id: chatId, message_id: undefined, text: analysisText, parse_mode: 'Markdown' };
   } catch (e) {
     logger.error('handleAnalyzeMatch error', e);
-    const errorText = formatBetrixError('unexpected', 'Failed to analyze match');
-    return { method: 'sendMessage', chat_id: chatId, text: errorText, parse_mode: 'Markdown' };
+    return { method: 'sendMessage', chat_id: chatId, text: '❌ Analysis failed. Please try again.', parse_mode: 'Markdown' };
   }
 }
 

@@ -218,6 +218,37 @@ export class SportsAggregator {
         }
       }
 
+      // 🔄 FALLBACK: Try to read from RawDataCache (prefetched data)
+      logger.debug(`📚 Attempting to read live matches from cache for league ${leagueId}`);
+      try {
+        // Try both sources from cache
+        const fdCached = await this.dataCache.getLiveMatches('footballdata');
+        const fdForLeague = (fdCached || []).filter(m => {
+          const leagueFromMatch = m.competition?.id || m.competition?.league_id || m.league?.id;
+          return leagueFromMatch === leagueId;
+        });
+        if (fdForLeague && fdForLeague.length > 0) {
+          logger.info(`📚 Using cached Football-Data live matches (${fdForLeague.length} matches)`);
+          const formatted = this._formatMatches(fdForLeague, 'footballdata') || [];
+          this._setCached(cacheKey, formatted);
+          return formatted;
+        }
+
+        const smCached = await this.dataCache.getLiveMatches('sportsmonks');
+        const smForLeague = (smCached || []).filter(m => {
+          const leagueFromMatch = m.league?.id || m.competition?.id;
+          return leagueFromMatch === leagueId;
+        });
+        if (smForLeague && smForLeague.length > 0) {
+          logger.info(`📚 Using cached SportMonks live matches (${smForLeague.length} matches)`);
+          const formatted = this._formatMatches(smForLeague, 'sportsmonks') || [];
+          this._setCached(cacheKey, formatted);
+          return formatted;
+        }
+      } catch (cacheErr) {
+        logger.debug('Failed to read live matches from RawDataCache', cacheErr?.message);
+      }
+
       logger.warn('⚠️  No live matches available from SportMonks or Football-Data');
       return [];
     } catch (err) {
@@ -394,6 +425,27 @@ export class SportsAggregator {
           logger.warn('Football-Data upcoming fetch failed', e?.message || String(e));
           try { await this._recordProviderHealth('footballdata', false, e?.message || String(e)); } catch(_) {}
         }
+      }
+
+      // 🔄 FALLBACK: Try to read from RawDataCache (prefetched data)
+      logger.debug(`📚 Attempting to read upcoming fixtures from cache for league ${leagueId}`);
+      try {
+        // Try both sources from cache
+        const smCached = await this.dataCache.getFixtures('sportsmonks', leagueId);
+        if (smCached && smCached.length > 0) {
+          logger.info(`📚 Using cached SportMonks fixtures (${smCached.length} matches)`);
+          this._setCached(cacheKey, smCached);
+          return this._formatMatches(smCached, 'sportsmonks');
+        }
+
+        const fdCached = await this.dataCache.getFixtures('footballdata', leagueId);
+        if (fdCached && fdCached.length > 0) {
+          logger.info(`📚 Using cached Football-Data fixtures (${fdCached.length} matches)`);
+          this._setCached(cacheKey, fdCached);
+          return this._formatMatches(fdCached, 'footballdata');
+        }
+      } catch (cacheErr) {
+        logger.warn('Failed to read from RawDataCache', cacheErr?.message);
       }
 
       logger.warn('⚠️  No upcoming matches available from SportMonks or Football-Data');
