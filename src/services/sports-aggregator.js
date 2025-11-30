@@ -1,80 +1,72 @@
 /**
- * Sports Data Aggregator
- * Fetches and normalizes data from multiple sports APIs with priority order:
- * 1. SportMonks - Primary source for comprehensive football data
- * 2. Football-Data.org - Secondary source for football
- * 
- * StatPal, SofaScore, and API-Football support have been removed.
- */
-
-import { CONFIG } from '../config.js';
-import { Logger } from '../utils/logger.js';
-import fetch from 'node-fetch';
-import axios from 'axios';
-import { getEspnLiveMatches } from './espn-provider.js';
-import { getNewsHeadlines } from './news-provider-enhanced.js';
-import liveScraper from './live-scraper.js';
-import { getLiveMatchesFromGoal } from './goal-scraper.js';
-import { getLiveMatchesFromFlashscore, getLiveMatchesByLeagueFromFlashscore } from './flashscore-scraper.js';
-import { ProviderHealth } from '../utils/provider-health.js';
-import SportMonksService from './sportmonks-service.js';
-import RawDataCache from './raw-data-cache.js';
-
-const logger = new Logger('SportsAggregator');
-const SPORTSMONKS_BASE_URL = 'https://api.sportmonks.com/v3';
-
-const LEAGUE_MAPPINGS = {
-  // Premier League
-  '39': { id: 39, name: 'Premier League', country: 'England', code: 'E0', footballDataId: 'PL' },
-  // La Liga
-  '140': { id: 140, name: 'La Liga', country: 'Spain', code: 'E1', footballDataId: 'SA' },
-  // Serie A
-  '135': { id: 135, name: 'Serie A', country: 'Italy', code: 'E2', footballDataId: 'SA' },
-  // Ligue 1
-  '61': { id: 61, name: 'Ligue 1', country: 'France', code: 'E3', footballDataId: 'FL1' },
-  // Bundesliga
-  '78': { id: 78, name: 'Bundesliga', country: 'Germany', code: 'E4', footballDataId: 'BL1' },
-  // Champions League
-  '2': { id: 2, name: 'Champions League', country: 'Europe', code: 'C1', footballDataId: 'CL' },
-};
-
-export class SportsAggregator {
-  constructor(redis, extras = {}) {
-    this.cache = new Map();
-    this.cacheTTL = 5 * 60 * 1000; // 5 min cache
-    this.redis = redis; // optional Redis instance for diagnostics
-    this.scorebat = extras.scorebat || null;
-    this.rss = extras.rss || null;
-    this.openLiga = extras.openLiga || null;
-    this.dataCache = new RawDataCache(redis); // Initialize raw data cache
-    // Allowed providers can be passed in extras.allowedProviders as an array
-    // e.g. ['SPORTSMONKS','FOOTBALLDATA'] to force the aggregator to only
-    // consider those providers regardless of global CONFIG.
-    this.allowedProviders = Array.isArray(extras.allowedProviders)
-      ? extras.allowedProviders.map(p => String(p).toUpperCase())
-      : null;
-
-    // ONLY initialize SportMonks and Football-Data
-    this.sportmonks = (this._isAllowedSync('SPORTSMONKS') && CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) ? new SportMonksService(redis) : null;
-    this.providerHealth = new ProviderHealth(redis);
-  }
-
-  async _recordProviderHealth(name, ok, message = '') {
+  async getAllLiveMatches() {
     try {
-      if (!this.redis) return;
-      const key = `${CONFIG.DIAGNOSTICS.PREFIX}${name}`;
-      const payload = { ok: Boolean(ok), message: String(message || ''), ts: Date.now() };
-      await this.redis.set(key, JSON.stringify(payload));
-      await this.redis.expire(key, Number(CONFIG.DIAGNOSTICS.TTL || 3600));
-    } catch (e) {
-      // Non-fatal, just log
-      logger.warn(`Failed to write provider health for ${name}`, e?.message || String(e));
-    }
-    // provider health circuit-breaker helper
-    this.providerHealth = new ProviderHealth(this.redis || null);
-  }
+      const cacheKey = 'live:all';
+      if (this.cache.has(cacheKey)) {
+        const cached = this.cache.get(cacheKey);
+        if (Date.now() - cached.timestamp < 2 * 60 * 1000) { // 2 min cache for live
+          return cached.data;
+        }
+      }
 
-  // Check if a provider is enabled: checks CONFIG.PROVIDERS then optional Redis override
+      let allLive = [];
+
+      // Primary: Fetch global live matches from Football-Data in one call
+      if (CONFIG.FOOTBALLDATA && CONFIG.FOOTBALLDATA.KEY) {
+        try {
+          logger.debug('📡 Fetching global live matches from Football-Data (PRIMARY)');
+          const url = `${CONFIG.FOOTBALLDATA.BASE}/matches?status=LIVE`;
+          const resp = await this._fetchWithRetry(url, {
+            headers: { 'X-Auth-Token': CONFIG.FOOTBALLDATA.KEY }
+          }, 2);
+
+          const fdMatches = (resp && resp.matches) ? resp.matches : [];
+          if (fdMatches.length > 0) {
+            const formatted = this._formatMatches(fdMatches, 'football-data') || [];
+            allLive.push(...formatted);
+            logger.info(`✅ Football-Data: Found ${formatted.length} live matches globally`);
+            await this.dataCache.storeLiveMatches('footballdata', fdMatches);
+            this._setCached(cacheKey, allLive);
+            await this._recordProviderHealth('footballdata', true, `Found ${formatted.length} live matches`);
+            return allLive;
+          }
+        } catch (e) {
+          logger.warn('Football-Data global live fetch failed', e?.message || String(e));
+          try { await this._recordProviderHealth('footballdata', false, e?.message || String(e)); } catch(_) {}
+        }
+      }
+
+      // Fallback: Try SportMonks only if Football-Data returned nothing
+      if (CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) {
+        try {
+          logger.debug('📡 Fallback: Fetching global live matches from SportMonks');
+          const smMatches = await this.sportmonks.getAllLiveMatches();
+          if (smMatches && smMatches.length > 0) {
+            logger.info(`✅ SportMonks (fallback): Found ${smMatches.length} total live matches globally`);
+            await this.dataCache.storeLiveMatches('sportsmonks', smMatches);
+            const formatted = this._formatMatches(smMatches, 'sportsmonks') || [];
+            const liveOnly = formatted.filter(m => String(m.status || '').toUpperCase() === 'LIVE');
+            logger.info(`🔍 SportMonks DIAGNOSTIC: raw:${smMatches.length} | formatted:${formatted.length} | live:${liveOnly.length}`);
+            if (liveOnly.length > 0) {
+              this._setCached(cacheKey, liveOnly);
+              await this._recordProviderHealth('sportsmonks', true, `Found ${liveOnly.length} live matches (fallback)`);
+              return liveOnly;
+            }
+            await this._recordProviderHealth('sportsmonks', false, `No matches marked LIVE (raw:${smMatches.length})`);
+          }
+        } catch (e) {
+          logger.warn('SportMonks fallback failed', e?.message || String(e));
+          try { await this._recordProviderHealth('sportsmonks', false, e?.message || String(e)); } catch(_) {}
+        }
+      }
+
+      logger.warn('⚠️  No live matches available globally from either provider');
+      return [];
+    } catch (err) {
+      logger.error('getAllLiveMatches failed:', err.message);
+      return [];
+    }
+  }
   async _isProviderEnabled(name) {
     try {
       // Accept case-insensitive provider names and normalize to upper-case for CONFIG lookup
