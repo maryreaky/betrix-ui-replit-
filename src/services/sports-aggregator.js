@@ -331,6 +331,28 @@ export class SportsAggregator {
         }
       }
 
+      // 🔄 FALLBACK: Try to read from RawDataCache (prefetched data) before giving up
+      logger.debug('📚 Attempting to read live matches from cache');
+      try {
+        const fdCached = await this.dataCache.getLiveMatches('footballdata');
+        if (fdCached && fdCached.length > 0) {
+          logger.info(`📚 Using cached Football-Data live matches (${fdCached.length} matches)`);
+          const formatted = this._formatMatches(fdCached, 'football-data') || [];
+          this._setCached(cacheKey, formatted);
+          return formatted;
+        }
+
+        const smCached = await this.dataCache.getLiveMatches('sportsmonks');
+        if (smCached && smCached.length > 0) {
+          logger.info(`📚 Using cached SportMonks live matches (${smCached.length} matches)`);
+          const formatted = this._formatMatches(smCached, 'sportsmonks') || [];
+          this._setCached(cacheKey, formatted);
+          return formatted;
+        }
+      } catch (cacheErr) {
+        logger.warn('Failed to read live matches from RawDataCache', cacheErr?.message);
+      }
+
       logger.warn('⚠️  No live matches available globally from either provider');
       return [];
     } catch (err) {

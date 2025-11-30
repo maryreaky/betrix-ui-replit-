@@ -124,7 +124,7 @@ export function startPrefetchScheduler({ redis, openLiga, rss, scorebat, footbal
         try {
           if (!await isAllowedToRun('sportsmonks')) { /* skip due to backoff */ }
           else {
-            const live = await sportsAggregator.getLiveMatches('football').catch(async (err) => { await recordFailure('sportsmonks'); throw err; });
+            const live = await sportsAggregator.getAllLiveMatches().catch(async (err) => { await recordFailure('sportsmonks'); throw err; });
             if (live && live.length > 0) {
               await safeSet('prefetch:sportsmonks:live', { fetchedAt: ts, count: live.length, data: live.slice(0, 50) }, 30);
               await recordSuccess('sportsmonks');

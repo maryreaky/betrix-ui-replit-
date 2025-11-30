@@ -16,8 +16,8 @@ const logger = new Logger('HandlerComplete');
 async function getLiveMatches(services = {}, sport = 'football') {
   try {
     // Prefer injected sportsAggregator if available (provides caching and fixtures integration)
-    if (services && services.sportsAggregator && typeof services.sportsAggregator.getLiveMatches === 'function') {
-      return await services.sportsAggregator.getLiveMatches(sport);
+    if (services && services.sportsAggregator && typeof services.sportsAggregator.getAllLiveMatches === 'function') {
+      return await services.sportsAggregator.getAllLiveMatches();
     }
 
     const sportMonks = new SportMonksService();
