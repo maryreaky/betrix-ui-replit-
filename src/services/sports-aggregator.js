@@ -413,11 +413,13 @@ export class SportsAggregator {
           const smFixtures = await this.sportmonks.getFixtures({ league_id: leagueId });
           if (smFixtures && smFixtures.length > 0) {
             logger.info(`✅ SportMonks: Found ${smFixtures.length} upcoming matches`);
-            // Store raw data
+            // Store raw data for audit/diagnostics
             await this.dataCache.storeFixtures('sportsmonks', leagueId, smFixtures);
-            this._setCached(cacheKey, smFixtures);
-            await this._recordProviderHealth('sportsmonks', true, `Found ${smFixtures.length} upcoming matches`);
-            return this._formatMatches(smFixtures, 'sportsmonks');
+            // Format once and cache the canonical fixture shape (home/away fields etc.)
+            const formatted = this._formatMatches(smFixtures, 'sportsmonks') || [];
+            this._setCached(cacheKey, formatted);
+            await this._recordProviderHealth('sportsmonks', true, `Found ${formatted.length} upcoming matches`);
+            return formatted;
           }
         } catch (e) {
           logger.warn('SportMonks upcoming fetch failed', e?.message || String(e));
@@ -432,11 +434,13 @@ export class SportsAggregator {
           const fdMatches = await this._getUpcomingFromFootballData(leagueId);
           if (fdMatches && fdMatches.length > 0) {
             logger.info(`✅ Football-Data: Found ${fdMatches.length} upcoming matches`);
-            // Store raw data
+            // Store raw data for audit/diagnostics
             await this.dataCache.storeFixtures('footballdata', leagueId, fdMatches);
-            this._setCached(cacheKey, fdMatches);
-            await this._recordProviderHealth('footballdata', true, `Found ${fdMatches.length} upcoming matches`);
-            return this._formatMatches(fdMatches, 'footballdata');
+            // Format once and cache the canonical fixture shape
+            const formatted = this._formatMatches(fdMatches, 'footballdata') || [];
+            this._setCached(cacheKey, formatted);
+            await this._recordProviderHealth('footballdata', true, `Found ${formatted.length} upcoming matches`);
+            return formatted;
           }
         } catch (e) {
           logger.warn('Football-Data upcoming fetch failed', e?.message || String(e));
