@@ -6,6 +6,7 @@
 import fetch from 'node-fetch';
 import axios from 'axios';
 import https from 'https';
+import dns from 'dns';
 import { CONFIG } from '../config.js';
 import { Logger } from '../utils/logger.js';
 
@@ -17,6 +18,21 @@ export default class SportMonksService {
     this.base = (CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.BASE) || 'https://api.sportsmonks.com/v3';
     // Accept multiple possible env var names for the API token to be resilient
     this.key = (CONFIG.SPORTSMONKS && CONFIG.SPORTSMONKS.KEY) || process.env.SPORTSMONKS_API_KEY || process.env.SPORTSMONKS_API || process.env.SPORTSMONKS_TOKEN || null;
+    
+    // Log DNS resolution for debugging
+    try {
+      const url = new URL(this.base);
+      const hostname = url.hostname;
+      dns.resolve4(hostname, (err, addresses) => {
+        if (err) {
+          logger.warn(`[SportMonksService] DNS resolution failed for ${hostname}: ${err.message}`);
+        } else {
+          logger.info(`[SportMonksService] DNS resolved ${hostname} to ${addresses.join(', ')}`);
+        }
+      });
+    } catch (e) {
+      logger.warn(`[SportMonksService] Failed to resolve base URL: ${e.message}`);
+    }
   }
 
   _buildUrl(endpoint, query = {}) {
@@ -33,6 +49,11 @@ export default class SportMonksService {
     for (let attempt = 1; attempt <= attempts; attempt++) {
       try {
         const url = this._buildUrl(endpoint, query);
+        // Log URL for debugging
+        const safeUrlForLog = url.replace(/(api_token=[^&]+)/gi, 'api_token=REDACTED');
+        if (attempt === 1) {
+          logger.info(`[SportMonksService] Requesting: ${safeUrlForLog}`);
+        }
         // Use axios for better TLS control per-service
         const insecure = (process.env.SPORTSMONKS_INSECURE === 'true');
         const agent = new https.Agent({ rejectUnauthorized: !insecure });
