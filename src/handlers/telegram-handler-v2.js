@@ -136,6 +136,38 @@ export async function handleCallbackQuery(update, redis, services) {
         logger.warn('Failed to handle pagination', e?.message || String(e));
         return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Unable to load page.' };
       }
+      }
+
+      if (data.startsWith('menu_live_all')) {
+        try {
+          const parts = data.split(':');
+          const sport = parts[1] || 'soccer';
+          const agg = services && services.sportsAggregator;
+          const games = await getLiveMatchesBySport(sport, redis, agg);
+          if (!games || games.length === 0) {
+            return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'No live matches available.' };
+          }
+
+          // Build a full text listing all matches (no slicing)
+          let text = `${games.length} live ${sport} matches:\n\n`;
+          games.forEach((g, i) => {
+            const idx = i + 1;
+            const home = g.home || g.home_team || g.homeName || 'Home';
+            const away = g.away || g.away_team || g.awayName || 'Away';
+            const score = g.score ? ` | Score: ${g.score}` : '';
+            const kick = g.kickoff || g.starting_at || g.utcDate || '';
+            text += `${idx}. ${home} vs ${away}${score}${kick ? ' | ' + kick : ''}\n`;
+          });
+
+          // Send as a separate message (not editing the inline menu) so users can scroll
+          return [
+            { method: 'sendMessage', chat_id: chatId, text, parse_mode: 'Markdown' },
+            { method: 'answerCallbackQuery', callback_query_id: cq.id, text: '' }
+          ];
+        } catch (e) {
+          logger.warn('Failed to handle show-all', e?.message || String(e));
+          return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Unable to show all matches.' };
+        }
     }
 
     return { method: 'answerCallbackQuery', callback_query_id: cq.id, text: 'Unknown action' };

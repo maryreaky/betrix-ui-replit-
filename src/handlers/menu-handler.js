@@ -297,6 +297,8 @@ export function buildLiveMenuPayload(games, sport = 'Football', userTier = 'FREE
   const navRow = [];
   if (currentPage > 1) navRow.push({ text: '◀️ Prev', callback_data: `menu_live_page:${sport.toLowerCase()}:${currentPage - 1}` });
   navRow.push({ text: '🔄 Refresh', callback_data: `menu_live_refresh:${sport.toLowerCase()}:${currentPage}` });
+  // Offer a Show All option to publish the full list in chat (may be large)
+  navRow.push({ text: '📋 Show All', callback_data: `menu_live_all:${sport.toLowerCase()}` });
   if (currentPage < totalPages) navRow.push({ text: 'Next ▶️', callback_data: `menu_live_page:${sport.toLowerCase()}:${currentPage + 1}` });
   // Wrap into inline keyboard row(s)
   if (navRow.length > 0) keyboard.push(navRow);
