@@ -525,6 +525,55 @@
     }
   }
 
+  /**
+   * Get head-to-head history between two teams using SportMonks
+   */
+  async getHeadToHead(homeTeamId, awayTeamId) {
+    try {
+      if (!this.sportmonks) return { totalMatches: 0, homeWins: 0, awayWins: 0, draws: 0 };
+      // SportMonks endpoint pattern: head-to-head/{home}/{away}
+      if (typeof this.sportmonks._fetch === 'function') {
+        const endpoint = `head-to-head/${encodeURIComponent(homeTeamId)}/${encodeURIComponent(awayTeamId)}`;
+        const data = await this.sportmonks._fetch(endpoint, {});
+        if (!data) return { totalMatches: 0, homeWins: 0, awayWins: 0, draws: 0 };
+        // Normalize basic counts if available
+        const records = Array.isArray(data) ? data : (data.results || data.data || []);
+        const total = records.length;
+        let homeWins = 0, awayWins = 0, draws = 0;
+        for (const r of records) {
+          const h = r.home_score ?? (r.result && r.result.home) ?? null;
+          const a = r.away_score ?? (r.result && r.result.away) ?? null;
+          if (h === null || a === null) continue;
+          if (Number(h) > Number(a)) homeWins++; else if (Number(a) > Number(h)) awayWins++; else draws++;
+        }
+        return { totalMatches: total, homeWins, awayWins, draws, raw: records };
+      }
+      return { totalMatches: 'N/A', homeWins: 'N/A', awayWins: 'N/A', draws: 'N/A' };
+    } catch (e) {
+      logger.warn('getHeadToHead failed', e?.message || String(e));
+      return { totalMatches: 0, homeWins: 0, awayWins: 0, draws: 0 };
+    }
+  }
+
+  /**
+   * Get recent form / latest matches for a team using SportMonks
+   */
+  async getRecentForm(teamId, limit = 5) {
+    try {
+      if (!this.sportmonks) return [];
+      if (typeof this.sportmonks._fetch === 'function') {
+        const endpoint = `teams/${encodeURIComponent(teamId)}/latest`;
+        const data = await this.sportmonks._fetch(endpoint, {});
+        const matches = Array.isArray(data) ? data : (data.results || data.data || []);
+        return (matches || []).slice(0, limit);
+      }
+      return [];
+    } catch (e) {
+      logger.warn('getRecentForm failed', e?.message || String(e));
+      return [];
+    }
+  }
+
   // ==================== API-Sports ====================
 
   /**
