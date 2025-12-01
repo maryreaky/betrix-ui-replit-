@@ -11,6 +11,18 @@
  * Install required packages:
  *   npm i express body-parser ioredis helmet cors express-rate-limit compression morgan ws multer bcryptjs dotenv
  */
+ * BETRIX EXPRESS SERVER - PRODUCTION
+ * - Express + WebSocket + Redis + Multer + Rate limiting + Security + Logging
+ * - Proxy-aware rate limiting (uses req.ip with trust proxy)
+ * - Secure Telegram webhook validation via X-Telegram-Bot-Api-Secret-Token
+ * - Admin basic auth (bcrypt + Redis), graceful shutdown, health and metrics
+ *
+ * Review environment variables before deploying:
+ *   REDIS_URL, TELEGRAM_TOKEN, TELEGRAM_WEBHOOK_SECRET, PORT, NODE_ENV, ADMIN_USERNAME, ADMIN_PASSWORD, ALLOWED_ORIGINS
+ *
+ * Install required packages:
+ *   npm i express body-parser ioredis helmet cors express-rate-limit compression morgan ws multer bcryptjs dotenv
+ */
 
 import express from "express";
 import bodyParser from "body-parser";
@@ -115,6 +127,24 @@ const app = express();
 // Use 1 when behind a single trusted proxy (Render, Cloudflare). Adjust if you have more.
 app.set("trust proxy", 1);
 
+// Quick top-level debug endpoint to inspect incoming headers and raw body preview
+// Placed early to avoid any `/webhook`-prefixed middleware that may reject requests.
+app.post('/__debug__webhook_echo', express.json({ limit: '1mb', verify: (req, _res, buf) => { req.rawBody = buf; } }), (req, res) => {
+  try {
+    const headers = {};
+    Object.keys(req.headers || {}).forEach(k => {
+      if (k.startsWith('x-') || k.includes('signature') || k.includes('lipana')) {
+        const v = String(req.headers[k] || '');
+        headers[k] = v ? `${v.slice(0,12)}...len:${v.length}` : '(empty)';
+      }
+    });
+    const rawPreview = (req.rawBody && req.rawBody.slice(0, 200).toString('utf8')) || JSON.stringify(req.body || {});
+    return res.status(200).json({ ok: true, path: req.path, headerPreview: headers, rawPreview });
+  } catch (e) {
+    return res.status(500).json({ ok: false, err: String(e) });
+  }
+});
+
 const server = createServer(app);
 const redis = getRedis();
 const wss = new WebSocketServer({ server });
@@ -150,7 +180,7 @@ const log = (level, moduleName, message, data = null) => {
   const ts = new Date().toISOString();
   const entry = { ts, level, module: moduleName, message, data, env: NODE_ENV };
   const extra = data ? ` | ${safeJson(data)}` : "";
-  console.log(`[${ts}] [${level}] [${moduleName}] ${message}${extra} - app.js:153`);
+  console.log(`[${ts}] [${level}] [${moduleName}] ${message}${extra} - app.js:174`);
 
   // Best-effort Redis logging
   redis.lpush(LOG_STREAM_KEY, safeJson(entry)).then(() => redis.ltrim(LOG_STREAM_KEY, 0, LOG_KEEP - 1)).catch(() => {});
@@ -248,10 +278,10 @@ try {
     let payload = message;
     try { payload = JSON.parse(message); } catch (e) { /* keep raw */ }
     log('INFO', 'PREFETCH', `pubsub:${channel}`, { payload });
-    try { broadcastToAdmins({ type: channel, data: payload }); } catch (e) { console.error('broadcast prefetch failed - app.js:251', e); }
+    try { broadcastToAdmins({ type: channel, data: payload }); } catch (e) { console.error('broadcast prefetch failed - app.js:272', e); }
   });
 } catch (e) {
-  console.error('prefetch subscriber failed to start - app.js:254', e);
+  console.error('prefetch subscriber failed to start - app.js:275', e);
 }
 
 // ============================================================================
@@ -279,7 +309,9 @@ app.use(cors({
 
 app.use(compression());
 app.use(morgan(isProd ? "combined" : "dev"));
-app.use(bodyParser.json({ limit: "50mb" }));
+// Capture raw bytes for HMAC verification at the global JSON parser level.
+// This ensures `req.rawBody` is available even if body parsing happens earlier.
+app.use(bodyParser.json({ limit: "50mb", verify: (req, _res, buf) => { req.rawBody = buf; } }));
 app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
 
 app.use(express.static(path.join(__dirname, "public")));
@@ -358,6 +390,23 @@ const tierBasedRateLimiter = async (req, res, next) => {
 // ============================================================================
 // UPLOADS (Multer)
  // ============================================================================
+
+// Temporary: inspect incoming webhook headers for debugging Lipana signature delivery.
+// Logs header keys and a short masked preview of any signature-like header.
+app.use('/webhook', (req, _res, next) => {
+  try {
+    const keys = Object.keys(req.headers || {}).filter(k => k.startsWith('x-') || k.includes('signature') || k.includes('lipana'));
+    const preview = {};
+    keys.forEach(k => {
+      const v = String(req.headers[k] || '').trim();
+      // Mask the value but show prefix for debugging (first 8 chars)
+      preview[k] = v ? `${v.slice(0,8)}...len:${v.length}` : '(empty)';
+    });
+    console.log('[WEBHOOKDEBUG] path= - app.js:396', req.path, 'headerPreview=', preview);
+  } catch (e) { /* ignore logging errors */ }
+  return next();
+});
+
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
@@ -941,7 +990,9 @@ const validateTelegramRequest = (req, pathToken) => {
   return { ok: true };
 };
 
-app.post("/webhook/:token?", tierBasedRateLimiter, express.json({ limit: "1mb" }), async (req, res) => {
+// Telegram-specific webhook endpoint. Keep this distinct so other /webhook/* routes (mpesa, paypal)
+// are not accidentally matched by the generic token route.
+app.post("/webhook/telegram/:token?", tierBasedRateLimiter, express.json({ limit: "1mb" }), async (req, res) => {
   const pathToken = req.params.token;
   const check = validateTelegramRequest(req, pathToken);
   if (!check.ok) {
@@ -1041,18 +1092,50 @@ app.post(
 
 // Simple health check for Render / uptime probes
 app.get('/health', (_req, res) => res.status(200).send('OK'));
-
 // Lipana / M-Pesa generic webhook receiver (HMAC-SHA256 signature in x-lipana-signature)
 function verifySignature(req) {
-  const signature = req.headers['x-lipana-signature'] || req.headers['x-lipana-signature'.toLowerCase()];
-  // Use the raw body buffer captured by the express.json verify hook.
+  // Accept multiple possible header names
+  const headerKeys = ['x-lipana-signature', 'x-signature', 'x-lipana-hmac', 'signature', 'x-hook-signature'];
+  let signature = null;
+  for (const k of headerKeys) {
+    if (req.headers[k]) { signature = String(req.headers[k]); break; }
+  }
+  if (!signature) return false;
+
+  // Normalize and strip optional prefix like `sha256=`
+  signature = signature.trim();
+  if (signature.toLowerCase().startsWith('sha256=')) signature = signature.slice(7).trim();
+
+  // Raw bytes from the global JSON parser verify hook
   const raw = req.rawBody || (req.body ? Buffer.from(JSON.stringify(req.body), 'utf8') : Buffer.from(''));
   if (!process.env.LIPANA_SECRET) return false;
-  const expected = crypto.createHmac('sha256', process.env.LIPANA_SECRET).update(raw).digest('hex');
-  // Log both values to help debugging signature mismatches
-  try { console.log('Received signature: - app.js:1053', signature); } catch (e) {}
-  try { console.log('Computed signature: - app.js:1054', expected); } catch (e) {}
-  return signature === expected;
+
+  const expectedHex = crypto.createHmac('sha256', process.env.LIPANA_SECRET).update(raw).digest('hex');
+  const expectedBase64 = crypto.createHmac('sha256', process.env.LIPANA_SECRET).update(raw).digest('base64');
+
+  // Masked logging for debugging (do not log secrets)
+  try { console.log('[verifySignature] received(masked)= - app.js:1108', `${signature.slice(0,8)}...len:${signature.length}`); } catch (e) {}
+  try { console.log('[verifySignature] expectedHex(first8)= - app.js:1109', expectedHex.slice(0,8)); } catch (e) {}
+
+  const safeCompare = (aBuf, bBuf) => {
+    try { if (!Buffer.isBuffer(aBuf) || !Buffer.isBuffer(bBuf)) return false; if (aBuf.length !== bBuf.length) return false; return crypto.timingSafeEqual(aBuf, bBuf); } catch (e) { return false; }
+  };
+
+  // Try hex comparison
+  try {
+    const sigHexBuf = Buffer.from(signature, 'hex');
+    const expectedHexBuf = Buffer.from(expectedHex, 'hex');
+    if (safeCompare(sigHexBuf, expectedHexBuf)) return true;
+  } catch (e) { /* not hex */ }
+
+  // Try base64 comparison
+  try {
+    const sigB64Buf = Buffer.from(signature, 'base64');
+    const expectedB64Buf = Buffer.from(expectedBase64, 'base64');
+    if (safeCompare(sigB64Buf, expectedB64Buf)) return true;
+  } catch (e) { /* not base64 */ }
+
+  return false;
 }
 
 // Capture raw body buffer for HMAC verification (use Buffer, not string)
@@ -1081,6 +1164,23 @@ app.post('/webhook/mpesa', express.json({ limit: '1mb', verify: (req, res, buf, 
   } catch (err) {
     log('ERROR', 'WEBHOOK', 'DB insert error', { err: err?.message || String(err) });
     return res.status(500).send('DB Error');
+  }
+});
+
+// Temporary debug endpoint: echo masked headers + small raw-body preview
+app.post('/webhook/debug-echo', express.json({ limit: '1mb', verify: (req, _res, buf) => { req.rawBody = buf; } }), (req, res) => {
+  try {
+    const headers = {};
+    Object.keys(req.headers || {}).forEach(k => {
+      if (k.startsWith('x-') || k.includes('signature') || k.includes('lipana')) {
+        const v = String(req.headers[k] || '');
+        headers[k] = v ? `${v.slice(0,12)}...len:${v.length}` : '(empty)';
+      }
+    });
+    const rawPreview = (req.rawBody && req.rawBody.slice(0, 200).toString('utf8')) || JSON.stringify(req.body || {});
+    return res.status(200).json({ ok: true, path: req.path, headerPreview: headers, rawPreview });
+  } catch (e) {
+    return res.status(500).json({ ok: false, err: String(e) });
   }
 });
 
