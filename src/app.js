@@ -1,29 +1,5 @@
 ﻿/**
- * BETRIX EXPRESS SERVER - PRODUCTION
- * - Express + WebSocket + Redis + Multer + Rate limiting + Security + Logging
- * - Proxy-aware rate limiting (uses req.ip with trust proxy)
- * - Secure Telegram webhook validation via X-Telegram-Bot-Api-Secret-Token
- * - Admin basic auth (bcrypt + Redis), graceful shutdown, health and metrics
- *
- * Review environment variables before deploying:
- *   REDIS_URL, TELEGRAM_TOKEN, TELEGRAM_WEBHOOK_SECRET, PORT, NODE_ENV, ADMIN_USERNAME, ADMIN_PASSWORD, ALLOWED_ORIGINS
- *
- * Install required packages:
- *   npm i express body-parser ioredis helmet cors express-rate-limit compression morgan ws multer bcryptjs dotenv
- */
- * BETRIX EXPRESS SERVER - PRODUCTION
- * - Express + WebSocket + Redis + Multer + Rate limiting + Security + Logging
- * - Proxy-aware rate limiting (uses req.ip with trust proxy)
- * - Secure Telegram webhook validation via X-Telegram-Bot-Api-Secret-Token
- * - Admin basic auth (bcrypt + Redis), graceful shutdown, health and metrics
- *
- * Review environment variables before deploying:
- *   REDIS_URL, TELEGRAM_TOKEN, TELEGRAM_WEBHOOK_SECRET, PORT, NODE_ENV, ADMIN_USERNAME, ADMIN_PASSWORD, ALLOWED_ORIGINS
- *
- * Install required packages:
- *   npm i express body-parser ioredis helmet cors express-rate-limit compression morgan ws multer bcryptjs dotenv
- */
-
+ 
 import express from "express";
 import bodyParser from "body-parser";
 import crypto from 'crypto';
@@ -180,7 +156,7 @@ const log = (level, moduleName, message, data = null) => {
   const ts = new Date().toISOString();
   const entry = { ts, level, module: moduleName, message, data, env: NODE_ENV };
   const extra = data ? ` | ${safeJson(data)}` : "";
-  console.log(`[${ts}] [${level}] [${moduleName}] ${message}${extra} - app.js:174`);
+  console.log(`[${ts}] [${level}] [${moduleName}] ${message}${extra} - app.js:171`);
 
   // Best-effort Redis logging
   redis.lpush(LOG_STREAM_KEY, safeJson(entry)).then(() => redis.ltrim(LOG_STREAM_KEY, 0, LOG_KEEP - 1)).catch(() => {});
@@ -278,10 +254,10 @@ try {
     let payload = message;
     try { payload = JSON.parse(message); } catch (e) { /* keep raw */ }
     log('INFO', 'PREFETCH', `pubsub:${channel}`, { payload });
-    try { broadcastToAdmins({ type: channel, data: payload }); } catch (e) { console.error('broadcast prefetch failed - app.js:272', e); }
+    try { broadcastToAdmins({ type: channel, data: payload }); } catch (e) { console.error('broadcast prefetch failed - app.js:269', e); }
   });
 } catch (e) {
-  console.error('prefetch subscriber failed to start - app.js:275', e);
+  console.error('prefetch subscriber failed to start - app.js:272', e);
 }
 
 // ============================================================================
@@ -402,7 +378,7 @@ app.use('/webhook', (req, _res, next) => {
       // Mask the value but show prefix for debugging (first 8 chars)
       preview[k] = v ? `${v.slice(0,8)}...len:${v.length}` : '(empty)';
     });
-    console.log('[WEBHOOKDEBUG] path= - app.js:396', req.path, 'headerPreview=', preview);
+    console.log('[WEBHOOKDEBUG] path= - app.js:393', req.path, 'headerPreview=', preview);
   } catch (e) { /* ignore logging errors */ }
   return next();
 });
@@ -1114,8 +1090,8 @@ function verifySignature(req) {
   const expectedBase64 = crypto.createHmac('sha256', process.env.LIPANA_SECRET).update(raw).digest('base64');
 
   // Masked logging for debugging (do not log secrets)
-  try { console.log('[verifySignature] received(masked)= - app.js:1108', `${signature.slice(0,8)}...len:${signature.length}`); } catch (e) {}
-  try { console.log('[verifySignature] expectedHex(first8)= - app.js:1109', expectedHex.slice(0,8)); } catch (e) {}
+  try { console.log('[verifySignature] received(masked)= - app.js:1105', `${signature.slice(0,8)}...len:${signature.length}`); } catch (e) {}
+  try { console.log('[verifySignature] expectedHex(first8)= - app.js:1106', expectedHex.slice(0,8)); } catch (e) {}
 
   const safeCompare = (aBuf, bBuf) => {
     try { if (!Buffer.isBuffer(aBuf) || !Buffer.isBuffer(bBuf)) return false; if (aBuf.length !== bBuf.length) return false; return crypto.timingSafeEqual(aBuf, bBuf); } catch (e) { return false; }
