@@ -18,6 +18,7 @@ import paypalSdk from '@paypal/checkout-server-sdk';
 // New telegram handler (v2) and app-level services
 import { handleMessage as newHandleMessage, handleCallbackQuery as newHandleCallback } from './handlers/telegram-handler-v2.js';
 import { openLiga, rssAggregator, footballData, scorebat, scrapers, redis as mainRedis } from './app.js';
+import { sportsAggregator } from './app.js';
 
 console.log("\n - worker.js:22" + "=".repeat(130));
 console.log("[🚀 BETRIX] ULTIMATE UNIFIED PRODUCTION WORKER  3000+ LINES - worker.js:23");
@@ -1941,17 +1942,21 @@ const handlers = {
   },
 
   async live(chatId, userId) {
-    console.log(`[HANDLERS] /live - worker.js:1946`);
+    console.log(`[HANDLERS] /live - Using SportsAggregator - worker.js:1946`);
     try {
       await analyticsEngine.trackCommand(userId, "live");
-      const data = await apiFootball.live();
-      if (!data?.response?.length) return sendTelegram(chatId, `${ICONS.live} No live matches`);
-      const text = `${ICONS.live} <b>Live (${data.response.length})</b>\n\n` +
-        data.response.slice(0, PAGE_SIZE).map((m, i) => `${i + 1}. ${escapeHtml(m.teams?.home?.name)} <b>${m.goals?.home}-${m.goals?.away}</b> ${escapeHtml(m.teams?.away?.name)}`).join("\n");
+      const matches = await sportsAggregator.getAllLiveMatches();
+      if (!matches || !matches.length) return sendTelegram(chatId, `${ICONS.live} No live matches at this time`);
+      const text = `${ICONS.live} <b>Live Now (${matches.length})</b>\n\n` +
+        matches.slice(0, PAGE_SIZE).map((m, i) => {
+          const score = m.homeScore !== null && m.awayScore !== null ? `${m.homeScore}-${m.awayScore}` : 'vs';
+          const league = m.league ? ` 🏆 ${m.league}` : '';
+          return `${i + 1}. ${escapeHtml(m.home)} <b>${score}</b> ${escapeHtml(m.away)}${league}`;
+        }).join("\n");
       return sendTelegram(chatId, text);
     } catch (err) {
       console.error(`[HANDLERS] /live error: - worker.js:1955`, err.message);
-      return sendTelegram(chatId, `${ICONS.error} Error fetching`);
+      return sendTelegram(chatId, `${ICONS.error} Error fetching live matches`);
     }
   },
 
@@ -2041,20 +2046,24 @@ const handlers = {
     return sendTelegram(chatId, text);
   },
 
-  async refer(chatId, userId) {
-    console.log(`[HANDLERS] /refer - worker.js:2047`);
-    const code = userHelpers.getReferralCode(userId);
-    return sendTelegram(chatId, `${ICONS.refer} <b>Refer Friends</b>\n\nCode: <code>${code}</code>\n\n+10pts per referral`);
+  async live(chatId, userId) {
+    console.log(`[HANDLERS] /live - Using SportsAggregator - worker.js:1946`);
+    try {
+      await analyticsEngine.trackCommand(userId, "live");
+      const matches = await sportsAggregator.getAllLiveMatches();
+      if (!matches || !matches.length) return sendTelegram(chatId, `${ICONS.live} No live matches at this time`);
+      const text = `${ICONS.live} <b>Live Now (${matches.length})</b>\n\n` +
+        matches.slice(0, PAGE_SIZE).map((m, i) => {
+          const score = m.homeScore !== null && m.awayScore !== null ? `${m.homeScore}-${m.awayScore}` : 'vs';
+          const league = m.league ? ` 🏆 ${m.league}` : '';
+          return `${i + 1}. ${escapeHtml(m.home)} <b>${score}</b> ${escapeHtml(m.away)}${league}`;
+        }).join("\n");
+      return sendTelegram(chatId, text);
+    } catch (err) {
+      console.error(`[HANDLERS] /live error: - worker.js:1955`, err.message);
+      return sendTelegram(chatId, `${ICONS.error} Error fetching live matches`);
+    }
   },
-
-  async leaderboard(chatId) {
-    console.log(`[HANDLERS] /leaderboard - worker.js:2053`);
-    return sendTelegram(chatId, `${ICONS.leaderboard} <b>Top Predictors</b>\n\n🥇 Ahmed - 450pts\n🥈 Sarah - 380pts\n🥉 Mike - 320pts\n4. Lisa - 290pts\n5. John - 250pts`);
-  },
-
-  async dossier(chatId, userId) {
-    console.log(`[HANDLERS] /dossier - worker.js:2058`);
-    const user = await getUser(userId);
     if (!userHelpers.isVVIP(user)) return sendTelegram(chatId, `💎 VVIP members only`);
     return sendTelegram(chatId, `${ICONS.dossier} <b>Professional Dossier</b>\n\n500+ word analysis`);
   },

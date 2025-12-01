@@ -1,0 +1,2043 @@
+﻿{
+    "data":  [
+                 {
+                     "id":  463,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  2,
+                     "stage_id":  2,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  43,
+                     "state_id":  5,
+                     "venue_id":  209,
+                     "name":  "Tottenham Hotspur vs Manchester City",
+                     "starting_at":  "2010-08-14 11:45:00",
+                     "result_info":  "Game ended in draw.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1281786300,
+                     "participants":  [
+                                          {
+                                              "id":  6,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  281313,
+                                              "gender":  "male",
+                                              "name":  "Tottenham Hotspur",
+                                              "short_code":  "TOT",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/6/6.png",
+                                              "founded":  1882,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 20:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  9,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  151,
+                                              "gender":  "male",
+                                              "name":  "Manchester City",
+                                              "short_code":  "MCI",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/9/9.png",
+                                              "founded":  1880,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  209,
+                                   "country_id":  462,
+                                   "city_id":  51663,
+                                   "name":  "White Hart Lane",
+                                   "address":  "Bill Nicholson Way, 748 High Road",
+                                   "zipcode":  null,
+                                   "latitude":  "51.604900",
+                                   "longitude":  "-0.095763",
+                                   "capacity":  36284,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/17/209.png",
+                                   "city_name":  "London",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  464,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  3,
+                     "stage_id":  3,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  44,
+                     "state_id":  5,
+                     "venue_id":  230,
+                     "name":  "Liverpool vs Stoke City",
+                     "starting_at":  "2013-08-17 11:45:00",
+                     "result_info":  "Liverpool won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1376739900,
+                     "participants":  [
+                                          {
+                                              "id":  8,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  230,
+                                              "gender":  "male",
+                                              "name":  "Liverpool",
+                                              "short_code":  "LIV",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/8/8.png",
+                                              "founded":  1892,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-26 20:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  26,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  207,
+                                              "gender":  "male",
+                                              "name":  "Stoke City",
+                                              "short_code":  "STK",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/26/26.png",
+                                              "founded":  1868,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 12:30:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  230,
+                                   "country_id":  462,
+                                   "city_id":  51090,
+                                   "name":  "Anfield",
+                                   "address":  "Anfield Road",
+                                   "zipcode":  null,
+                                   "latitude":  "53.430833",
+                                   "longitude":  "-2.960833",
+                                   "capacity":  61276,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/6/230.png",
+                                   "city_name":  "Liverpool",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  465,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  2,
+                     "stage_id":  2,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  43,
+                     "state_id":  5,
+                     "venue_id":  5,
+                     "name":  "Aston Villa vs West Ham United",
+                     "starting_at":  "2010-08-14 14:00:00",
+                     "result_info":  "Aston Villa won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1281794400,
+                     "participants":  [
+                                          {
+                                              "id":  1,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  214,
+                                              "gender":  "male",
+                                              "name":  "West Ham United",
+                                              "short_code":  "WHU",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/1/1.png",
+                                              "founded":  1895,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-22 15:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  15,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  5,
+                                              "gender":  "male",
+                                              "name":  "Aston Villa",
+                                              "short_code":  "AVL",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/15/15.png",
+                                              "founded":  1874,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-27 17:45:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  5,
+                                   "country_id":  462,
+                                   "city_id":  9576,
+                                   "name":  "Villa Park",
+                                   "address":  "Trinity Road, Birmingham B6 6HE",
+                                   "zipcode":  null,
+                                   "latitude":  "52.509167",
+                                   "longitude":  "-1.884722",
+                                   "capacity":  42640,
+                                   "image_path":  "https://cdn.sportmonks.com/images/core/venues/5/5.png",
+                                   "city_name":  "Birmingham",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  466,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  3,
+                     "stage_id":  3,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  44,
+                     "state_id":  5,
+                     "venue_id":  204,
+                     "name":  "Arsenal vs Aston Villa",
+                     "starting_at":  "2013-08-17 14:00:00",
+                     "result_info":  "Aston Villa won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1376748000,
+                     "participants":  [
+                                          {
+                                              "id":  19,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  204,
+                                              "gender":  "male",
+                                              "name":  "Arsenal",
+                                              "short_code":  "ARS",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/19/19.png",
+                                              "founded":  1886,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-26 20:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  15,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  5,
+                                              "gender":  "male",
+                                              "name":  "Aston Villa",
+                                              "short_code":  "AVL",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/15/15.png",
+                                              "founded":  1874,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-27 17:45:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  204,
+                                   "country_id":  462,
+                                   "city_id":  51663,
+                                   "name":  "Emirates Stadium",
+                                   "address":  "Arsenal Football Club Highbury House 75 Drayton Park London, N5 1BU",
+                                   "zipcode":  null,
+                                   "latitude":  "51.556667",
+                                   "longitude":  "-0.106111",
+                                   "capacity":  60704,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/12/204.png",
+                                   "city_name":  "London",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  467,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  2,
+                     "stage_id":  2,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  43,
+                     "state_id":  5,
+                     "venue_id":  339721,
+                     "name":  "Blackburn Rovers vs Everton",
+                     "starting_at":  "2010-08-14 14:00:00",
+                     "result_info":  "Blackburn Rovers won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1281794400,
+                     "participants":  [
+                                          {
+                                              "id":  2,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  8,
+                                              "gender":  "male",
+                                              "name":  "Blackburn Rovers",
+                                              "short_code":  "BBR",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/2/2.png",
+                                              "founded":  1875,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  13,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  343762,
+                                              "gender":  "male",
+                                              "name":  "Everton",
+                                              "short_code":  "EVE",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/13/13.png",
+                                              "founded":  1878,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 17:30:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  339721,
+                                   "country_id":  null,
+                                   "city_id":  null,
+                                   "name":  "Ewood Park (Blackburn, Lancashire)",
+                                   "address":  null,
+                                   "zipcode":  null,
+                                   "latitude":  "53.7285283",
+                                   "longitude":  "-2.489225134",
+                                   "capacity":  31367,
+                                   "image_path":  null,
+                                   "city_name":  "Blackburn, Lancashire",
+                                   "surface":  null,
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  468,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  3,
+                     "stage_id":  3,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  44,
+                     "state_id":  5,
+                     "venue_id":  489,
+                     "name":  "Norwich City vs Everton",
+                     "starting_at":  "2013-08-17 14:00:00",
+                     "result_info":  "Game ended in draw.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1376748000,
+                     "participants":  [
+                                          {
+                                              "id":  33,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  489,
+                                              "gender":  "male",
+                                              "name":  "Norwich City",
+                                              "short_code":  "NOR",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/1/33.png",
+                                              "founded":  1902,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  13,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  343762,
+                                              "gender":  "male",
+                                              "name":  "Everton",
+                                              "short_code":  "EVE",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/13/13.png",
+                                              "founded":  1878,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 17:30:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  489,
+                                   "country_id":  462,
+                                   "city_id":  63475,
+                                   "name":  "Carrow Road",
+                                   "address":  "Carrow Road",
+                                   "zipcode":  null,
+                                   "latitude":  "52.622222",
+                                   "longitude":  "1.309167",
+                                   "capacity":  27244,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/9/489.png",
+                                   "city_name":  "Norwich",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  469,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  6,
+                     "stage_id":  4,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  45,
+                     "state_id":  5,
+                     "venue_id":  204,
+                     "name":  "Arsenal vs West Bromwich Albion",
+                     "starting_at":  "2008-08-16 11:45:00",
+                     "result_info":  "Arsenal won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1218887100,
+                     "participants":  [
+                                          {
+                                              "id":  19,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  204,
+                                              "gender":  "male",
+                                              "name":  "Arsenal",
+                                              "short_code":  "ARS",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/19/19.png",
+                                              "founded":  1886,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-26 20:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  10,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  119,
+                                              "gender":  "male",
+                                              "name":  "West Bromwich Albion",
+                                              "short_code":  "WBA",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/10/10.png",
+                                              "founded":  1878,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  204,
+                                   "country_id":  462,
+                                   "city_id":  51663,
+                                   "name":  "Emirates Stadium",
+                                   "address":  "Arsenal Football Club Highbury House 75 Drayton Park London, N5 1BU",
+                                   "zipcode":  null,
+                                   "latitude":  "51.556667",
+                                   "longitude":  "-0.106111",
+                                   "capacity":  60704,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/12/204.png",
+                                   "city_name":  "London",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  470,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  2,
+                     "stage_id":  2,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  43,
+                     "state_id":  5,
+                     "venue_id":  14,
+                     "name":  "Wigan Athletic vs Blackpool",
+                     "starting_at":  "2010-08-14 14:00:00",
+                     "result_info":  "Blackpool won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1281794400,
+                     "participants":  [
+                                          {
+                                              "id":  17,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  14,
+                                              "gender":  "male",
+                                              "name":  "Wigan Athletic",
+                                              "short_code":  "WIG",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/17/17.png",
+                                              "founded":  1932,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  28,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  26,
+                                              "gender":  "male",
+                                              "name":  "Blackpool",
+                                              "short_code":  "BLK",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/28/28.png",
+                                              "founded":  1887,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 12:30:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  14,
+                                   "country_id":  462,
+                                   "city_id":  98715,
+                                   "name":  "The DW Stadium",
+                                   "address":  null,
+                                   "zipcode":  null,
+                                   "latitude":  "53.547531",
+                                   "longitude":  "-2.654234",
+                                   "capacity":  25138,
+                                   "image_path":  "https://cdn.sportmonks.com/images/core/venues/14/14.png",
+                                   "city_name":  "Wigan",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  471,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  6,
+                     "stage_id":  4,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  45,
+                     "state_id":  5,
+                     "venue_id":  4,
+                     "name":  "West Ham United vs Wigan Athletic",
+                     "starting_at":  "2008-08-16 14:00:00",
+                     "result_info":  "West Ham United won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1218895200,
+                     "participants":  [
+                                          {
+                                              "id":  1,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  214,
+                                              "gender":  "male",
+                                              "name":  "West Ham United",
+                                              "short_code":  "WHU",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/1/1.png",
+                                              "founded":  1895,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-22 15:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  17,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  14,
+                                              "gender":  "male",
+                                              "name":  "Wigan Athletic",
+                                              "short_code":  "WIG",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/17/17.png",
+                                              "founded":  1932,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  4,
+                                   "country_id":  462,
+                                   "city_id":  51663,
+                                   "name":  "Boleyn Ground",
+                                   "address":  "Upton Park London, E13 England",
+                                   "zipcode":  null,
+                                   "latitude":  "51.509865",
+                                   "longitude":  "-0.118092",
+                                   "capacity":  35016,
+                                   "image_path":  "https://cdn.sportmonks.com/images/core/venues/4/4.png",
+                                   "city_name":  "London",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  472,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  3,
+                     "stage_id":  3,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  44,
+                     "state_id":  5,
+                     "venue_id":  212,
+                     "name":  "Sunderland vs Fulham",
+                     "starting_at":  "2013-08-17 14:00:00",
+                     "result_info":  "Fulham won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1376748000,
+                     "participants":  [
+                                          {
+                                              "id":  3,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  212,
+                                              "gender":  "male",
+                                              "name":  "Sunderland",
+                                              "short_code":  "SUN",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/3/3.png",
+                                              "founded":  1879,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  11,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  485,
+                                              "gender":  "male",
+                                              "name":  "Fulham",
+                                              "short_code":  "FUL",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/11/11.png",
+                                              "founded":  1879,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 20:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  212,
+                                   "country_id":  462,
+                                   "city_id":  87471,
+                                   "name":  "Stadium of Light",
+                                   "address":  "Millenium Way",
+                                   "zipcode":  null,
+                                   "latitude":  "54.914040",
+                                   "longitude":  "-1.388983",
+                                   "capacity":  48707,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/20/212.png",
+                                   "city_name":  "Sunderland",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  473,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  7,
+                     "stage_id":  5,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  46,
+                     "state_id":  5,
+                     "venue_id":  204,
+                     "name":  "Arsenal vs Sunderland",
+                     "starting_at":  "2012-08-18 14:00:00",
+                     "result_info":  "Game ended in draw.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1345298400,
+                     "participants":  [
+                                          {
+                                              "id":  19,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  204,
+                                              "gender":  "male",
+                                              "name":  "Arsenal",
+                                              "short_code":  "ARS",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/19/19.png",
+                                              "founded":  1886,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-26 20:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  3,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  212,
+                                              "gender":  "male",
+                                              "name":  "Sunderland",
+                                              "short_code":  "SUN",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/3/3.png",
+                                              "founded":  1879,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  204,
+                                   "country_id":  462,
+                                   "city_id":  51663,
+                                   "name":  "Emirates Stadium",
+                                   "address":  "Arsenal Football Club Highbury House 75 Drayton Park London, N5 1BU",
+                                   "zipcode":  null,
+                                   "latitude":  "51.556667",
+                                   "longitude":  "-0.106111",
+                                   "capacity":  60704,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/12/204.png",
+                                   "city_name":  "London",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  474,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  6,
+                     "stage_id":  4,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  45,
+                     "state_id":  5,
+                     "venue_id":  203,
+                     "name":  "Middlesbrough vs Tottenham Hotspur",
+                     "starting_at":  "2008-08-16 14:00:00",
+                     "result_info":  "Middlesbrough won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1218895200,
+                     "participants":  [
+                                          {
+                                              "id":  7,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  203,
+                                              "gender":  "male",
+                                              "name":  "Middlesbrough",
+                                              "short_code":  "MID",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/7/7.png",
+                                              "founded":  1876,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  6,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  281313,
+                                              "gender":  "male",
+                                              "name":  "Tottenham Hotspur",
+                                              "short_code":  "TOT",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/6/6.png",
+                                              "founded":  1882,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 20:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  203,
+                                   "country_id":  462,
+                                   "city_id":  56966,
+                                   "name":  "Riverside Stadium",
+                                   "address":  "Dockside Road",
+                                   "zipcode":  null,
+                                   "latitude":  "54.578333",
+                                   "longitude":  "-1.216944",
+                                   "capacity":  34988,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/11/203.png",
+                                   "city_name":  "Middlesbrough",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  475,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  2,
+                     "stage_id":  2,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  43,
+                     "state_id":  5,
+                     "venue_id":  10,
+                     "name":  "Bolton Wanderers vs Fulham",
+                     "starting_at":  "2010-08-14 14:00:00",
+                     "result_info":  "Game ended in draw.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1281794400,
+                     "participants":  [
+                                          {
+                                              "id":  16,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  383,
+                                              "gender":  "male",
+                                              "name":  "Bolton Wanderers",
+                                              "short_code":  "BOL",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/16/16.png",
+                                              "founded":  1874,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  11,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  485,
+                                              "gender":  "male",
+                                              "name":  "Fulham",
+                                              "short_code":  "FUL",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/11/11.png",
+                                              "founded":  1879,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 20:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  10,
+                                   "country_id":  462,
+                                   "city_id":  38733,
+                                   "name":  "Reebok Stadium",
+                                   "address":  null,
+                                   "zipcode":  null,
+                                   "latitude":  "53.5965362",
+                                   "longitude":  "-2.5409992",
+                                   "capacity":  28723,
+                                   "image_path":  null,
+                                   "city_name":  "Horwich",
+                                   "surface":  null,
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  476,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  3,
+                     "stage_id":  3,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  44,
+                     "state_id":  5,
+                     "venue_id":  119,
+                     "name":  "West Bromwich Albion vs Southampton",
+                     "starting_at":  "2013-08-17 14:00:00",
+                     "result_info":  "Southampton won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1376748000,
+                     "participants":  [
+                                          {
+                                              "id":  10,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  119,
+                                              "gender":  "male",
+                                              "name":  "West Bromwich Albion",
+                                              "short_code":  "WBA",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/10/10.png",
+                                              "founded":  1878,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  65,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  167,
+                                              "gender":  "male",
+                                              "name":  "Southampton",
+                                              "short_code":  "SOU",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/1/65.png",
+                                              "founded":  1885,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  119,
+                                   "country_id":  462,
+                                   "city_id":  97813,
+                                   "name":  "The Hawthorns",
+                                   "address":  "Halfords Lane",
+                                   "zipcode":  null,
+                                   "latitude":  "52.509167",
+                                   "longitude":  "-1.963889",
+                                   "capacity":  26688,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/23/119.png",
+                                   "city_name":  "West Bromwich",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  477,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  7,
+                     "stage_id":  5,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  46,
+                     "state_id":  5,
+                     "venue_id":  485,
+                     "name":  "Fulham vs Norwich City",
+                     "starting_at":  "2012-08-18 14:00:00",
+                     "result_info":  "Fulham won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1345298400,
+                     "participants":  [
+                                          {
+                                              "id":  11,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  485,
+                                              "gender":  "male",
+                                              "name":  "Fulham",
+                                              "short_code":  "FUL",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/11/11.png",
+                                              "founded":  1879,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 20:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  33,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  489,
+                                              "gender":  "male",
+                                              "name":  "Norwich City",
+                                              "short_code":  "NOR",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/1/33.png",
+                                              "founded":  1902,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  485,
+                                   "country_id":  462,
+                                   "city_id":  51663,
+                                   "name":  "Craven Cottage",
+                                   "address":  "Stevenage Road",
+                                   "zipcode":  null,
+                                   "latitude":  "51.475",
+                                   "longitude":  "-0.221667",
+                                   "capacity":  25700,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/5/485.png",
+                                   "city_name":  "London",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  478,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  6,
+                     "stage_id":  4,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  45,
+                     "state_id":  5,
+                     "venue_id":  199,
+                     "name":  "Hull City vs Fulham",
+                     "starting_at":  "2008-08-16 14:00:00",
+                     "result_info":  "Hull City won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1218895200,
+                     "participants":  [
+                                          {
+                                              "id":  22,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  199,
+                                              "gender":  "male",
+                                              "name":  "Hull City",
+                                              "short_code":  "HUL",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/22/22.png",
+                                              "founded":  1904,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 12:30:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  11,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  485,
+                                              "gender":  "male",
+                                              "name":  "Fulham",
+                                              "short_code":  "FUL",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/11/11.png",
+                                              "founded":  1879,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 20:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  199,
+                                   "country_id":  462,
+                                   "city_id":  39201,
+                                   "name":  "MKM Stadium",
+                                   "address":  "Walton Street / Anlaby Road",
+                                   "zipcode":  null,
+                                   "latitude":  "53.74592",
+                                   "longitude":  "-0.36806",
+                                   "capacity":  25586,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/7/199.png",
+                                   "city_name":  "Hull",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  479,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  2,
+                     "stage_id":  2,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  43,
+                     "state_id":  5,
+                     "venue_id":  212,
+                     "name":  "Sunderland vs Birmingham City",
+                     "starting_at":  "2010-08-14 14:00:00",
+                     "result_info":  "Game ended in draw.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1281794400,
+                     "participants":  [
+                                          {
+                                              "id":  3,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  212,
+                                              "gender":  "male",
+                                              "name":  "Sunderland",
+                                              "short_code":  "SUN",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/3/3.png",
+                                              "founded":  1879,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  12,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  507,
+                                              "gender":  "male",
+                                              "name":  "Birmingham City",
+                                              "short_code":  "BRC",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/12/12.png",
+                                              "founded":  1875,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-26 20:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  212,
+                                   "country_id":  462,
+                                   "city_id":  87471,
+                                   "name":  "Stadium of Light",
+                                   "address":  "Millenium Way",
+                                   "zipcode":  null,
+                                   "latitude":  "54.914040",
+                                   "longitude":  "-1.388983",
+                                   "capacity":  48707,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/20/212.png",
+                                   "city_name":  "Sunderland",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  480,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  3,
+                     "stage_id":  3,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  44,
+                     "state_id":  5,
+                     "venue_id":  4,
+                     "name":  "West Ham United vs Cardiff City",
+                     "starting_at":  "2013-08-17 14:00:00",
+                     "result_info":  "West Ham United won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1376748000,
+                     "participants":  [
+                                          {
+                                              "id":  1,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  214,
+                                              "gender":  "male",
+                                              "name":  "West Ham United",
+                                              "short_code":  "WHU",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/1/1.png",
+                                              "founded":  1895,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-22 15:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  69,
+                                              "sport_id":  1,
+                                              "country_id":  515,
+                                              "venue_id":  125,
+                                              "gender":  "male",
+                                              "name":  "Cardiff City",
+                                              "short_code":  "CDF",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/5/69.png",
+                                              "founded":  1889,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  4,
+                                   "country_id":  462,
+                                   "city_id":  51663,
+                                   "name":  "Boleyn Ground",
+                                   "address":  "Upton Park London, E13 England",
+                                   "zipcode":  null,
+                                   "latitude":  "51.509865",
+                                   "longitude":  "-0.118092",
+                                   "capacity":  35016,
+                                   "image_path":  "https://cdn.sportmonks.com/images/core/venues/4/4.png",
+                                   "city_name":  "London",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  481,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  7,
+                     "stage_id":  5,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  46,
+                     "state_id":  5,
+                     "venue_id":  491,
+                     "name":  "Queens Park Rangers vs Swansea City",
+                     "starting_at":  "2012-08-18 14:00:00",
+                     "result_info":  "Swansea City won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1345298400,
+                     "participants":  [
+                                          {
+                                              "id":  30,
+                                              "sport_id":  1,
+                                              "country_id":  515,
+                                              "venue_id":  208,
+                                              "gender":  "male",
+                                              "name":  "Swansea City",
+                                              "short_code":  "SWA",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/30/30.png",
+                                              "founded":  1912,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  47,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  491,
+                                              "gender":  "male",
+                                              "name":  "Queens Park Rangers",
+                                              "short_code":  "QPR",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/15/47.png",
+                                              "founded":  1885,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  491,
+                                   "country_id":  462,
+                                   "city_id":  51663,
+                                   "name":  "MATRADE Loftus Road",
+                                   "address":  "South Africa Road, Shepherd\u0027s Bush",
+                                   "zipcode":  "W12 7PJ",
+                                   "latitude":  "51.5094016",
+                                   "longitude":  "-0.23211359",
+                                   "capacity":  18360,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/11/491.png",
+                                   "city_name":  "London",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  482,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  6,
+                     "stage_id":  4,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  45,
+                     "state_id":  5,
+                     "venue_id":  12,
+                     "name":  "Everton vs Blackburn Rovers",
+                     "starting_at":  "2008-08-16 14:00:00",
+                     "result_info":  "Blackburn Rovers won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1218895200,
+                     "participants":  [
+                                          {
+                                              "id":  2,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  8,
+                                              "gender":  "male",
+                                              "name":  "Blackburn Rovers",
+                                              "short_code":  "BBR",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/2/2.png",
+                                              "founded":  1875,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  13,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  343762,
+                                              "gender":  "male",
+                                              "name":  "Everton",
+                                              "short_code":  "EVE",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/13/13.png",
+                                              "founded":  1878,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 17:30:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  12,
+                                   "country_id":  462,
+                                   "city_id":  51090,
+                                   "name":  "Goodison Park",
+                                   "address":  "Goodison Road",
+                                   "zipcode":  "L4 4EL",
+                                   "latitude":  "53.43881",
+                                   "longitude":  "-2.96625",
+                                   "capacity":  39571,
+                                   "image_path":  "https://cdn.sportmonks.com/images/core/venues/12/12.png",
+                                   "city_name":  "Liverpool",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  483,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  2,
+                     "stage_id":  2,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  43,
+                     "state_id":  5,
+                     "venue_id":  492,
+                     "name":  "Wolverhampton Wanderers vs Stoke City",
+                     "starting_at":  "2010-08-14 14:00:00",
+                     "result_info":  "Wolverhampton Wanderers won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1281794400,
+                     "participants":  [
+                                          {
+                                              "id":  26,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  207,
+                                              "gender":  "male",
+                                              "name":  "Stoke City",
+                                              "short_code":  "STK",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/26/26.png",
+                                              "founded":  1868,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 12:30:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  29,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  492,
+                                              "gender":  "male",
+                                              "name":  "Wolverhampton Wanderers",
+                                              "short_code":  "WOL",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/29/29.png",
+                                              "founded":  1877,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-22 15:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  492,
+                                   "country_id":  462,
+                                   "city_id":  99578,
+                                   "name":  "Molineux Stadium",
+                                   "address":  "Waterloo Road",
+                                   "zipcode":  null,
+                                   "latitude":  "52.590195",
+                                   "longitude":  "-2.131226",
+                                   "capacity":  32050,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/12/492.png",
+                                   "city_name":  "Wolverhampton",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  484,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  3,
+                     "stage_id":  3,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  44,
+                     "state_id":  5,
+                     "venue_id":  208,
+                     "name":  "Swansea City vs Manchester United",
+                     "starting_at":  "2013-08-17 16:30:00",
+                     "result_info":  "Manchester United won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1376757000,
+                     "participants":  [
+                                          {
+                                              "id":  30,
+                                              "sport_id":  1,
+                                              "country_id":  515,
+                                              "venue_id":  208,
+                                              "gender":  "male",
+                                              "name":  "Swansea City",
+                                              "short_code":  "SWA",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/30/30.png",
+                                              "founded":  1912,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  14,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  206,
+                                              "gender":  "male",
+                                              "name":  "Manchester United",
+                                              "short_code":  "MUN",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/14/14.png",
+                                              "founded":  1878,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-24 20:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  208,
+                                   "country_id":  515,
+                                   "city_id":  87866,
+                                   "name":  "Swansea.com Stadium",
+                                   "address":  "Normandy Road",
+                                   "zipcode":  null,
+                                   "latitude":  "51.642200",
+                                   "longitude":  "-3.935100",
+                                   "capacity":  20827,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/16/208.png",
+                                   "city_name":  "Swansea",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  485,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  7,
+                     "stage_id":  5,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  46,
+                     "state_id":  5,
+                     "venue_id":  494,
+                     "name":  "Reading vs Stoke City",
+                     "starting_at":  "2012-08-18 14:00:00",
+                     "result_info":  "Game ended in draw.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1345298400,
+                     "participants":  [
+                                          {
+                                              "id":  23,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  494,
+                                              "gender":  "male",
+                                              "name":  "Reading",
+                                              "short_code":  "RDG",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/23/23.png",
+                                              "founded":  1871,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 12:30:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  26,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  207,
+                                              "gender":  "male",
+                                              "name":  "Stoke City",
+                                              "short_code":  "STK",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/26/26.png",
+                                              "founded":  1868,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 12:30:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  494,
+                                   "country_id":  462,
+                                   "city_id":  73429,
+                                   "name":  "Select Car Leasing Stadium",
+                                   "address":  "Shooters Way / Junction 11, M4",
+                                   "zipcode":  null,
+                                   "latitude":  "51.422222",
+                                   "longitude":  "-0.982778",
+                                   "capacity":  24161,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/14/494.png",
+                                   "city_name":  "Reading",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  486,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  6,
+                     "stage_id":  4,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  45,
+                     "state_id":  5,
+                     "venue_id":  383,
+                     "name":  "Bolton Wanderers vs Stoke City",
+                     "starting_at":  "2008-08-16 14:00:00",
+                     "result_info":  "Bolton Wanderers won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1218895200,
+                     "participants":  [
+                                          {
+                                              "id":  16,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  383,
+                                              "gender":  "male",
+                                              "name":  "Bolton Wanderers",
+                                              "short_code":  "BOL",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/16/16.png",
+                                              "founded":  1874,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  26,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  207,
+                                              "gender":  "male",
+                                              "name":  "Stoke City",
+                                              "short_code":  "STK",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/26/26.png",
+                                              "founded":  1868,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 12:30:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  383,
+                                   "country_id":  462,
+                                   "city_id":  10653,
+                                   "name":  "University of Bolton Stadium",
+                                   "address":  "Burnden Way",
+                                   "zipcode":  null,
+                                   "latitude":  "53.5806",
+                                   "longitude":  "-2.53563",
+                                   "capacity":  28723,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/31/383.png",
+                                   "city_name":  "Bolton",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 },
+                 {
+                     "id":  487,
+                     "sport_id":  1,
+                     "league_id":  8,
+                     "season_id":  2,
+                     "stage_id":  2,
+                     "group_id":  null,
+                     "aggregate_id":  null,
+                     "round_id":  43,
+                     "state_id":  5,
+                     "venue_id":  321614,
+                     "name":  "Chelsea vs West Bromwich Albion",
+                     "starting_at":  "2010-08-14 16:30:00",
+                     "result_info":  "Chelsea won after full-time.",
+                     "leg":  "1/1",
+                     "details":  null,
+                     "length":  90,
+                     "placeholder":  false,
+                     "has_odds":  false,
+                     "has_premium_odds":  false,
+                     "starting_at_timestamp":  1281803400,
+                     "participants":  [
+                                          {
+                                              "id":  18,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  321614,
+                                              "gender":  "male",
+                                              "name":  "Chelsea",
+                                              "short_code":  "CHE",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/18/18.png",
+                                              "founded":  1905,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-25 20:00:00",
+                                              "meta":  {
+                                                           "location":  "home",
+                                                           "winner":  true,
+                                                           "position":  null
+                                                       }
+                                          },
+                                          {
+                                              "id":  10,
+                                              "sport_id":  1,
+                                              "country_id":  462,
+                                              "venue_id":  119,
+                                              "gender":  "male",
+                                              "name":  "West Bromwich Albion",
+                                              "short_code":  "WBA",
+                                              "image_path":  "https://cdn.sportmonks.com/images/soccer/teams/10/10.png",
+                                              "founded":  1878,
+                                              "type":  "domestic",
+                                              "placeholder":  false,
+                                              "last_played_at":  "2025-11-29 15:00:00",
+                                              "meta":  {
+                                                           "location":  "away",
+                                                           "winner":  false,
+                                                           "position":  null
+                                                       }
+                                          }
+                                      ],
+                     "venue":  {
+                                   "id":  321614,
+                                   "country_id":  462,
+                                   "city_id":  51663,
+                                   "name":  "Stamford Bridge",
+                                   "address":  "Fulham Road",
+                                   "zipcode":  null,
+                                   "latitude":  "51.481667",
+                                   "longitude":  "-0.191111",
+                                   "capacity":  41841,
+                                   "image_path":  "https://cdn.sportmonks.com/images/soccer/venues/14/321614.png",
+                                   "city_name":  "London",
+                                   "surface":  "grass",
+                                   "national_team":  false
+                               },
+                     "odds":  [
+
+                              ]
+                 }
+             ],
+    "pagination":  {
+                       "count":  25,
+                       "per_page":  25,
+                       "current_page":  1,
+                       "next_page":  "https://api.sportmonks.com/v3/football/fixtures?include=participants%3Bvenue%3Bodds\u0026page=2",
+                       "has_more":  true
+                   },
+    "subscription":  [
+                         {
+                             "meta":  {
+                                          "trial_ends_at":  "2025-12-13 15:56:21",
+                                          "ends_at":  "2025-12-29 14:56:58",
+                                          "current_timestamp":  1764499143
+                                      },
+                             "plans":  [
+                                           {
+                                               "plan":  "Worldwide Plan",
+                                               "sport":  "Football",
+                                               "category":  "Advanced"
+                                           }
+                                       ],
+                             "add_ons":  [
+                                             {
+                                                 "add_on":  "Worldwide Plan Predictions",
+                                                 "sport":  "Football",
+                                                 "category":  "Predictions"
+                                             }
+                                         ],
+                             "widgets":  [
+
+                                         ]
+                         }
+                     ],
+    "rate_limit":  {
+                       "resets_in_seconds":  3209,
+                       "remaining":  2984,
+                       "requested_entity":  "Fixture"
+                   },
+    "timezone":  "UTC"
+}

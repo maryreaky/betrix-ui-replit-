@@ -11,7 +11,8 @@ const logger = new Logger('SportMonksAPI');
 
 export class SportMonksAPI {
   constructor(apiKey) {
-    this.apiKey = apiKey || process.env.SPORTMONKS_API_KEY || 'zUdIC2auUmiG6bUS5v7Mc53IxJwqiQ2gBMyFqsTI9KnnBJJQMM5eExZsPh42';
+    // Prefer explicit constructor arg, then common env names. Do NOT embed secrets in source.
+    this.apiKey = apiKey || process.env.SPORTSMONKS_API_KEY || process.env.SPORTSMONKS_API || process.env.SPORTSMONKS_TOKEN || null;
     this.baseUrl = 'https://api.sportmonks.com/v3';
     this.enabled = !!this.apiKey;
     

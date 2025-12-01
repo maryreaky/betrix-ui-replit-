@@ -1,0 +1,95 @@
+[
+  {
+    "id": "3dac93de-fa47-4257-9756-47c872daa071",
+    "user_id": "<REDACTED_USER_ID>",
+    "tx_ref": "betrix_<REDACTED_MSISDN>_444",
+    "tx_id": "TXN<REDACTED_MSISDN>T0HUJL",
+    "status": "initiated",
+    "amount": 300,
+    "currency": "KES",
+    "metadata": {
+      "msisdn": "<REDACTED_MSISDN>",
+      "lipana_response": {
+        "data": {
+          "__v": 0,
+          "_id": "692df32d9a01e7c887f2f43b",
+          "phone": "<REDACTED_MSISDN>",
+          "amount": 300,
+          "status": "pending",
+          "userId": "<REDACTED_USER_ID>",
+          "createdAt": "2025-12-01T19:57:33.651Z",
+          "reference": "betrix_<REDACTED_MSISDN>_444",
+          "updatedAt": "2025-12-01T19:57:33.651Z",
+          "payoutStatus": "not_initiated",
+          "transactionId": "TXN<REDACTED_MSISDN>T0HUJL",
+          "reversalStatus": "not_initiated"
+        },
+        "success": true
+      },
+      "provider_checkout_id": "TXN<REDACTED_MSISDN>T0HUJL"
+    },
+    "created_at": "2025-12-01T19:57:22.938Z"
+  },
+  {
+    "id": "ab343989-b812-40d9-80e8-abf9af6ab78b",
+    "user_id": "<REDACTED_USER_ID>",
+    "tx_ref": "betrix_<REDACTED_MSISDN>_934",
+    "tx_id": "TXN<REDACTED_MSISDN>FDIO6",
+    "status": "initiated",
+    "amount": 300,
+    "currency": "KES",
+    "metadata": {
+      "msisdn": "<REDACTED_MSISDN>",
+      "lipana_response": {
+        "data": {
+          "__v": 0,
+          "_id": "692df06a9a01e7c887f2cbe7",
+          "phone": "<REDACTED_MSISDN>",
+          "amount": 300,
+          "status": "pending",
+          "userId": "<REDACTED_USER_ID>",
+          "createdAt": "2025-12-01T19:45:46.459Z",
+          "reference": "betrix_<REDACTED_MSISDN>_934",
+          "updatedAt": "2025-12-01T19:45:46.459Z",
+          "payoutStatus": "not_initiated",
+          "transactionId": "TXN<REDACTED_MSISDN>FDIO6",
+          "reversalStatus": "not_initiated"
+        },
+        "success": true
+      },
+      "provider_checkout_id": "TXN<REDACTED_MSISDN>FDIO6"
+    },
+    "created_at": "2025-12-01T19:45:45.546Z"
+  },
+  {
+    "id": "a8d575cd-66ea-4133-bb50-9d<REDACTED_MSISDN>7",
+    "user_id": "<REDACTED_USER_ID>",
+    "tx_ref": "betrix_<REDACTED_MSISDN>_873",
+    "tx_id": "TXN<REDACTED_MSISDN>CXE5N2",
+    "status": "initiated",
+    "amount": 300,
+    "currency": "KES",
+    "metadata": {
+      "msisdn": "<REDACTED_MSISDN>",
+      "lipana_response": {
+        "data": {
+          "__v": 0,
+          "_id": "692dedbf9a01e7c887f2aac8",
+          "phone": "<REDACTED_MSISDN>",
+          "amount": 300,
+          "status": "pending",
+          "userId": "<REDACTED_USER_ID>",
+          "createdAt": "2025-12-01T19:34:23.452Z",
+          "reference": "betrix_<REDACTED_MSISDN>_873",
+          "updatedAt": "2025-12-01T19:34:23.452Z",
+          "payoutStatus": "not_initiated",
+          "transactionId": "TXN<REDACTED_MSISDN>CXE5N2",
+          "reversalStatus": "not_initiated"
+        },
+        "success": true
+      },
+      "provider_checkout_id": "TXN<REDACTED_MSISDN>CXE5N2"
+    },
+    "created_at": "2025-12-01T19:34:22.515Z"
+  }
+]

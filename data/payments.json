@@ -1,0 +1,86 @@
+[
+  {
+    "id": "8bf657f8-4626-47d2-b330-a5b15e560ad9",
+    "tx_ref": "tx_1764593347377",
+    "amount": 300,
+    "phone": "254741118999",
+    "provider": "lipana",
+    "status": "success",
+    "created_at": "2025-12-01T12:49:07.377Z",
+    "updated_at": "2025-12-01T13:04:43.381Z",
+    "meta": {
+      "provider": "lipana",
+      "note": "manual simulation"
+    }
+  },
+  {
+    "id": "724de0bb-8b65-46f0-86c5-d4911961edb1",
+    "tx_ref": "tx_1764593313229",
+    "amount": 300,
+    "phone": "254741118999",
+    "provider": "lipana",
+    "status": "pending",
+    "created_at": "2025-12-01T12:48:33.229Z"
+  },
+  {
+    "id": "a2f37c8c-fdbd-423f-808b-c40ec11dfab3",
+    "tx_ref": "tx_1764591156455",
+    "amount": 300,
+    "phone": "254741118999",
+    "provider": "lipana",
+    "status": "success",
+    "created_at": "2025-12-01T12:12:36.455Z",
+    "updated_at": "2025-12-01T12:12:37.442Z",
+    "meta": {
+      "provider": "lipana"
+    }
+  },
+  {
+    "id": "23297035-d3b8-4abc-97eb-c57ae5cff775",
+    "tx_ref": "tx_1764590563130",
+    "amount": 300,
+    "phone": "254741118999",
+    "provider": "lipana",
+    "status": "success",
+    "created_at": "2025-12-01T12:02:43.130Z",
+    "updated_at": "2025-12-01T12:02:43.765Z",
+    "meta": {
+      "provider": "lipana"
+    }
+  },
+  {
+    "id": "8a53c719-63ba-4d78-a2d5-f53b14df0185",
+    "tx_ref": "tx_1764590500833",
+    "amount": 300,
+    "phone": "254741118999",
+    "provider": "lipana",
+    "status": "success",
+    "created_at": "2025-12-01T12:01:40.834Z",
+    "updated_at": "2025-12-01T12:01:41.527Z",
+    "meta": {
+      "provider": "lipana"
+    }
+  },
+  {
+    "id": "2673158c-99d8-4b31-a562-a1a2d9b43021",
+    "tx_ref": "tx_1764590493860",
+    "amount": 300,
+    "phone": "254741118999",
+    "provider": "lipana",
+    "status": "success",
+    "created_at": "2025-12-01T12:01:33.860Z",
+    "updated_at": "2025-12-01T12:01:34.842Z",
+    "meta": {
+      "provider": "lipana"
+    }
+  },
+  {
+    "id": "b07142d4-0cfe-4ac0-b916-18990b70e9f8",
+    "tx_ref": "tx_1764590341958",
+    "amount": 300,
+    "phone": "254741118999",
+    "provider": "lipana",
+    "status": "pending",
+    "created_at": "2025-12-01T11:59:01.958Z"
+  }
+]

@@ -14,6 +14,8 @@
 
 import express from "express";
 import bodyParser from "body-parser";
+import crypto from 'crypto';
+import { Pool } from 'pg';
 import { getRedis } from "./lib/redis-factory.js";
 import Redis from "ioredis";
 import helmet from "helmet";
@@ -48,6 +50,7 @@ import { normalizeMatch, chooseBestMatch } from "./services/normalizer.js";
 import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import DataExposureHandler from "./handlers/data-exposure-handler.js";
+import { SportsAggregator } from "./services/sports-aggregator.js";
 
 dotenv.config();
 
@@ -116,12 +119,22 @@ const server = createServer(app);
 const redis = getRedis();
 const wss = new WebSocketServer({ server });
 
+// Postgres connection via env var (used for generic webhook ingestion)
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
 // Instantiate free-data services
 const openLiga = new OpenLigaDBService();
 const rssAggregator = new RSSAggregator(redis, { ttlSeconds: 60 });
 const footballData = new FootballDataService();
 const scorebat = new ScoreBatService(process.env.SCOREBAT_TOKEN || null);
 const scrapers = new Scrapers(redis);
+
+// Instantiate SportsAggregator for unified data fetching (SportMonks + Football-Data)
+const sportsAggregator = new SportsAggregator(redis, { 
+  scorebat,
+  rss: rssAggregator,
+  openLiga
+});
 
 // ============================================================================
 // LOGGING
@@ -137,7 +150,7 @@ const log = (level, moduleName, message, data = null) => {
   const ts = new Date().toISOString();
   const entry = { ts, level, module: moduleName, message, data, env: NODE_ENV };
   const extra = data ? ` | ${safeJson(data)}` : "";
-  console.log(`[${ts}] [${level}] [${moduleName}] ${message}${extra}`);
+  console.log(`[${ts}] [${level}] [${moduleName}] ${message}${extra} - app.js:153`);
 
   // Best-effort Redis logging
   redis.lpush(LOG_STREAM_KEY, safeJson(entry)).then(() => redis.ltrim(LOG_STREAM_KEY, 0, LOG_KEEP - 1)).catch(() => {});
@@ -235,10 +248,10 @@ try {
     let payload = message;
     try { payload = JSON.parse(message); } catch (e) { /* keep raw */ }
     log('INFO', 'PREFETCH', `pubsub:${channel}`, { payload });
-    try { broadcastToAdmins({ type: channel, data: payload }); } catch (e) { console.error('broadcast prefetch failed', e); }
+    try { broadcastToAdmins({ type: channel, data: payload }); } catch (e) { console.error('broadcast prefetch failed - app.js:251', e); }
   });
 } catch (e) {
-  console.error('prefetch subscriber failed to start', e);
+  console.error('prefetch subscriber failed to start - app.js:254', e);
 }
 
 // ============================================================================
@@ -1026,6 +1039,51 @@ app.post(
   }
 );
 
+// Simple health check for Render / uptime probes
+app.get('/health', (_req, res) => res.status(200).send('OK'));
+
+// Lipana / M-Pesa generic webhook receiver (HMAC-SHA256 signature in x-lipana-signature)
+function verifySignature(req) {
+  const signature = req.headers['x-lipana-signature'] || req.headers['x-lipana-signature'.toLowerCase()];
+  // Use the raw body buffer captured by the express.json verify hook.
+  const raw = req.rawBody || (req.body ? Buffer.from(JSON.stringify(req.body), 'utf8') : Buffer.from(''));
+  if (!process.env.LIPANA_SECRET) return false;
+  const expected = crypto.createHmac('sha256', process.env.LIPANA_SECRET).update(raw).digest('hex');
+  // Log both values to help debugging signature mismatches
+  try { console.log('Received signature: - app.js:1053', signature); } catch (e) {}
+  try { console.log('Computed signature: - app.js:1054', expected); } catch (e) {}
+  return signature === expected;
+}
+
+// Capture raw body buffer for HMAC verification (use Buffer, not string)
+app.post('/webhook/mpesa', express.json({ limit: '1mb', verify: (req, res, buf, encoding) => { req.rawBody = buf; } }), async (req, res) => {
+  if (!verifySignature(req)) {
+    log('WARN', 'WEBHOOK', 'Invalid Lipana signature', { ip: req.ip });
+    return res.status(401).send('Unauthorized');
+  }
+  try {
+    log('INFO', 'WEBHOOK', 'Webhook received', { body: req.body });
+    // insert into webhooks table (raw_payload stored as jsonb)
+    const q = `INSERT INTO webhooks(event, transaction_id, amount, phone, reference, message, timestamp, raw_payload, created_at)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8::jsonb, now())`;
+    const vals = [
+      req.body.event || null,
+      req.body.transaction_id || req.body.transactionId || null,
+      req.body.amount || null,
+      req.body.phone || req.body.msisdn || null,
+      req.body.reference || req.body.tx_ref || null,
+      req.body.message || null,
+      req.body.timestamp || new Date().toISOString(),
+      JSON.stringify(req.body)
+    ];
+    await pool.query(q, vals);
+    return res.status(200).send('OK');
+  } catch (err) {
+    log('ERROR', 'WEBHOOK', 'DB insert error', { err: err?.message || String(err) });
+    return res.status(500).send('DB Error');
+  }
+});
+
 // Manual verify (user clicked "I have paid") - orderId in URL
 app.post(
   "/webhook/payment/manual/:orderId",
@@ -1157,5 +1215,6 @@ export function registerDataExposureAPI(sportsAggregator) {
 
 // Export core app pieces and initialized data services for other modules
 export { app, server, redis, wss, openLiga, rssAggregator, footballData, scorebat, scrapers };
+export { sportsAggregator };
 
 

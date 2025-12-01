@@ -1,0 +1,95 @@
+[
+  {
+    "id": "3dac93de-fa47-4257-9756-47c872daa071",
+    "user_id": "123456",
+    "tx_ref": "betrix_1764619038575_444",
+    "tx_id": "TXN1764619053649T0HUJL",
+    "status": "initiated",
+    "amount": 300,
+    "currency": "KES",
+    "metadata": {
+      "msisdn": "254741118999",
+      "lipana_response": {
+        "data": {
+          "__v": 0,
+          "_id": "692df32d9a01e7c887f2f43b",
+          "phone": "254741118999",
+          "amount": 300,
+          "status": "pending",
+          "userId": "692d555a9a01e7c887f04d99",
+          "createdAt": "2025-12-01T19:57:33.651Z",
+          "reference": "betrix_1764619038575_444",
+          "updatedAt": "2025-12-01T19:57:33.651Z",
+          "payoutStatus": "not_initiated",
+          "transactionId": "TXN1764619053649T0HUJL",
+          "reversalStatus": "not_initiated"
+        },
+        "success": true
+      },
+      "provider_checkout_id": "TXN1764619053649T0HUJL"
+    },
+    "created_at": "2025-12-01T19:57:22.938Z"
+  },
+  {
+    "id": "ab343989-b812-40d9-80e8-abf9af6ab78b",
+    "user_id": "123456",
+    "tx_ref": "betrix_1764618341771_934",
+    "tx_id": "TXN17646183464575FDIO6",
+    "status": "initiated",
+    "amount": 300,
+    "currency": "KES",
+    "metadata": {
+      "msisdn": "254720798611",
+      "lipana_response": {
+        "data": {
+          "__v": 0,
+          "_id": "692df06a9a01e7c887f2cbe7",
+          "phone": "254720798611",
+          "amount": 300,
+          "status": "pending",
+          "userId": "692d555a9a01e7c887f04d99",
+          "createdAt": "2025-12-01T19:45:46.459Z",
+          "reference": "betrix_1764618341771_934",
+          "updatedAt": "2025-12-01T19:45:46.459Z",
+          "payoutStatus": "not_initiated",
+          "transactionId": "TXN17646183464575FDIO6",
+          "reversalStatus": "not_initiated"
+        },
+        "success": true
+      },
+      "provider_checkout_id": "TXN17646183464575FDIO6"
+    },
+    "created_at": "2025-12-01T19:45:45.546Z"
+  },
+  {
+    "id": "a8d575cd-66ea-4133-bb50-9d7408172537",
+    "user_id": "123456",
+    "tx_ref": "betrix_1764617658548_873",
+    "tx_id": "TXN1764617663450CXE5N2",
+    "status": "initiated",
+    "amount": 300,
+    "currency": "KES",
+    "metadata": {
+      "msisdn": "254720798611",
+      "lipana_response": {
+        "data": {
+          "__v": 0,
+          "_id": "692dedbf9a01e7c887f2aac8",
+          "phone": "254720798611",
+          "amount": 300,
+          "status": "pending",
+          "userId": "692d555a9a01e7c887f04d99",
+          "createdAt": "2025-12-01T19:34:23.452Z",
+          "reference": "betrix_1764617658548_873",
+          "updatedAt": "2025-12-01T19:34:23.452Z",
+          "payoutStatus": "not_initiated",
+          "transactionId": "TXN1764617663450CXE5N2",
+          "reversalStatus": "not_initiated"
+        },
+        "success": true
+      },
+      "provider_checkout_id": "TXN1764617663450CXE5N2"
+    },
+    "created_at": "2025-12-01T19:34:22.515Z"
+  }
+]
