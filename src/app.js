@@ -1094,10 +1094,8 @@ function verifySignature(req) {
   for (const k of headerKeys) {
     if (req.headers[k]) { signature = String(req.headers[k]); break; }
   }
-  if (!signature) return false;
-
-  // Normalize and strip optional prefix like `sha256=`
-  signature = signature.trim();
+  // Normalize header value if present (but continue so we can log even when missing)
+  signature = signature ? signature.trim() : '';
   if (signature.toLowerCase().startsWith('sha256=')) signature = signature.slice(7).trim();
 
   // Raw bytes from the global JSON parser verify hook
@@ -1111,14 +1109,14 @@ function verifySignature(req) {
   try {
     const fingerprint = crypto.createHash('sha256').update(lipanaSecret).digest('hex').substring(0,8);
     const incomingPreview = signature ? `${String(signature).slice(0,64)}...len:${String(signature).length}` : '(empty)';
-    console.log('[verifySignature] LIPANA_SECRET fingerprint(first8)= - app.js:1099', fingerprint);
-    console.log('[verifySignature] Incoming signature(header)= - app.js:1100', incomingPreview);
+    console.log('[verifySignature] LIPANA_SECRET fingerprint(first8)= - app.js:1114', fingerprint);
+    console.log('[verifySignature] Incoming signature(header)= - app.js:1115', incomingPreview);
   } catch (e) {
     // ignore logging errors
   }
 
   if (!lipanaSecret) {
-    try { console.log('[verifySignature] LIPANA_SECRET is missing or empty - app.js:1106'); } catch (e) {}
+    try { console.log('[verifySignature] LIPANA_SECRET is missing or empty - app.js:1121'); } catch (e) {}
     return false;
   }
 
@@ -1127,8 +1125,8 @@ function verifySignature(req) {
 
   // Log computed signatures (masked) for easier comparison
   try {
-    console.log('[verifySignature] Computed expectedHex(first16)= - app.js:1112', expectedHex.slice(0,16), '...');
-    console.log('[verifySignature] Computed expectedBase64(first16)= - app.js:1113', expectedBase64.slice(0,16), '...');
+    console.log('[verifySignature] Computed expectedHex(first16)= - app.js:1130', expectedHex.slice(0,16), '...');
+    console.log('[verifySignature] Computed expectedBase64(first16)= - app.js:1131', expectedBase64.slice(0,16), '...');
   } catch (e) {}
 
   const safeCompare = (aBuf, bBuf) => {
