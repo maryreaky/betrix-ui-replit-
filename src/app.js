@@ -1109,14 +1109,29 @@ function verifySignature(req) {
   try {
     const fingerprint = crypto.createHash('sha256').update(lipanaSecret).digest('hex').substring(0,8);
     const incomingPreview = signature ? `${String(signature).slice(0,64)}...len:${String(signature).length}` : '(empty)';
-    console.log('[verifySignature] LIPANA_SECRET fingerprint(first8)= - app.js:1114', fingerprint);
-    console.log('[verifySignature] Incoming signature(header)= - app.js:1115', incomingPreview);
+    console.log('[verifySignature] LIPANA_SECRET fingerprint(first8)= - app.js:1112', fingerprint);
+    console.log('[verifySignature] Incoming signature(header)= - app.js:1113', incomingPreview);
+  } catch (e) {
+    // ignore logging errors
+  }
+
+  // Log raw body preview and headers to help identify byte-level differences
+  try {
+    const ct = req.headers['content-type'] || '(none)';
+    const cl = req.headers['content-length'] || (raw && raw.length) || '(unknown)';
+    const rawPreview = raw && raw.slice(0, 1024) ? raw.slice(0, 1024).toString('utf8') : '(empty)';
+    const rawHex = raw && raw.slice(0, 64) ? raw.slice(0, 64).toString('hex') : '';
+    const parsedPreview = req.body ? JSON.stringify(req.body).slice(0,1024) : '(no parsed body)';
+    console.log('[verifySignature] content-type=', ct, 'content-length=', cl);
+    console.log('[verifySignature] rawPreview(utf8,first1k)= - app.js:1106', rawPreview);
+    console.log('[verifySignature] rawPreview(hex,first64bytes)= - app.js:1107', rawHex);
+    console.log('[verifySignature] parsed(JSON.stringify) preview= - app.js:1108', parsedPreview);
   } catch (e) {
     // ignore logging errors
   }
 
   if (!lipanaSecret) {
-    try { console.log('[verifySignature] LIPANA_SECRET is missing or empty - app.js:1121'); } catch (e) {}
+    try { console.log('[verifySignature] LIPANA_SECRET is missing or empty - app.js:1119'); } catch (e) {}
     return false;
   }
 
@@ -1125,8 +1140,8 @@ function verifySignature(req) {
 
   // Log computed signatures (masked) for easier comparison
   try {
-    console.log('[verifySignature] Computed expectedHex(first16)= - app.js:1130', expectedHex.slice(0,16), '...');
-    console.log('[verifySignature] Computed expectedBase64(first16)= - app.js:1131', expectedBase64.slice(0,16), '...');
+    console.log('[verifySignature] Computed expectedHex(first16)= - app.js:1128', expectedHex.slice(0,16), '...');
+    console.log('[verifySignature] Computed expectedBase64(first16)= - app.js:1129', expectedBase64.slice(0,16), '...');
   } catch (e) {}
 
   const safeCompare = (aBuf, bBuf) => {
