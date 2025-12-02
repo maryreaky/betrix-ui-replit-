@@ -1,6 +1,4 @@
-﻿/**
- 
-import express from "express";
+﻿import express from "express";
 import bodyParser from "body-parser";
 import crypto from 'crypto';
 import { Pool } from 'pg';
@@ -387,7 +385,9 @@ app.use('/webhook', (req, _res, next) => {
       preview[k] = v ? `${v.slice(0,8)}...len:${v.length}` : '(empty)';
     });
     console.log('[WEBHOOKDEBUG] path= - app.js:393', req.path, 'headerPreview=', preview);
-  } catch (e) { /* ignore logging errors */ }
+  } catch (e) {
+    // ignore logging errors
+  }
   return next();
 });
 
@@ -1098,8 +1098,16 @@ function verifySignature(req) {
   const expectedBase64 = crypto.createHmac('sha256', process.env.LIPANA_SECRET).update(raw).digest('base64');
 
   // Masked logging for debugging (do not log secrets)
-  try { console.log('[verifySignature] received(masked)= - app.js:1105', `${signature.slice(0,8)}...len:${signature.length}`); } catch (e) {}
-  try { console.log('[verifySignature] expectedHex(first8)= - app.js:1106', expectedHex.slice(0,8)); } catch (e) {}
+  try {
+    console.log('[verifySignature] received(masked)= - app.js:1105', `${signature.slice(0,8)}...len:${signature.length}`);
+  } catch (e) {
+    // ignore logging errors
+  }
+  try {
+    console.log('[verifySignature] expectedHex(first8)= - app.js:1106', expectedHex.slice(0,8));
+  } catch (e) {
+    // ignore logging errors
+  }
 
   const safeCompare = (aBuf, bBuf) => {
     try { if (!Buffer.isBuffer(aBuf) || !Buffer.isBuffer(bBuf)) return false; if (aBuf.length !== bBuf.length) return false; return crypto.timingSafeEqual(aBuf, bBuf); } catch (e) { return false; }
@@ -1110,14 +1118,18 @@ function verifySignature(req) {
     const sigHexBuf = Buffer.from(signature, 'hex');
     const expectedHexBuf = Buffer.from(expectedHex, 'hex');
     if (safeCompare(sigHexBuf, expectedHexBuf)) return true;
-  } catch (e) { /* not hex */ }
+  } catch (e) {
+    // not hex
+  }
 
   // Try base64 comparison
   try {
     const sigB64Buf = Buffer.from(signature, 'base64');
     const expectedB64Buf = Buffer.from(expectedBase64, 'base64');
     if (safeCompare(sigB64Buf, expectedB64Buf)) return true;
-  } catch (e) { /* not base64 */ }
+  } catch (e) {
+    // not base64
+  }
 
   return false;
 }
