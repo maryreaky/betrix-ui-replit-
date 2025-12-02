@@ -154,7 +154,7 @@ const log = (level, moduleName, message, data = null) => {
   const ts = new Date().toISOString();
   const entry = { ts, level, module: moduleName, message, data, env: NODE_ENV };
   const extra = data ? ` | ${safeJson(data)}` : "";
-  console.log(`[${ts}] [${level}] [${moduleName}] ${message}${extra} - app.js:171`);
+  console.log(`[${ts}] [${level}] [${moduleName}] ${message}${extra} - app.js:157`);
 
   // Best-effort Redis logging
   redis.lpush(LOG_STREAM_KEY, safeJson(entry)).then(() => redis.ltrim(LOG_STREAM_KEY, 0, LOG_KEEP - 1)).catch(() => {});
@@ -259,11 +259,11 @@ try {
     try {
       broadcastToAdmins({ type: channel, data: payload });
     } catch (e) {
-      console.error('broadcast prefetch failed - app.js:269', e);
+      console.error('broadcast prefetch failed - app.js:262', e);
     }
   });
 } catch (e) {
-  console.error('prefetch subscriber failed to start - app.js:272', e);
+  console.error('prefetch subscriber failed to start - app.js:266', e);
 }
 
 // ============================================================================
@@ -384,7 +384,7 @@ app.use('/webhook', (req, _res, next) => {
       // Mask the value but show prefix for debugging (first 8 chars)
       preview[k] = v ? `${v.slice(0,8)}...len:${v.length}` : '(empty)';
     });
-    console.log('[WEBHOOKDEBUG] path= - app.js:393', req.path, 'headerPreview=', preview);
+    console.log('[WEBHOOKDEBUG] path= - app.js:387', req.path, 'headerPreview=', preview);
   } catch (e) {
     // ignore logging errors
   }
@@ -777,6 +777,14 @@ app.get("/admin/provider-health", async (req, res) => {
     for (const key of keys) {
       try {
         const val = await redis.get(key).catch(() => null);
+
+    // Log a short fingerprint of the configured secret (does not reveal the secret)
+    try {
+      const secretFingerprint = process.env.LIPANA_SECRET ? crypto.createHash('sha256').update(String(process.env.LIPANA_SECRET)).digest('hex').slice(0,8) : '(no-secret)';
+      console.log('[verifySignature] LIPANA_SECRET fingerprint(first8)= - app.js:1114', secretFingerprint);
+    } catch (e) {
+      // ignore logging errors
+    }
         if (val) {
           const parsed = JSON.parse(val);
           const provider = key.replace(prefix, '');
@@ -1099,12 +1107,12 @@ function verifySignature(req) {
 
   // Masked logging for debugging (do not log secrets)
   try {
-    console.log('[verifySignature] received(masked)= - app.js:1105', `${signature.slice(0,8)}...len:${signature.length}`);
+    console.log('[verifySignature] received(masked)= - app.js:1102', `${signature.slice(0,8)}...len:${signature.length}`);
   } catch (e) {
     // ignore logging errors
   }
   try {
-    console.log('[verifySignature] expectedHex(first8)= - app.js:1106', expectedHex.slice(0,8));
+    console.log('[verifySignature] expectedHex(first8)= - app.js:1107', expectedHex.slice(0,8));
   } catch (e) {
     // ignore logging errors
   }
