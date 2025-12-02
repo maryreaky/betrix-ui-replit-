@@ -1106,21 +1106,30 @@ function verifySignature(req) {
   // Use a trimmed secret to avoid accidental whitespace/newline mismatches
   const _rawSecret = process.env.LIPANA_SECRET ? String(process.env.LIPANA_SECRET) : '';
   const lipanaSecret = _rawSecret.trim();
-  if (!lipanaSecret) return false;
+
+  // Unconditional fingerprint + incoming signature logging to help debug Render env
+  try {
+    const fingerprint = crypto.createHash('sha256').update(lipanaSecret).digest('hex').substring(0,8);
+    const incomingPreview = signature ? `${String(signature).slice(0,64)}...len:${String(signature).length}` : '(empty)';
+    console.log('[verifySignature] LIPANA_SECRET fingerprint(first8)= - app.js:1099', fingerprint);
+    console.log('[verifySignature] Incoming signature(header)= - app.js:1100', incomingPreview);
+  } catch (e) {
+    // ignore logging errors
+  }
+
+  if (!lipanaSecret) {
+    try { console.log('[verifySignature] LIPANA_SECRET is missing or empty - app.js:1106'); } catch (e) {}
+    return false;
+  }
 
   const expectedHex = crypto.createHmac('sha256', lipanaSecret).update(raw).digest('hex');
   const expectedBase64 = crypto.createHmac('sha256', lipanaSecret).update(raw).digest('base64');
 
-  // Additional explicit debug logging requested: print fingerprint and both signatures
+  // Log computed signatures (masked) for easier comparison
   try {
-    const fingerprint = crypto.createHash('sha256').update(lipanaSecret).digest('hex').substring(0,8);
-    console.log('[verifySignature] LIPANA_SECRET fingerprint(first8)= - app.js:1116', fingerprint);
-    console.log('[verifySignature] Incoming signature(header)= - app.js:1117', signature);
-    console.log('[verifySignature] Computed expectedHex(first16)= - app.js:1118', expectedHex.slice(0,16), '...');
-    console.log('[verifySignature] Computed expectedBase64(first16)= - app.js:1119', expectedBase64.slice(0,16), '...');
-  } catch (e) {
-    // ignore logging errors
-  }
+    console.log('[verifySignature] Computed expectedHex(first16)= - app.js:1112', expectedHex.slice(0,16), '...');
+    console.log('[verifySignature] Computed expectedBase64(first16)= - app.js:1113', expectedBase64.slice(0,16), '...');
+  } catch (e) {}
 
   const safeCompare = (aBuf, bBuf) => {
     try { if (!Buffer.isBuffer(aBuf) || !Buffer.isBuffer(bBuf)) return false; if (aBuf.length !== bBuf.length) return false; return crypto.timingSafeEqual(aBuf, bBuf); } catch (e) { return false; }
