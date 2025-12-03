@@ -780,7 +780,7 @@ app.get("/admin/provider-health", async (req, res) => {
 
     // Log a short fingerprint of the configured secret (does not reveal the secret)
     try {
-      const _rawSecret = process.env.LIPANA_SECRET ? String(process.env.LIPANA_SECRET) : '';
+      const _rawSecret = process.env.LIPANA_WEBHOOK_SECRET ? String(process.env.LIPANA_WEBHOOK_SECRET) : '';
       const trimmedSecret = _rawSecret.trim();
       const secretFingerprint = trimmedSecret ? crypto.createHash('sha256').update(trimmedSecret).digest('hex').slice(0,8) : '(no-secret)';
       console.log('[verifySignature] LIPANA_SECRET fingerprint(first8)= - app.js:786', secretFingerprint);
@@ -1102,7 +1102,7 @@ function verifySignature(req) {
   const raw = req.rawBody || (req.body ? Buffer.from(JSON.stringify(req.body), 'utf8') : Buffer.from(''));
 
   // Use a trimmed secret to avoid accidental whitespace/newline mismatches
-  const _rawSecret = process.env.LIPANA_SECRET ? String(process.env.LIPANA_SECRET) : '';
+  const _rawSecret = process.env.LIPANA_WEBHOOK_SECRET ? String(process.env.LIPANA_WEBHOOK_SECRET) : '';
   const lipanaSecret = _rawSecret.trim();
 
   // Unconditional fingerprint + incoming signature logging to help debug Render env
