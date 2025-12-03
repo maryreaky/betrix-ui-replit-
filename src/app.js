@@ -218,7 +218,7 @@ const handleWebSocketMessage = (ws, data, clientId) => {
     case "unsubscribe": {
       const channels = Array.isArray(data.channels) ? data.channels : [data.channels].filter(Boolean);
       const subs = clientSubscriptions.get(ws) || new Set();
-      channels.forEach(c => subs.delete(c);
+      channels.forEach(c => subs.delete(c));
       clientSubscriptions.set(ws, new Set());
       log("INFO", "WEBSOCKET", "Unsubscribed", { clientId, channels });
       safeSend(ws, { type: "unsubscribed", channels });
