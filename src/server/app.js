@@ -26,34 +26,34 @@ function tryRequireCandidates() {
       if (fs.existsSync(c)) {
         const mod = require(c);
         if (mod && typeof mod.createServer === 'function') {
-          return { mod, path: c, mode: 'createServer' };
-        };
+          return { mod, path: c, mode: 'createServer' }
+        }
         if (typeof mod === 'function') {
-          return { mod: { createServer: mod }, path: c, mode: 'function' };
-        };
+          return { mod: { createServer: mod }, path: c, mode: 'function' }
+        }
         if (mod && mod.default && typeof mod.default === 'function') {
-          return { mod: { createServer: mod.default }, path: c, mode: 'default-fn' };
-        };
+          return { mod: { createServer: mod.default }, path: c, mode: 'default-fn' }
+        }
         if (mod && mod.server && typeof mod.server.createServer === 'function') {
-          return { mod: { createServer: mod.server.createServer }, path: c, mode: 'server.createServer' };
-        };
-      };
+          return { mod: { createServer: mod.server.createServer }, path: c, mode: 'server.createServer' }
+        }
+      }
     } catch (e) {
       // ignore individual candidate require errors; continue trying others
       // but we won't crash the bootstrap on require errors here
-    };
-  };
+    }
+  }
   return null;
-};
+}
 
 // Minimal fallback createServer for safety: returns an http.Server that responds 200 OK to any request
 function fallbackCreateServer() {
   const http = require('http');
   return http.createServer((req, res) => {
-    res.writeHead(200, { 'Content-Type': 'text/plain' };
+    res.writeHead(200, { 'Content-Type': 'text/plain' }
     res.end('OK');
-};
-};
+}
+}
 
 let exported;
 try {
@@ -64,14 +64,14 @@ try {
     console.log('BOOT-INFO: re-exporting createServer from', found.path);
   } else {
     // nothing found: export fallback but also log guidance
-    exported = { createServer: fallbackCreateServer };
+    exported = { createServer: fallbackCreateServer }
     // eslint-disable-next-line no-console
     console.warn('BOOT-WARN: no createServer implementation found in candidates; exporting minimal fallback createServer for safe boot.');
-  };
+  }
 } catch (err) {
-  exported = { createServer: fallbackCreateServer };
+  exported = { createServer: fallbackCreateServer }
   // eslint-disable-next-line no-console
   console.error('BOOT-ERROR: unexpected error while locating server implementation:', err && err.message);
-};
+}
 
 module.exports = exported;
