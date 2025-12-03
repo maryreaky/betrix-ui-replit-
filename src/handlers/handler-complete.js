@@ -6,6 +6,8 @@
 
 import { Logger } from '../utils/logger.js';
 import * as completeMenus from './menu-handler-complete.js';
+import { createCustomPaymentOrder } from './payment-router.js';
+import lipana from '../lib/lipana-client.js';
 import SportMonksService from '../services/sportmonks-service.js';
 
 const logger = new Logger('HandlerComplete');
@@ -563,6 +565,69 @@ export async function handleCallbackQuery(cq, redis, services) {
     // Payment confirmation
     if (data.startsWith('pay_confirm:')) {
       const method = data.split(':')[1];
+
+      // Only handle MPESA/STK confirmation here; other methods are no-ops
+      if (method === 'mpesa' || method === 'mpesa_stk' || method === 'lipana') {
+        try {
+          const userId = cq.from && cq.from.id ? cq.from.id : null;
+          const chatId = cq.message && cq.message.chat && cq.message.chat.id ? cq.message.chat.id : null;
+
+          // Attempt to read stored user profile for phone number
+          let profile = {};
+          try { profile = await redis.hgetall(`user:${userId}:profile`) || {}; } catch (e) { profile = {}; }
+          const msisdn = profile && (profile.msisdn || profile.phone || profile.msisdn) ? (profile.msisdn || profile.phone) : null;
+
+          if (!msisdn) {
+            return {
+              method: 'answerCallbackQuery',
+              callback_query_id: cq.id,
+              text: '📱 Please send your phone number first (e.g. 2547XXXXXXXX) so we can initiate the STK push.',
+              show_alert: true
+            };
+          }
+
+          const amount = 300; // default amount for quick-deposit flow
+
+          // Create a short-lived payment order (custom amount)
+          const order = await createCustomPaymentOrder(redis, userId, amount, 'MPESA');
+
+          // Try to trigger Lipana STK push (best-effort)
+          let providerCheckout = null;
+          try {
+            const callback = process.env.LIPANA_CALLBACK_URL || process.env.MPESA_CALLBACK_URL || process.env.MPESA_CALLBACK_URL || null;
+            const resp = await lipana.stkPush({ amount, phone: msisdn, tx_ref: order.orderId, reference: order.orderId, callback_url: callback });
+            providerCheckout = resp?.raw?.data?.transactionId || resp?.raw?.data?._id || null;
+            if (providerCheckout) {
+              // Store quick lookup mapping so webhook can resolve provider ref -> orderId
+              try { await redis.setex(`payment:by_provider_ref:MPESA:${providerCheckout}`, 900, order.orderId); } catch (e) { /* ignore */ }
+            }
+          } catch (e) {
+            logger.warn('Lipana STK push failed', e?.message || String(e));
+          }
+
+          // Reply to user indicating initiation
+          const txRef = order.orderId;
+          const replyText = `✅ STK push initiated for KES ${amount}.\nPlease check your phone and enter your M-Pesa PIN.\nTransaction ID: ${txRef}` + (providerCheckout ? `\nProvider checkout: ${providerCheckout}` : '');
+
+          return {
+            method: 'editMessageText',
+            chat_id: chatId,
+            message_id: cq.message.message_id,
+            text: replyText,
+            reply_markup: { inline_keyboard: [[{ text: '🔁 Retry payment', callback_data: 'pay:retry' }, { text: '❌ Cancel payment', callback_data: 'pay:cancel' }]] },
+            parse_mode: 'Markdown'
+          };
+        } catch (err) {
+          logger.warn('pay_confirm:mpesa handler failed', err?.message || String(err));
+          return {
+            method: 'answerCallbackQuery',
+            callback_query_id: cq.id,
+            text: '❌ Failed to initiate payment. Please try again later.',
+            show_alert: true
+          };
+        }
+      }
+
       return {
         method: 'answerCallbackQuery',
         callback_query_id: cq.id,

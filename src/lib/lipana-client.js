@@ -29,4 +29,20 @@ async function stkPush({ amount, phone, reference, tx_ref, callback_url }) {
   return { status: resp.status, raw: parsed || null };
 }
 
-export default { stkPush };
+async function getTransaction(transactionId) {
+  if (!LIPANA_PUBLISHABLE) throw new Error('LIPANA_API_KEY (publishable) not set');
+  const url = `${LIPANA_BASE}/v1/transactions/${encodeURIComponent(String(transactionId))}`;
+  const resp = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': LIPANA_PUBLISHABLE
+    },
+    timeout: 15000
+  });
+  let parsed = null;
+  try { parsed = await resp.json(); } catch (e) { /* ignore */ }
+  return { status: resp.status, raw: parsed || null };
+}
+
+export default { stkPush, getTransaction };

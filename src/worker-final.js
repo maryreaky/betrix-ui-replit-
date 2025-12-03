@@ -47,6 +47,8 @@ import completeHandler from "./handlers/handler-complete.js";
 import SportMonksAPI from "./services/sportmonks-api.js";
 import SportsDataAPI from "./services/sportsdata-api.js";
 import { registerDataExposureAPI } from "./app.js";
+import { Pool } from 'pg';
+import { reconcileWithLipana } from './tasks/reconcile-lipana.js';
 
 // ===== PREMIUM ENHANCEMENT MODULES =====
 import premiumUI from "./utils/premium-ui-builder.js";
@@ -95,6 +97,25 @@ if (redis && typeof redis.on === 'function') {
   try { redis.on('error', (err) => logger.error('Redis error', err)); } catch(e){}
 }
 
+// Initialize Postgres pool (optional) — fall back gracefully if DATABASE_URL not set or connection fails
+let pgPool;
+try {
+  const connStr = process.env.DATABASE_URL || (CONFIG && CONFIG.DATABASE_URL) || null;
+  if (connStr) {
+    pgPool = new Pool({ connectionString: connStr });
+    // quick connectivity smoke-test
+    await pgPool.query('SELECT 1');
+    logger.info('✅ Postgres pool initialized');
+  } else {
+    logger.warn('⚠️ DATABASE_URL not set — Postgres pool will not be initialized');
+    pgPool = null;
+  }
+} catch (err) {
+  logger.warn('⚠️ Postgres pool initialization failed — continuing without DB', err?.message || String(err));
+  try { if (pgPool && typeof pgPool.end === 'function') await pgPool.end(); } catch(e){}
+  pgPool = null;
+}
+
 // small sleep helper used in the main loop
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -111,6 +132,27 @@ setInterval(async () => {
 // Initialize all services
 const telegram = new TelegramService(CONFIG.TELEGRAM_TOKEN, CONFIG.TELEGRAM.SAFE_CHUNK);
 const userService = new UserService(redis);
+// Periodic Lipana reconciliation (runs only if Postgres pool is available)
+if (pgPool) {
+  const minutes = Number(process.env.RECONCILE_INTERVAL_MINUTES || 10);
+  const intervalMs = Math.max(1, minutes) * 60 * 1000;
+  setInterval(async () => {
+    try {
+      logger.info('Running scheduled Lipana reconciliation');
+      await reconcileWithLipana({
+        pool: pgPool,
+        telegram,
+        redis,
+        thresholdMinutes: Number(process.env.RECONCILE_THRESHOLD_MINUTES || 15),
+        limit: Number(process.env.RECONCILE_LIMIT || 200),
+        adminId: process.env.ADMIN_TELEGRAM_ID || (CONFIG && CONFIG.ADMIN_TELEGRAM_ID) || null,
+      });
+      logger.info('Scheduled Lipana reconciliation complete');
+    } catch (err) {
+      logger.error('Scheduled Lipana reconciliation failed', err?.message || String(err));
+    }
+  }, intervalMs);
+}
 // Do not instantiate API-Football service — set to null so handlers fall back to SportMonks/Football-Data
 const apiFootball = null;
 const gemini = new GeminiService(CONFIG.GEMINI.API_KEY);
