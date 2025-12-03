@@ -70,7 +70,7 @@ app.get("/admin/webhook-fallback", (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-app.listen(10000);
+app.listen(PORT, () => { console.log(`Server running on port ${PORT}`); });
 
 export default app;
 
