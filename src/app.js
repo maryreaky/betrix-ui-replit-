@@ -209,7 +209,7 @@ const handleWebSocketMessage = (ws, data, clientId) => {
     case "subscribe": {
       const channels = Array.isArray(data.channels) ? data.channels : [data.channels].filter(Boolean);
       const subs = clientSubscriptions.get(ws) || new Set();
-      channels.forEach(c => subs.add(c);
+      channels.forEach(c => subs.add(c));
       clientSubscriptions.set(ws, new Set());
       log("INFO", "WEBSOCKET", "Subscribed", { clientId, channels });
       safeSend(ws, { type: "subscribed", channels, ts: Date.now() });
