@@ -124,7 +124,7 @@ const redis = getRedis();
 const wss = new WebSocketServer({ server });
 
 // Postgres connection via env var (used for generic webhook ingestion)
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }));
+const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
 
 // Instantiate free-data services
 const openLiga = new OpenLigaDBService();
@@ -168,7 +168,7 @@ const activeConnections = new Set();
 const clientSubscriptions = new Map();
 
 const safeSend = (ws, payload) => {
-  try { if (ws && ws.readyState === 1) ws.send(JSON.stringify(payload)); } catch {}
+  try { if (ws && ws.readyState === 1) ws.send(JSON.stringify(payload); } catch {}
 };
 
 const broadcastToAdmins = message => {
@@ -179,14 +179,14 @@ const broadcastToAdmins = message => {
 wss.on("connection", (ws, req) => {
   const clientId = Math.random().toString(36).slice(2, 11);
   activeConnections.add(ws);
-  clientSubscriptions.set(ws, new Set());
+  clientSubscriptions.set(ws, new Set();
   log("INFO", "WEBSOCKET", "Client connected", { clientId, ip: req.headers["x-forwarded-for"] || req.socket.remoteAddress, total: activeConnections.size });
 
   safeSend(ws, { type: "welcome", data: { brand: BETRIX.name, version: BETRIX.version, clientId, ts: new Date().toISOString() } });
 
   ws.on("message", raw => {
     try {
-      const data = JSON.parse(String(raw));
+      const data = JSON.parse(String(raw);
       handleWebSocketMessage(ws, data, clientId);
     } catch (err) {
       log("ERROR", "WEBSOCKET", "Invalid WS message", { clientId, err: err.message });
@@ -200,7 +200,7 @@ wss.on("connection", (ws, req) => {
     log("INFO", "WEBSOCKET", "Client disconnected", { clientId, remaining: activeConnections.size });
   });
 
-  ws.on("error", err => log("ERROR", "WEBSOCKET", "WS error", { clientId, err: err.message }));
+  ws.on("error", err => log("ERROR", "WEBSOCKET", "WS error", { clientId, err: err.message });
 });
 
 const handleWebSocketMessage = (ws, data, clientId) => {
@@ -209,7 +209,7 @@ const handleWebSocketMessage = (ws, data, clientId) => {
     case "subscribe": {
       const channels = Array.isArray(data.channels) ? data.channels : [data.channels].filter(Boolean);
       const subs = clientSubscriptions.get(ws) || new Set();
-      channels.forEach(c => subs.add(c));
+      channels.forEach(c => subs.add(c);
       clientSubscriptions.set(ws, subs);
       log("INFO", "WEBSOCKET", "Subscribed", { clientId, channels });
       safeSend(ws, { type: "subscribed", channels, ts: Date.now() });
@@ -218,7 +218,7 @@ const handleWebSocketMessage = (ws, data, clientId) => {
     case "unsubscribe": {
       const channels = Array.isArray(data.channels) ? data.channels : [data.channels].filter(Boolean);
       const subs = clientSubscriptions.get(ws) || new Set();
-      channels.forEach(c => subs.delete(c));
+      channels.forEach(c => subs.delete(c);
       clientSubscriptions.set(ws, subs);
       log("INFO", "WEBSOCKET", "Unsubscribed", { clientId, channels });
       safeSend(ws, { type: "unsubscribed", channels });
@@ -280,24 +280,24 @@ app.use(helmet({
     }
   },
   hsts: { maxAge: 31536000, includeSubDomains: true, preload: true }
-}));
+});
 
 app.use(cors({
   origin: ALLOWED_ORIGINS === "*" ? "*" : ALLOWED_ORIGINS.split(",").map(s => s.trim()),
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   credentials: true,
   optionsSuccessStatus: 200
-}));
+});
 
-app.use(compression());
-app.use(morgan(isProd ? "combined" : "dev"));
+app.use(compression();
+app.use(morgan(isProd ? "combined" : "dev");
 // Capture raw bytes for HMAC verification at the global JSON parser level.
 // This ensures `req.rawBody` is available even if body parsing happens earlier.
-app.use(bodyParser.json({ limit: "50mb", verify: (req, _res, buf) => { req.rawBody = buf; } }));
-app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
+app.use(bodyParser.json({ limit: "50mb", verify: (req, _res, buf) => { req.rawBody = buf; } });
+app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" });
 
-app.use(express.static(path.join(__dirname, "public")));
-app.use("/assets", express.static(path.join(__dirname, "assets")));
+app.use(express.static(path.join(__dirname, "public"));
+app.use("/assets", express.static(path.join(__dirname, "assets"));
 
 app.use((req, res, next) => {
   if (req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|woff|woff2)$/)) {
@@ -377,7 +377,7 @@ const tierBasedRateLimiter = async (req, res, next) => {
 // Logs header keys and a short masked preview of any signature-like header.
 app.use('/webhook', (req, _res, next) => {
   try {
-    const keys = Object.keys(req.headers || {}).filter(k => k.startsWith('x-') || k.includes('signature') || k.includes('lipana'));
+    const keys = Object.keys(req.headers || {}).filter(k => k.startsWith('x-') || k.includes('signature') || k.includes('lipana');
     const preview = {};
     keys.forEach(k => {
       const v = String(req.headers[k] || '').trim();
@@ -400,7 +400,7 @@ const upload = multer({
     const ext = path.extname(file.originalname || "").toLowerCase();
     const ok = allowed.test(ext) && allowed.test(file.mimetype);
     if (ok) { log("INFO", "UPLOAD", "Accepted file", { filename: file.originalname, mimetype: file.mimetype }); cb(null, true); }
-    else { log("WARN", "UPLOAD", "Rejected file", { filename: file.originalname, mimetype: file.mimetype }); cb(new Error("Invalid file type")); }
+    else { log("WARN", "UPLOAD", "Rejected file", { filename: file.originalname, mimetype: file.mimetype }); cb(new Error("Invalid file type"); }
   }
 });
 
@@ -441,12 +441,12 @@ const queueJob = async (type, payload, priority = "normal") => {
     if (type === "telegram:update") {
       // Some parts of the code push the raw update object; the worker expects the
       // serialized update on the Redis list `telegram:updates` so push payload there.
-      await redis.rpush("telegram:updates", JSON.stringify(payload));
+      await redis.rpush("telegram:updates", JSON.stringify(payload);
       log("INFO", "QUEUE", "Queued telegram:update to telegram:updates", { id, size: JSON.stringify(payload).length });
       return id;
     }
 
-    await redis.rpush(`jobs:${priority}`, JSON.stringify(job));
+    await redis.rpush(`jobs:${priority}`, JSON.stringify(job);
     log("INFO", "QUEUE", "Queued job", { id, type, priority });
     return id;
   } catch (err) {
@@ -469,15 +469,15 @@ app.get("/", (req, res) => {
 });
 
 app.get("/health", (req, res) => {
-  res.json(formatResponse(true, { status: "healthy", uptime: process.uptime(), redis: true, version: BETRIX.version }, "All systems operational"));
+  res.json(formatResponse(true, { status: "healthy", uptime: process.uptime(), redis: true, version: BETRIX.version }, "All systems operational");
 });
 
 app.get("/metrics", async (req, res) => {
   try {
     const logCount = await redis.llen(LOG_STREAM_KEY).catch(() => 0);
-    res.json(formatResponse(true, { uptime: process.uptime(), logs: logCount }, "Metrics"));
+    res.json(formatResponse(true, { uptime: process.uptime(), logs: logCount }, "Metrics");
   } catch (err) {
-    res.status(500).json(formatResponse(false, null, "Metrics fetch failed"));
+    res.status(500).json(formatResponse(false, null, "Metrics fetch failed");
   }
 });
 
@@ -485,10 +485,10 @@ app.get("/metrics", async (req, res) => {
 app.get('/openligadb/leagues', async (req, res) => {
   try {
     const leagues = await openLiga.getAvailableLeagues();
-    return res.json(formatResponse(true, leagues.slice(0, 200), 'OpenLigaDB leagues'));
+    return res.json(formatResponse(true, leagues.slice(0, 200), 'OpenLigaDB leagues');
   } catch (err) {
     log('ERROR', 'OPENLIGA', 'Failed to fetch leagues', { err: err.message });
-    return res.status(500).json(formatResponse(false, null, 'Failed to fetch leagues'));
+    return res.status(500).json(formatResponse(false, null, 'Failed to fetch leagues');
   }
 });
 
@@ -497,12 +497,12 @@ app.get('/openligadb/matchdata', async (req, res) => {
     const league = req.query.league;
     const season = req.query.season || new Date().getFullYear();
     const group = req.query.group || 1;
-    if (!league) return res.status(400).json(formatResponse(false, null, 'Missing league param (e.g. bl1)'));
+    if (!league) return res.status(400).json(formatResponse(false, null, 'Missing league param (e.g. bl1)');
     const data = await openLiga.getMatchData(league, season, group);
-    return res.json(formatResponse(true, data, 'Match data'));
+    return res.json(formatResponse(true, data, 'Match data');
   } catch (err) {
     log('ERROR', 'OPENLIGA', 'Matchdata fetch failed', { err: err.message });
-    return res.status(500).json(formatResponse(false, null, 'Failed to fetch match data'));
+    return res.status(500).json(formatResponse(false, null, 'Failed to fetch match data');
   }
 });
 
@@ -514,10 +514,10 @@ app.get('/live', async (req, res) => {
     const groups = Number(req.query.groups || 3);
     const data = await openLiga.getRecentMatches(league, season, groups);
     // Filter to upcoming / recent matches within sensible window
-    return res.json(formatResponse(true, data, 'Live/Recent matches (best-effort)'));
+    return res.json(formatResponse(true, data, 'Live/Recent matches (best-effort)');
   } catch (err) {
     log('ERROR', 'LIVE', 'Live fetch failed', { err: err.message });
-    return res.status(500).json(formatResponse(false, null, 'Failed to fetch live matches'));
+    return res.status(500).json(formatResponse(false, null, 'Failed to fetch live matches');
   }
 });
 
@@ -530,10 +530,10 @@ app.get('/news', async (req, res) => {
       'https://www.espn.com/espn/rss/football/news'
     ];
     const results = await rssAggregator.fetchMultiple(feeds);
-    return res.json(formatResponse(true, results, 'Aggregated sports news feeds'));
+    return res.json(formatResponse(true, results, 'Aggregated sports news feeds');
   } catch (err) {
     log('ERROR', 'RSS', 'News aggregation failed', { err: err.message });
-    return res.status(500).json(formatResponse(false, null, 'Failed to fetch news'));
+    return res.status(500).json(formatResponse(false, null, 'Failed to fetch news');
   }
 });
 
@@ -545,21 +545,21 @@ app.get('/fixtures', async (req, res) => {
     const data = await footballData.fixturesFromCsv(comp, season);
     // Cache to Redis for short period
     await redis.set(`cache:fixtures:${comp}:${season}`, JSON.stringify(data), 'EX', 60 * 60).catch(()=>{});
-    return res.json(formatResponse(true, data, 'Fixtures from football-data.co.uk (best-effort)'));
+    return res.json(formatResponse(true, data, 'Fixtures from football-data.co.uk (best-effort)');
   } catch (err) {
     log('ERROR', 'FOOTBALLDATA', 'Fixtures fetch failed', { err: err.message });
-    return res.status(500).json(formatResponse(false, null, 'Failed to fetch fixtures'));
+    return res.status(500).json(formatResponse(false, null, 'Failed to fetch fixtures');
   }
 });
 
 // Highlights endpoint via ScoreBat
 app.get('/highlights', async (req, res) => {
   try {
-    const feed = await scorebat.freeFeed().catch(e => ({ error: e.message }));
-    return res.json(formatResponse(true, feed, 'ScoreBat highlights (free feed)'));
+    const feed = await scorebat.freeFeed().catch(e => ({ error: e.message });
+    return res.json(formatResponse(true, feed, 'ScoreBat highlights (free feed)');
   } catch (err) {
     log('ERROR', 'SCOREBAT', 'Highlights fetch failed', { err: err.message });
-    return res.status(500).json(formatResponse(false, null, 'Failed to fetch highlights'));
+    return res.status(500).json(formatResponse(false, null, 'Failed to fetch highlights');
   }
 });
 
@@ -577,14 +577,14 @@ app.get('/standings', async (req, res) => {
 
     // Normalize some matches and pick best
     const normalized = [];
-    for (const m of (openData || []).slice(0,50)) normalized.push(normalizeMatch(m, 'openligadb'));
-    for (const m of (fdData || []).slice(0,50)) normalized.push(normalizeMatch(m, 'footballdata'));
+    for (const m of (openData || []).slice(0,50)) normalized.push(normalizeMatch(m, 'openligadb');
+    for (const m of (fdData || []).slice(0,50)) normalized.push(normalizeMatch(m, 'footballdata');
 
     const best = normalized.map(n => ({...n, rank: n.confidence})).slice(0,50);
-    return res.json(formatResponse(true, { combined: best, sources: { open: !!openData.length, footballData: !!fdData.length } }, 'Combined standings/matches (normalized)'));
+    return res.json(formatResponse(true, { combined: best, sources: { open: !!openData.length, footballData: !!fdData.length } }, 'Combined standings/matches (normalized)');
   } catch (err) {
     log('ERROR', 'STANDINGS', 'Standings failed', { err: err.message });
-    return res.status(500).json(formatResponse(false, null, 'Failed to fetch standings'));
+    return res.status(500).json(formatResponse(false, null, 'Failed to fetch standings');
   }
 });
 
@@ -601,23 +601,23 @@ app.get("/admin/queue", async (req, res) => {
       telegram_callbacks: telegramCallbacks,
       worker_heartbeat: workerHeartbeat ? Number(workerHeartbeat) : null,
       commit: commit
-    }, "Queue status"));
+    }, "Queue status");
   } catch (err) {
     log("ERROR", "ADMIN", "Failed to read queue status", { err: err.message });
-    return res.status(500).json(formatResponse(false, null, "Failed to read queue status"));
+    return res.status(500).json(formatResponse(false, null, "Failed to read queue status");
   }
 });
 
 // Admin: fetch Telegram getWebhookInfo (uses server-side token, no token exposure)
 app.get("/admin/webhook-info", async (req, res) => {
   try {
-    if (!TELEGRAM_TOKEN) return res.status(400).json(formatResponse(false, null, "TELEGRAM_TOKEN not configured"));
+    if (!TELEGRAM_TOKEN) return res.status(400).json(formatResponse(false, null, "TELEGRAM_TOKEN not configured");
     const tg = new TelegramService(TELEGRAM_TOKEN);
     const info = await tg.getWebhookInfo();
-    return res.json(formatResponse(true, info, "Webhook info retrieved"));
+    return res.json(formatResponse(true, info, "Webhook info retrieved");
   } catch (err) {
     log("ERROR", "TELEGRAM", "getWebhookInfo failed", { err: err?.message || String(err) });
-    return res.status(500).json(formatResponse(false, null, "Failed to fetch webhook info"));
+    return res.status(500).json(formatResponse(false, null, "Failed to fetch webhook info");
   }
 });
 
@@ -637,10 +637,10 @@ app.get("/admin/ai-health", async (req, res) => {
   huggingfaceModels,
       localEnabled,
       lastActive: lastActive || null
-    }, "AI health"));
+    }, "AI health");
   } catch (err) {
     log("ERROR", "ADMIN", "AI health check failed", { err: err?.message || String(err) });
-    return res.status(500).json(formatResponse(false, null, "AI health check failed"));
+    return res.status(500).json(formatResponse(false, null, "AI health check failed");
   }
 });
 
@@ -651,7 +651,7 @@ app.post("/admin/gemini-debug", authenticateAdmin, async (req, res) => {
     const apiKey = process.env.GEMINI_API_KEY;
     
     if (!apiKey) {
-      return res.status(400).json(formatResponse(false, null, "GEMINI_API_KEY not set in environment"));
+      return res.status(400).json(formatResponse(false, null, "GEMINI_API_KEY not set in environment");
     }
 
     const { GoogleGenerativeAI } = await import("@google/generative-ai");
@@ -673,10 +673,10 @@ app.post("/admin/gemini-debug", authenticateAdmin, async (req, res) => {
       responseLength: text.length,
       finishReason: status,
       fullResponse: JSON.stringify(result.response)
-    }, "Gemini debug"));
+    }, "Gemini debug");
   } catch (err) {
     log('ERROR', 'GEMINI-DEBUG', 'Raw Gemini test failed', { err: err?.message || String(err) });
-    return res.status(500).json(formatResponse(false, { error: err?.message || String(err) }, 'Gemini debug failed'));
+    return res.status(500).json(formatResponse(false, { error: err?.message || String(err) }, 'Gemini debug failed');
   }
 });
 
@@ -684,7 +684,7 @@ app.post("/admin/gemini-debug", authenticateAdmin, async (req, res) => {
 app.post("/admin/ai-test", authenticateAdmin, async (req, res) => {
   try {
     const prompt = req.body?.prompt || req.query?.prompt;
-    if (!prompt) return res.status(400).json(formatResponse(false, null, "Missing 'prompt' in body or query"));
+    if (!prompt) return res.status(400).json(formatResponse(false, null, "Missing 'prompt' in body or query");
 
     // Build same composite chain locally in web process for testing (does not affect worker)
     const geminiS = new GeminiService(process.env.GEMINI_API_KEY);
@@ -702,7 +702,7 @@ app.post("/admin/ai-test", authenticateAdmin, async (req, res) => {
     if (geminiS && geminiS.enabled) {
       try {
         const out = await geminiS.chat(prompt, {});
-        return res.json(formatResponse(true, { provider: 'gemini', model: null, response: out }, 'AI test'));
+        return res.json(formatResponse(true, { provider: 'gemini', model: null, response: out }, 'AI test');
       } catch (err) {
         log('WARN', 'AI-TEST', 'Gemini test failed, falling back', { err: err?.message || String(err) });
       }
@@ -712,7 +712,7 @@ app.post("/admin/ai-test", authenticateAdmin, async (req, res) => {
     if (azureS && azureS.isHealthy()) {
       try {
         const out = await azureS.chat(prompt, {});
-        return res.json(formatResponse(true, { provider: 'azure', model: azureS.lastUsed || null, response: out }, 'AI test'));
+        return res.json(formatResponse(true, { provider: 'azure', model: azureS.lastUsed || null, response: out }, 'AI test');
       } catch (err) {
         log('WARN', 'AI-TEST', 'Azure test failed, falling back', { err: err?.message || String(err) });
       }
@@ -722,7 +722,7 @@ app.post("/admin/ai-test", authenticateAdmin, async (req, res) => {
     if (hf && hf.isHealthy()) {
       try {
         const out = await hf.chat(prompt);
-        return res.json(formatResponse(true, { provider: 'huggingface', model: hf.lastUsed || null, response: out }, 'AI test'));
+        return res.json(formatResponse(true, { provider: 'huggingface', model: hf.lastUsed || null, response: out }, 'AI test');
       } catch (err) {
         log('WARN', 'AI-TEST', 'HuggingFace test failed, falling back', { err: err?.message || String(err) });
       }
@@ -730,22 +730,22 @@ app.post("/admin/ai-test", authenticateAdmin, async (req, res) => {
 
     // Local fallback
     const out = await local.chat(prompt);
-    return res.json(formatResponse(true, { provider: 'local', model: null, response: out }, 'AI test'));
+    return res.json(formatResponse(true, { provider: 'local', model: null, response: out }, 'AI test');
   } catch (err) {
     log('ERROR', 'AI-TEST', 'AI test failed', { err: err?.message || String(err) });
-    return res.status(500).json(formatResponse(false, null, 'AI test failed'));
+    return res.status(500).json(formatResponse(false, null, 'AI test failed');
   }
 });
 
 app.get("/dashboard", tierBasedRateLimiter, (req, res) => {
-  res.json(formatResponse(true, { brand: BETRIX.brand, menu: BETRIX.menu?.main, stats: { totalUsers: 50000, activePredictions: 1234, uptime: process.uptime() } }));
+  res.json(formatResponse(true, { brand: BETRIX.brand, menu: BETRIX.menu?.main, stats: { totalUsers: 50000, activePredictions: 1234, uptime: process.uptime() } });
 });
 
 // Admin endpoints
 app.get("/admin", authenticateAdmin, tierBasedRateLimiter, async (req, res) => {
   const raw = await redis.lrange(LOG_STREAM_KEY, 0, 19).catch(() => []);
   const logs = raw.map(r => { try { return JSON.parse(r); } catch { return null; } }).filter(Boolean);
-  res.json(formatResponse(true, { menus: BETRIX.menu?.admin, recentLogs: logs }, "Admin overview"));
+  res.json(formatResponse(true, { menus: BETRIX.menu?.admin, recentLogs: logs }, "Admin overview");
 });
 
 // Admin: mapping misses summary (past N days)
@@ -753,10 +753,10 @@ app.get("/admin/mapping-misses", authenticateAdmin, tierBasedRateLimiter, async 
   try {
     const days = Number(req.query.days || 7);
     const data = await getMappingMisses(redis, days);
-    return res.json(formatResponse(true, data, "Mapping misses"));
+    return res.json(formatResponse(true, data, "Mapping misses");
   } catch (err) {
     log("ERROR", "ADMIN", "mapping-misses failed", { err: err?.message || String(err) });
-    return res.status(500).json(formatResponse(false, null, "Failed to fetch mapping misses"));
+    return res.status(500).json(formatResponse(false, null, "Failed to fetch mapping misses");
   }
 });
 
@@ -770,7 +770,7 @@ app.get("/admin/provider-health", async (req, res) => {
     do {
       const result = await redis.scan(cursor, 'MATCH', `${prefix}*`, 'COUNT', 100).catch(() => ['0', []]);
       cursor = result[0];
-      keys.push(...(result[1] || []));
+      keys.push(...(result[1] || []);
     } while (cursor !== '0');
 
     const health = {};
@@ -805,10 +805,10 @@ app.get("/admin/provider-health", async (req, res) => {
       scanTime: new Date().toISOString()
     };
 
-    return res.json(formatResponse(true, summary, "Provider health dashboard"));
+    return res.json(formatResponse(true, summary, "Provider health dashboard");
   } catch (err) {
     log("ERROR", "ADMIN", "provider-health failed", { err: err?.message || String(err) });
-    return res.status(500).json(formatResponse(false, null, "Failed to fetch provider health"));
+    return res.status(500).json(formatResponse(false, null, "Failed to fetch provider health");
   }
 });
 
@@ -818,51 +818,51 @@ app.post("/admin/safe-scan", authenticateAdmin, tierBasedRateLimiter, express.js
     const scanLimit = Number(req.body.scanLimit || 2000);
     const days = Number(req.body.days || 7);
     const summary = await safeScanAndRepair(redis, { scanLimit, days });
-    return res.json(formatResponse(true, summary, "Safe-scan completed"));
+    return res.json(formatResponse(true, summary, "Safe-scan completed");
   } catch (err) {
     log("ERROR", "ADMIN", "safe-scan failed", { err: err?.message || String(err) });
-    return res.status(500).json(formatResponse(false, null, "Safe-scan failed"));
+    return res.status(500).json(formatResponse(false, null, "Safe-scan failed");
   }
 });
 
 app.post("/admin/settings", authenticateAdmin, upload.single("logo"), async (req, res) => {
   try {
     const settings = req.body || {};
-    await redis.set("admin:settings", JSON.stringify(settings));
+    await redis.set("admin:settings", JSON.stringify(settings);
     log("INFO", "ADMIN", "Settings updated", { admin: req.adminUser });
-    res.json(formatResponse(true, settings, "Settings updated"));
+    res.json(formatResponse(true, settings, "Settings updated");
   } catch (err) {
     log("ERROR", "ADMIN", "Settings update failed", { err: err.message });
-    res.status(500).json(formatResponse(false, null, "Failed to update settings"));
+    res.status(500).json(formatResponse(false, null, "Failed to update settings");
   }
 });
 
 // Predictions / odds / analytics scaffolding
 app.get("/predictions", tierBasedRateLimiter, (req, res) => {
-  res.json(formatResponse(true, { predictions: [{ match: "Barcelona vs Real Madrid", pred: "Barcelona Win", conf: "87%", odds: 1.85 }], accuracy: 97.2 }));
+  res.json(formatResponse(true, { predictions: [{ match: "Barcelona vs Real Madrid", pred: "Barcelona Win", conf: "87%", odds: 1.85 }], accuracy: 97.2 });
 });
 
 app.get("/odds", tierBasedRateLimiter, (req, res) => {
-  res.json(formatResponse(true, { odds: [{ league: "EPL", match: "Man United vs Liverpool", home: 2.45, draw: 3.20, away: 2.80 }], updated: new Date().toISOString() }));
+  res.json(formatResponse(true, { odds: [{ league: "EPL", match: "Man United vs Liverpool", home: 2.45, draw: 3.20, away: 2.80 }], updated: new Date().toISOString() });
 });
 
 app.get("/leaderboard", tierBasedRateLimiter, (req, res) => {
-  res.json(formatResponse(true, { leaderboard: [{ rank: 1, name: "ProBetter", points: 15450 }], yourRank: 247 }));
+  res.json(formatResponse(true, { leaderboard: [{ rank: 1, name: "ProBetter", points: 15450 }], yourRank: 247 });
 });
 
 app.get("/analytics", tierBasedRateLimiter, (req, res) => {
-  res.json(formatResponse(true, { dailyActiveUsers: 12340, totalPredictions: 1234567 }));
+  res.json(formatResponse(true, { dailyActiveUsers: 12340, totalPredictions: 1234567 });
 });
 
 // User routes
 app.get("/user/:userId/stats", tierBasedRateLimiter, (req, res) => {
   const userId = req.params.userId;
   const bets = 156, wins = 95;
-  res.json(formatResponse(true, { userId, totalBets: bets, wins, losses: bets - wins, winRate: `${((wins / bets) * 100).toFixed(1)}%` }));
+  res.json(formatResponse(true, { userId, totalBets: bets, wins, losses: bets - wins, winRate: `${((wins / bets) * 100).toFixed(1)}%` });
 });
 
 app.get("/user/:userId/referrals", tierBasedRateLimiter, (req, res) => {
-  res.json(formatResponse(true, { userId: req.params.userId, totalReferrals: 14, earnings: 8400 }));
+  res.json(formatResponse(true, { userId: req.params.userId, totalReferrals: 14, earnings: 8400 });
 });
 
 // Audit & pricing
@@ -870,14 +870,14 @@ app.get("/audit", authenticateAdmin, tierBasedRateLimiter, async (req, res) => {
   try {
     const raw = await redis.lrange(LOG_STREAM_KEY, 0, 50).catch(() => []);
     const parsed = raw.map(r => { try { return JSON.parse(r); } catch { return null; } }).filter(Boolean).slice(0, 20);
-    res.json(formatResponse(true, { auditLogs: parsed }));
+    res.json(formatResponse(true, { auditLogs: parsed });
   } catch (err) {
     log("ERROR", "AUDIT", "Fetch failed", { err: err.message });
-    res.status(500).json(formatResponse(false, null, "Failed to fetch audit logs"));
+    res.status(500).json(formatResponse(false, null, "Failed to fetch audit logs");
   }
 });
 
-app.get("/pricing", (req, res) => res.json(formatResponse(true, { tiers: BETRIX.pricing })));
+app.get("/pricing", (req, res) => res.json(formatResponse(true, { tiers: BETRIX.pricing }));
 
 // ============================================================================
 // MONITORING DASHBOARD (public, provides system health metrics)
@@ -965,10 +965,10 @@ app.get("/monitor", async (req, res) => {
       },
       version: BETRIX.version,
       brand: BETRIX.name
-    }, 'System monitoring metrics'));
+    }, 'System monitoring metrics');
   } catch (err) {
     log('ERROR', 'MONITOR', 'Dashboard failed', { err: err.message });
-    return res.status(500).json(formatResponse(false, null, 'Monitor dashboard error'));
+    return res.status(500).json(formatResponse(false, null, 'Monitor dashboard error');
   }
 });
 
@@ -1028,7 +1028,7 @@ app.post(
       return res.status(result?.success ? 200 : 400).json(result);
     } catch (err) {
       log("ERROR", "PAYMENTS", "M-Pesa webhook failed", { err: err?.message || String(err) });
-      return res.status(500).json(formatResponse(false, null, "M-Pesa webhook error"));
+      return res.status(500).json(formatResponse(false, null, "M-Pesa webhook error");
     }
   }
 );
@@ -1045,7 +1045,7 @@ app.post(
       return res.status(result?.success ? 200 : 400).json(result);
     } catch (err) {
       log("ERROR", "PAYMENTS", "Till webhook failed", { err: err?.message || String(err) });
-      return res.status(500).json(formatResponse(false, null, "Till webhook error"));
+      return res.status(500).json(formatResponse(false, null, "Till webhook error");
     }
   }
 );
@@ -1062,7 +1062,7 @@ app.post(
       return res.status(result?.success ? 200 : 400).json(result);
     } catch (err) {
       log("ERROR", "PAYMENTS", "PayPal webhook failed", { err: err?.message || String(err) });
-      return res.status(500).json(formatResponse(false, null, "PayPal webhook error"));
+      return res.status(500).json(formatResponse(false, null, "PayPal webhook error");
     }
   }
 );
@@ -1079,13 +1079,13 @@ app.post(
       return res.status(result?.success ? 200 : 400).json(result);
     } catch (err) {
       log("ERROR", "PAYMENTS", "Binance webhook failed", { err: err?.message || String(err) });
-      return res.status(500).json(formatResponse(false, null, "Binance webhook error"));
+      return res.status(500).json(formatResponse(false, null, "Binance webhook error");
     }
   }
 );
 
 // Simple health check for Render / uptime probes
-app.get('/health', (_req, res) => res.status(200).send('OK'));
+app.get('/health', (_req, res) => res.status(200).send('OK');
 // Lipana / M-Pesa generic webhook receiver (HMAC-SHA256 signature in x-lipana-signature)
 function verifySignature(req) {
   // Accept multiple possible header names
@@ -1099,7 +1099,7 @@ function verifySignature(req) {
   if (signature.toLowerCase().startsWith('sha256=')) signature = signature.slice(7).trim();
 
   // Raw bytes from the global JSON parser verify hook
-  const raw = req.rawBody || (req.body ? Buffer.from(JSON.stringify(req.body), 'utf8') : Buffer.from(''));
+  const raw = req.rawBody || (req.body ? Buffer.from(JSON.stringify(req.body), 'utf8') : Buffer.from('');
 
   // Use a trimmed secret to avoid accidental whitespace/newline mismatches
   const _rawSecret = process.env.LIPANA_WEBHOOK_SECRET ? String(process.env.LIPANA_WEBHOOK_SECRET) : '';
@@ -1231,7 +1231,7 @@ app.post(
       return res.status(result?.success ? 200 : 400).json(result);
     } catch (err) {
       log("ERROR", "PAYMENTS", "Manual verify failed", { err: err?.message || String(err) });
-      return res.status(500).json(formatResponse(false, null, "Manual verify error"));
+      return res.status(500).json(formatResponse(false, null, "Manual verify error");
     }
   }
 );
@@ -1239,12 +1239,12 @@ app.post(
 // ============================================================================
 // ERROR HANDLING & 404
 // ============================================================================
-app.use((req, res) => res.status(404).json(formatResponse(false, null, "Not found")));
+app.use((req, res) => res.status(404).json(formatResponse(false, null, "Not found"));
 
 app.use((err, req, res, next) => {
   log("ERROR", "EXPRESS", "Unhandled error", { message: err?.message, stack: err?.stack });
   if (res.headersSent) return next(err);
-  res.status(500).json(formatResponse(false, null, "Internal server error"));
+  res.status(500).json(formatResponse(false, null, "Internal server error");
 });
 
 // ============================================================================
@@ -1256,7 +1256,7 @@ const shutdown = async () => {
   shuttingDown = true;
   log("INFO", "SHUTDOWN", "Initiating graceful shutdown");
   try {
-    server.close(() => log("INFO", "SHUTDOWN", "HTTP server closed"));
+    server.close(() => log("INFO", "SHUTDOWN", "HTTP server closed");
     wss.clients.forEach(ws => { try { ws.close(1001, "Server shutting down"); } catch {} });
     await redis.quit().catch(() => {});
     log("INFO", "SHUTDOWN", "Redis connection closed");
