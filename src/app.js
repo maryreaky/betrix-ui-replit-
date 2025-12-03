@@ -50,6 +50,25 @@ app.post('/webhook/mpesa', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => safeLog(`Minimal app listening on ${PORT}`));
+app.get("/admin/webhook-fallback", (req, res) => {
+  if (req.get("X-ADMIN-TOKEN") !== process.env.ADMIN_TOKEN) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  try {
+    const fs = require("fs"), os = require("os");
+    const repoPath = process.cwd() + "/webhooks.log";
+    const tmpPath = os.tmpdir() + "/webhooks.log";
+    const readFile = p => {
+      try {
+        return fs.readFileSync(p, "utf8").split("\n").slice(-50).map(l => {
+          try { return JSON.parse(l); } catch { return l; }
+        });
+      } catch (e) { return { error: e.message }; }
+    };
+    res.json({ files: { repo: readFile(repoPath), tmp: readFile(tmpPath) } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});\napp.listen(10000);
 
 export default app;
