@@ -107,7 +107,7 @@ export async function handleMpesaCallback(req, redis, bot) {
           const connStr = process.env.DATABASE_URL || null;
           if (connStr) {
             const { Pool } = await import('pg');
-            const pool = new Pool({ connectionString: connStr });
+            const pool = new Pool({ connectionString: connStr, ssl: { rejectUnauthorized: false } });
             const upd = `UPDATE payments SET status = 'success', tx_id = $1, updated_at = now() WHERE (metadata->>'provider_checkout_id') = $2 OR tx_ref = $3`;
             await pool.query(upd, [mpesaReceiptNumber, mpesaReceiptNumber, orderId]);
             try { await pool.end(); } catch(e){}

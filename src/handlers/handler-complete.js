@@ -603,7 +603,7 @@ export async function handleCallbackQuery(cq, redis, services) {
               try {
                 const connStr = process.env.DATABASE_URL || null;
                 if (connStr) {
-                  const pool = new Pool({ connectionString: connStr });
+                  const pool = new Pool({ connectionString: connStr, ssl: { rejectUnauthorized: false } });
                   const insertSql = `INSERT INTO payments(tx_ref, user_id, amount, status, metadata, created_at)
                     VALUES($1,$2,$3,$4,$5, now())`;
                   const metadata = { provider: 'LIPANA', provider_checkout_id: providerCheckout, orderId: order.orderId };

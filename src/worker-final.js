@@ -102,7 +102,7 @@ let pgPool;
 try {
   const connStr = process.env.DATABASE_URL || (CONFIG && CONFIG.DATABASE_URL) || null;
   if (connStr) {
-    pgPool = new Pool({ connectionString: connStr });
+  pgPool = new Pool({ connectionString: connStr, ssl: { rejectUnauthorized: false } });
     // quick connectivity smoke-test
     await pgPool.query('SELECT 1');
     logger.info('✅ Postgres pool initialized');

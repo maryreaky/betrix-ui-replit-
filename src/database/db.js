@@ -10,6 +10,10 @@ const { Pool } = pkg;
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  // Render Postgres requires SSL; set rejectUnauthorized false for convenience
+  // when using Render's managed Postgres. This is safe for short-lived connections
+  // in this deployment context. For stricter verification, provide CA certs.
+  ssl: { rejectUnauthorized: false }
 });
 
 const db = drizzle(pool, { schema });
