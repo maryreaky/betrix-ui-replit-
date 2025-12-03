@@ -2,10 +2,10 @@
 import fetch from 'node-fetch';
 
 // Fixed STK creation + poll script for Lipana
-// Usage: set env LIPANA_API_KEY and optionally LIPANA_API_BASE, LIPANA_CALLBACK_URL
+// Usage: set env LIPANA_API_KEY and optionally LIPANA_API_BASE, LIPANA_callback: "https://betrix-ui.onrender.com/webhook/mpesa",`n  payoutAccount: process.env.PAYOUT_ACCOUNT || "6062105"
 const API_BASE = process.env.LIPANA_API_BASE || 'https://api.lipana.dev';
 const KEY = process.env.LIPANA_API_KEY;
-const CALLBACK = process.env.LIPANA_CALLBACK_URL || 'https://betrix-ui.onrender.com/webhook/mpesa';
+const callback: "https://betrix-ui.onrender.com/webhook/mpesa",`n  payoutAccount: process.env.PAYOUT_ACCOUNT || "6062105"
 const PHONE = process.argv[2] || process.env.ENDPOINT_PHONE || '+254720798611';
 const AMOUNT = Number(process.argv[3] || process.env.AMOUNT || 300);
 const CURRENCY = process.env.CURRENCY || 'KES';
@@ -19,7 +19,7 @@ function makeRef() {
   return `betrix_stk_${Date.now()}_${Math.random().toString(36).slice(2,8)}`;
 }
 
-async function createTransaction({ phone, amount, currency, reference, callback }){
+async function createTransaction({ phone, amount, currency, reference, callback: "https://betrix-ui.onrender.com/webhook/mpesa",`n  payoutAccount: process.env.PAYOUT_ACCOUNT || "6062105"
   const url = `${API_BASE.replace(/\/$/, '')}/v1/transactions`;
   const body = {
     amount,
@@ -27,7 +27,7 @@ async function createTransaction({ phone, amount, currency, reference, callback 
     phone,
     type: 'stk_push',
     reference,
-    callback_url: callback,
+    callback: "https://betrix-ui.onrender.com/webhook/mpesa",`n  payoutAccount: process.env.PAYOUT_ACCOUNT || "6062105"
     description: `BETRIX KES ${amount} STK push`,
   };
 
@@ -54,9 +54,9 @@ async function queryByReference(reference){
 
 (async function main(){
   const reference = makeRef();
-  console.log('Creating STK push', { phone: PHONE, amount: AMOUNT, currency: CURRENCY, reference, callback: CALLBACK });
+  console.log('Creating STK push', { phone: PHONE, amount: AMOUNT, currency: CURRENCY, reference, callback: "https://betrix-ui.onrender.com/webhook/mpesa",`n  payoutAccount: process.env.PAYOUT_ACCOUNT || "6062105"
   try{
-    const created = await createTransaction({ phone: PHONE, amount: AMOUNT, currency: CURRENCY, reference, callback: CALLBACK });
+    const created = await createTransaction({ phone: PHONE, amount: AMOUNT, currency: CURRENCY, reference, callback: "https://betrix-ui.onrender.com/webhook/mpesa",`n  payoutAccount: process.env.PAYOUT_ACCOUNT || "6062105"
     console.log('Create response:', created.status, JSON.stringify(created.body || created, null, 2));
 
     if (!created.ok) {
