@@ -7,20 +7,18 @@ import path from 'path';
 import os from 'os';
 import DataExposureHandler from './handlers/data-exposure-handler.js';
 
-// Minimal, clean app.js with named export registerDataExposureAPI
+// Single, clean app.js — remove duplicated blocks that caused SyntaxError
 process.env.PGSSLMODE = process.env.PGSSLMODE || 'require';
 
 const app = express();
-
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
-
 app.use(bodyParser.json({ limit: '5mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
 
 function safeLog(...args) { try { console.log(...args); } catch (e) {} }
 
 app.get('/health', (_req, res) => res.status(200).json({ ok: true }));
 
-app.get('/admin/queue', (_req, res) => res.json({ ok: true, commit: process.env.RENDER_GIT_COMMIT || process.env.COMMIT_SHA || null }));
+app.get('/admin/queue', (req, res) => res.json({ ok: true, commit: process.env.RENDER_GIT_COMMIT || process.env.COMMIT_SHA || null }));
 
 app.get('/admin/webhook-fallback', (req, res) => {
   try {
@@ -47,7 +45,7 @@ app.post('/webhook/mpesa', async (req, res) => {
   const incoming = req.headers['x-lipana-signature'] || req.headers['x-signature'] || req.headers['signature'] || '';
   try {
     const raw = req.rawBody || Buffer.from(JSON.stringify(req.body || {}), 'utf8');
-    let computedHex = null; let computedB64 = null;
+    let computedHex = null, computedB64 = null;
     if (secret) {
       const h = crypto.createHmac('sha256', String(secret)).update(raw).digest();
       computedHex = h.toString('hex'); computedB64 = h.toString('base64');
@@ -72,50 +70,17 @@ app.post('/webhook/mpesa', async (req, res) => {
   }
 });
 
-// Named export used by worker-final.js to register the data-exposure endpoints
 export function registerDataExposureAPI(sportsAggregator) {
-  try {
-    new DataExposureHandler(app, sportsAggregator);
-    safeLog('DATA_EXPOSURE: registered endpoints');
-  } catch (err) {
-    safeLog('DATA_EXPOSURE registration failed:', String(err));
-  }
+  try { new DataExposureHandler(app, sportsAggregator); safeLog('DATA_EXPOSURE: registered endpoints'); }
+  catch (err) { safeLog('DATA_EXPOSURE registration failed:', String(err)); }
 }
 
-// Start server only when this module is run as the main process
 if (process.argv[1] && process.argv[1].endsWith('src/app.js')) {
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => safeLog(`Server running on port ${PORT}`));
 }
 
 export default app;
-import express from 'express';
-import bodyParser from 'body-parser';
-import crypto from 'crypto';
-import { Pool } from 'pg';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
-import DataExposureHandler from './handlers/data-exposure-handler.js';
-
-// Keep PGSSLMODE defaulted to 'require' on platforms like Render
-process.env.PGSSLMODE = process.env.PGSSLMODE || 'require';
-
-const app = express();
-
-// DB pool: best-effort TLS settings for managed Postgres (fine-tune in prod)
-const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });
-
-// Capture raw body bytes for HMAC verification
-app.use(bodyParser.json({ limit: '5mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
-
-function safeLog(...args) { try { console.log(...args); } catch (e) {} }
-
-app.get('/health', (_req, res) => res.status(200).json({ ok: true }));
-
-app.get('/admin/queue', (req, res) => {
-  return res.json({ ok: true, commit: process.env.RENDER_GIT_COMMIT || process.env.COMMIT_SHA || null });
-});
 
 // Admin: return last N fallback webhook entries from fallback files
 app.get('/admin/webhook-fallback', (req, res) => {
@@ -190,7 +155,7 @@ app.post('/webhook/mpesa', async (req, res) => {
 // Single PORT binding and listen
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} - app.js:102`);
+  console.log(`Server running on port ${PORT} - app.js:158`);
 });
 
 export default app;
@@ -297,7 +262,7 @@ app.post('/webhook/mpesa', async (req, res) => {
 // Final PORT binding (single listen)
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} - app.js:209`);
+  console.log(`Server running on port ${PORT} - app.js:265`);
 });
 
 export default app;
@@ -602,7 +567,7 @@ export default app;
       const _rawSecret = process.env.LIPANA_SECRET ? String(process.env.LIPANA_SECRET) : '';
       const trimmedSecret = _rawSecret.trim();
       const secretFingerprint = trimmedSecret ? crypto.createHash('sha256').update(trimmedSecret).digest('hex').slice(0,8) : '(no-secret)';
-      console.log('[verifySignature] LIPANA_SECRET fingerprint(first8)= - app.js:514', secretFingerprint);
+      console.log('[verifySignature] LIPANA_SECRET fingerprint(first8)= - app.js:570', secretFingerprint);
     } catch (e) {
       // ignore logging errors
     }
@@ -928,8 +893,8 @@ function verifySignature(req) {
   try {
     const fingerprint = crypto.createHash('sha256').update(lipanaSecret).digest('hex').substring(0,8);
     const incomingPreview = signature ? `${String(signature).slice(0,64)}...len:${String(signature).length}` : '(empty)';
-    console.log('[verifySignature] LIPANA_SECRET fingerprint(first8)= - app.js:840', fingerprint);
-    console.log('[verifySignature] Incoming signature(header)= - app.js:841', incomingPreview);
+    console.log('[verifySignature] LIPANA_SECRET fingerprint(first8)= - app.js:896', fingerprint);
+    console.log('[verifySignature] Incoming signature(header)= - app.js:897', incomingPreview);
   } catch (e) {
     // ignore logging errors
   }
@@ -941,16 +906,16 @@ function verifySignature(req) {
     const rawPreview = raw && raw.slice(0, 1024) ? raw.slice(0, 1024).toString('utf8') : '(empty)';
     const rawHex = raw && raw.slice(0, 64) ? raw.slice(0, 64).toString('hex') : '';
     const parsedPreview = req.body ? JSON.stringify(req.body).slice(0,1024) : '(no parsed body)';
-    console.log('[verifySignature] contenttype= - app.js:853', ct, 'content-length=', cl);
-    console.log('[verifySignature] rawPreview(utf8,first1k)= - app.js:854', rawPreview);
-    console.log('[verifySignature] rawPreview(hex,first64bytes)= - app.js:855', rawHex);
-    console.log('[verifySignature] parsed(JSON.stringify) preview= - app.js:856', parsedPreview);
+    console.log('[verifySignature] contenttype= - app.js:909', ct, 'content-length=', cl);
+    console.log('[verifySignature] rawPreview(utf8,first1k)= - app.js:910', rawPreview);
+    console.log('[verifySignature] rawPreview(hex,first64bytes)= - app.js:911', rawHex);
+    console.log('[verifySignature] parsed(JSON.stringify) preview= - app.js:912', parsedPreview);
   } catch (e) {
     // ignore logging errors
   }
 
   if (!lipanaSecret) {
-    try { console.log('[verifySignature] LIPANA_SECRET is missing or empty - app.js:862'); } catch (e) {}
+    try { console.log('[verifySignature] LIPANA_SECRET is missing or empty - app.js:918'); } catch (e) {}
     return false;
   }
 
@@ -966,8 +931,8 @@ function verifySignature(req) {
       req._computedHmacB64 = expectedBase64;
       req._rawPreviewHex = raw && raw.slice(0,64) ? raw.slice(0,64).toString('hex') : '';
     }
-    console.log('[verifySignature] Computed expectedHex(first16)= - app.js:878', expectedHex.slice(0,16), '...');
-    console.log('[verifySignature] Computed expectedBase64(first16)= - app.js:879', expectedBase64.slice(0,16), '...');
+    console.log('[verifySignature] Computed expectedHex(first16)= - app.js:934', expectedHex.slice(0,16), '...');
+    console.log('[verifySignature] Computed expectedBase64(first16)= - app.js:935', expectedBase64.slice(0,16), '...');
   } catch (e) {}
 
   const safeCompare = (aBuf, bBuf) => {
@@ -1426,7 +1391,7 @@ export function registerDataExposureAPI(sportsAggregator) {
 // Export core app pieces and initialized data services for other modules
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT} - app.js:1338`);
+  console.log(`Server running on port ${PORT} - app.js:1394`);
 });
 
 
