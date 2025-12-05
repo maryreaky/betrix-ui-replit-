@@ -175,7 +175,10 @@ export function getRedis(opts = {}) {
   function attachIfMissing(name, impl) {
     if (typeof _instance[name] !== 'function') {
       try {
-        _instance[name] = impl;
+        // Attach both to the instance and the prototype to cover
+        // different client shapes (proxied objects, wrapped clients).
+        try { _instance[name] = impl; } catch (e) {}
+        try { if (_instance && _instance.constructor && _instance.constructor.prototype) _instance.constructor.prototype[name] = impl; } catch (e) {}
         console.log(`[redis-factory] ⚙️  Attached compatibility wrapper for ${name}`);
       } catch (e) {
         console.warn(`[redis-factory] ⚠️  Could not attach wrapper for ${name}`, e && e.message ? e.message : e);
@@ -211,6 +214,24 @@ export function getRedis(opts = {}) {
       return val;
     }
     throw new Error('redis.brpoplpush not supported by client');
+  });
+
+  // RPOPLPUSH source dest
+  attachIfMissing('rpoplpush', async (source, dest) => {
+    // Try native RPOPLPUSH first
+    if (typeof _instance.rpoplpush === 'function') {
+      return await _instance.rpoplpush(source, dest);
+    }
+    if (sendCmd) return (await sendCmd(['RPOPLPUSH', source, dest]));
+    if (callCmd) return (await callCmd('RPOPLPUSH', source, dest));
+    // Fallback: try RPOP then LPUSH (non-atomic)
+    if (typeof _instance.rpop === 'function' && typeof _instance.lpush === 'function') {
+      const val = await _instance.rpop(source);
+      if (!val) return null;
+      await _instance.lpush(dest, val);
+      return val;
+    }
+    throw new Error('redis.rpoplpush not supported by client');
   });
 
   return _instance;
