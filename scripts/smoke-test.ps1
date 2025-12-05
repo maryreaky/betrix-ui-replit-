@@ -57,13 +57,20 @@ Write-Host "GET /admin/process-info ->" ($results.processInfo.ok ? 'OK' : 'FAIL'
 $results.routes = Invoke-GetSafe '/admin/routes'
 Write-Host "GET /admin/routes ->" ($results.routes.ok ? 'OK' : 'FAIL')
 
-$results.redisPing = Invoke-GetSafe '/admin/redis-ping'
-Write-Host "GET /admin/redis-ping ->" ($results.redisPing.ok ? 'OK' : 'FAIL')
+# Test both admin-scoped and top-level redis ping aliases
+$results.redisPingAdmin = Invoke-GetSafe '/admin/redis-ping'
+Write-Host "GET /admin/redis-ping ->" ($results.redisPingAdmin.ok ? 'OK' : 'FAIL')
 
-# POST to Telegram webhook endpoint
+$results.redisPingAlias = Invoke-GetSafe '/redis-ping'
+Write-Host "GET /redis-ping ->" ($results.redisPingAlias.ok ? 'OK' : 'FAIL')
+
+# POST to Telegram webhook endpoints (admin-scoped and top-level alias)
 $testBody = @{ test = 'smoke'; ts = (Get-Date).ToString('o') }
-$results.telegramPost = Invoke-PostSafe '/webhook/telegram' $testBody
-Write-Host "POST /webhook/telegram ->" ($results.telegramPost.ok ? 'OK' : 'FAIL')
+$results.telegramPostWebhook = Invoke-PostSafe '/webhook/telegram' $testBody
+Write-Host "POST /webhook/telegram ->" ($results.telegramPostWebhook.ok ? 'OK' : 'FAIL')
+
+$results.telegramPostAlias = Invoke-PostSafe '/telegram' $testBody
+Write-Host "POST /telegram ->" ($results.telegramPostAlias.ok ? 'OK' : 'FAIL')
 
 # POST to mpesa webhook endpoint
 $mpesaBody = @{ Body = @{ Test = 'mpesa-smoke' }; ts = (Get-Date).ToString('o') }
@@ -94,7 +101,8 @@ $results.GetEnumerator() | ForEach-Object {
 }
 
 # Exit with non-zero code if any critical check failed
-$critical = @('health','processInfo','routes','telegramPost')
+## Consider the top-level aliases as critical since they bypass edge rules
+$critical = @('health','processInfo','routes','redisPingAlias','telegramPostAlias')
 $failed = $critical | Where-Object { -not ($results[$_] -and $results[$_].ok) }
 if ($failed) {
     Write-Host "`nOne or more critical checks failed: $($failed -join ', ')" -ForegroundColor Red
