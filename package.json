@@ -14,7 +14,7 @@
     "bot:start": "node src/bot/server.js",
     "lint": "eslint 'src/**/*.{js,mjs}' --max-warnings=0",
     "format": "prettier --write 'src/**/*.{js,json,md}'",
-    "test": "node --test tests || echo 'no tests'",
+    "test": "node --test ./tests/*.test.js || echo 'no tests'",
     "docker:build": "docker build -t adminoroo/betrix-ui-new:latest .",
     "redis:validate": "node scripts/validate-redis-connection.js",
     "redis:monitor": "node scripts/monitor-redis-health.js",
