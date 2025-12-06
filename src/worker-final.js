@@ -59,11 +59,11 @@ import { Pool } from 'pg';
 import { reconcileWithLipana } from './tasks/reconcile-lipana.js';
 
 // ===== PREMIUM ENHANCEMENT MODULES =====
-import premiumUI from "./utils/premium-ui-builder.js";
-import advancedAnalysis from "./utils/advanced-match-analysis.js";
-import fixturesManager from "./utils/fixtures-manager.js";
-import intelligentMenus from "./utils/intelligent-menu-builder.js";
-import brandingUtils from "./utils/betrix-branding.js";
+import _premiumUI from "./utils/premium-ui-builder.js";
+import _advancedAnalysis from "./utils/advanced-match-analysis.js";
+import _fixturesManager from "./utils/fixtures-manager.js";
+import _intelligentMenus from "./utils/intelligent-menu-builder.js";
+import _brandingUtils from "./utils/betrix-branding.js";
 import perfUtils from "./utils/performance-optimizer.js";
 
 const logger = new Logger("FinalWorker");
@@ -347,7 +347,7 @@ try {
   sub.subscribe('prefetch:updates', 'prefetch:error').then(() => logger.info('Subscribed to prefetch pub/sub channels')).catch((err)=>{ logger.warn('Prefetch subscribe failed', err && (err.message||String(err))); });
   sub.on('message', async (channel, message) => {
     let payload = message;
-    try { payload = JSON.parse(message); } catch (e) { /* raw */ }
+    try { payload = JSON.parse(message); } catch (e) { logger.debug('Prefetch message parse failed (raw payload)', { err: e && (e.message||String(e)), raw: message }); }
     logger.info('Prefetch event', { channel, payload });
     // Example reactive action: when openligadb updates, optionally warm specific caches
     try {
@@ -368,7 +368,7 @@ try {
     sub.subscribe('prefetch:updates', 'prefetch:error').then(() => logger.info('Subscribed to prefetch pub/sub channels')).catch((err)=>{ logger.warn('Prefetch subscribe failed (external)', err && (err.message||String(err))); });
     sub.on('message', async (channel, message) => {
       let payload = message;
-      try { payload = JSON.parse(message); } catch (e) { /* raw */ }
+        try { payload = JSON.parse(message); } catch (e) { logger.debug('Prefetch message parse failed (external)', { err: e && (e.message||String(e)), raw: message }); }
       logger.info('Prefetch event', { channel, payload });
       try {
         if (channel === 'prefetch:updates' && payload && payload.type === 'openligadb') {
