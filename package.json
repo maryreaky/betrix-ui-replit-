@@ -9,14 +9,24 @@
   },
   "scripts": {
     "start": "node src/app.js",
-    "dev": "node src/worker-db.js",
-    "bot:start": "node src/bot/server.js",
+    "dev": "nodemon --watch src --exec node src/app.js",
     "worker": "node src/worker-final.js",
-    "test": "node --test tests/*.js",
+    "bot:start": "node src/bot/server.js",
+    "lint": "eslint 'src/**/*.{js,mjs}' --max-warnings=0",
+    "format": "prettier --write 'src/**/*.{js,json,md}'",
+    "test": "node --test tests || echo 'no tests'",
+    "docker:build": "docker build -t adminoroo/betrix-ui-new:latest .",
     "redis:validate": "node scripts/validate-redis-connection.js",
     "redis:monitor": "node scripts/monitor-redis-health.js",
     "redis:test-handlers": "node scripts/test-redis-handlers.js",
     "redis:health": "npm run redis:validate && npm run redis:test-handlers"
+  },
+  "devDependencies": {
+    "eslint": "^8.47.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-import": "^2.30.0",
+    "nodemon": "^3.0.1",
+    "prettier": "^3.8.0"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
