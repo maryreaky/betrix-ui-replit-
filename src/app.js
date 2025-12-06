@@ -98,7 +98,7 @@ app.post('/webhook/telegram', async (req, res) => {
 
       try {
         await redis.lpush('telegram:updates', JSON.stringify(body));
-        try { await redis.ltrim('telegram:updates', 0, 10000); } catch (e) {}
+        try { await redis.ltrim('telegram:updates', 0, 10000); } catch (e) { console.debug('[TELEGRAM] ltrim failed (non-fatal)', e && (e.message || e)); }
         console.log('[TELEGRAM] Update enqueued', { updateId });
 
         // Immediate fire-and-forget reply for /start commands to improve UX.
