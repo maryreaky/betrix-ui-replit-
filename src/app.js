@@ -19,7 +19,12 @@ app.get('/admin/health', async (req, res) => {
   try {
     const r = { status: 'ok' };
     if (redis && typeof redis.ping === 'function') {
-      try { r.redis = await redis.ping(); } catch (e) { r.redis = String(e?.message || e); }
+        try {
+          r.redis = await redis.ping();
+        } catch (e) {
+          console.warn('[app] Redis ping failed in /admin/health', e && (e.message || e));
+          r.redis = 'unavailable';
+        }
     }
     return res.json(r);
   } catch (err) {
@@ -43,11 +48,11 @@ app.post('/webhook/telegram', async (req, res) => {
   const body = req.body || {};
   // If this is a callback_query from an inline keyboard, handle immediately
   if (body.callback_query) {
-    try {
-      await handleCallbackQuery(body);
-    } catch (err) {
-      console.warn('[app] callback handler failed', err && (err.message || err));
-    }
+      try {
+        await handleCallbackQuery(body);
+      } catch (err) {
+        console.warn('[app] callback handler failed', err && (err.stack || err.message || err));
+      }
     return res.sendStatus(200);
   }
   try {
@@ -105,7 +110,7 @@ app.post('/webhook/telegram', async (req, res) => {
         try {
           const msg = body && body.message ? body.message : null;
           if (msg && typeof msg.text === 'string' && msg.text.trim().split(/\s+/)[0] === '/start') {
-            const chatId = msg.chat && (msg.chat.id || (msg.chat && msg.chat.id));
+              const chatId = msg?.chat?.id;
             if (chatId && process.env.TELEGRAM_TOKEN) {
               // Use global fetch (Node 18+). Do not await — best-effort send.
               const url = `https://api.telegram.org/bot${process.env.TELEGRAM_TOKEN}/sendMessage`;
@@ -141,3 +146,6 @@ app.post('/webhook/telegram', async (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => console.log(`BETRIX web app running on ${PORT}`));
+
+// Export the Express app so worker can import and/or start it when required
+export default app;
