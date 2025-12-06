@@ -46,6 +46,7 @@ import { AnalyticsService } from "./services/analytics.js";
 import { ContextManager } from "./middleware/context-manager.js";
 import * as v2Handler from "./handlers/telegram-handler-v2-clean.js";
 import * as completeHandler from "./handlers/handler-complete.js";
+import { handleLegacyCallback } from "./bot/callbacks.js";
 import { SportMonksAPI } from "./services/sportmonks-api.js";
 import { SportsDataAPI } from "./services/sportsdata-api.js";
 import { registerDataExposureAPI } from "./app_clean.js";
@@ -644,7 +645,15 @@ async function handleUpdate(update) {
       try {
         const services = { openLiga, footballData: footballDataService, rss: rssAggregator, scrapers, sportsAggregator, oddsAnalyzer, multiSportAnalyzer, cache, sportMonks: sportMonksAPI, sportsData: sportsDataAPI };
         const res = await completeHandler.handleCallbackQuery(callbackQuery, redis, services);
-        if (!res) return;
+        if (!res) {
+          // Fallback to legacy/simple callback router when rich handler returns nothing
+          try {
+            await handleLegacyCallback(chatId, callbackQuery.from?.id, callbackQuery.data, { basicHandlers, logger });
+          } catch (e) {
+            logger.warn('Legacy callback fallback failed', e && (e.message || e));
+          }
+          return;
+        }
 
         // Normalize to array for uniform processing
         const actions = Array.isArray(res) ? res : [res];
