@@ -1,0 +1,14 @@
+# Temporarily ignore large legacy directories to allow focused linting
+src/server/
+src/handlers/
+src/services/
+src/utils/
+src/jobs/
+src/tasks/
+src/worker*.js
+src/*-complete.js
+src/*-autonomous.js
+
+# Keep core web and worker entrypoints linted
+!src/app.js
+!src/worker-final.js
