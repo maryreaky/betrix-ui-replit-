@@ -12,7 +12,7 @@
     "dev": "nodemon --watch src --exec node src/app.js",
     "worker": "node src/worker-final.js",
     "bot:start": "node src/bot/server.js",
-    "lint": "eslint 'src/**/*.{js,mjs}' --max-warnings=0",
+    "lint": "eslint . --ext .js,.mjs --max-warnings=0",
     "format": "prettier --write 'src/**/*.{js,json,md}'",
     "test": "node --test ./tests/*.test.js || echo 'no tests'",
     "docker:build": "docker build -t adminoroo/betrix-ui-new:latest .",
