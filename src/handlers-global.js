@@ -3,12 +3,9 @@
  * Multi-country, multi-currency, multi-language signup flow
  */
 
-import { Logger } from "./utils/logger.js";
 import { GlobalService } from "./services/global-service.js";
-import { UIBuilder } from "./utils/ui-builder.js";
 import { I18n } from "./utils/i18n.js";
 
-const logger = new Logger("GlobalHandlers");
 
 class GlobalSignupHandler {
   constructor(telegram, userService, otp) {
@@ -20,7 +17,7 @@ class GlobalSignupHandler {
   /**
    * Step 1: Ask for country
    */
-  async askCountry(chatId, userId) {
+  async askCountry(chatId) {
     const text = `🌍 <b>Welcome to BETRIX</b>\n\n` +
       `Where are you joining from?\n\n` +
       `This helps us show the right currency and payment methods.`;
@@ -63,7 +60,7 @@ class GlobalSignupHandler {
       vvip_month: GlobalService.getLocalPricing("vvip_month", user.country),
     };
 
-    const text = `💎 <b>Choose Your Plan</b>\n\n` +
+    const text = `💎 <b>Choose Your Plan — ${country.name}</b>\n\n` +
       `🎁 <b>Free</b>\n` +
       `├─ Live matches\n` +
       `├─ Basic odds\n` +
@@ -120,7 +117,6 @@ class GlobalSignupHandler {
    * Step 5: Payment method selected, ask for phone
    */
   async askPhone(chatId, userId, paymentMethod) {
-    const user = await this.userService.getUser(userId);
     await this.userService.saveUser(userId, { paymentMethod });
 
     const text = `📱 <b>Verify Your Phone</b>\n\n` +

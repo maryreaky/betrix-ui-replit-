@@ -1,11 +1,8 @@
 // Canonical app module for local testing: Express with Redis ping and webhook handler
 import express from 'express';
 import bodyParser from 'body-parser';
-import crypto from 'crypto';
-import { Pool } from 'pg';
 import fs from 'fs';
-import path from 'path';
-import os from 'os';
+import { Pool } from 'pg';
 import { createClient } from 'redis';
 
 const app = express();
@@ -31,7 +28,9 @@ function buildPgPoolConfig() {
   return cfg;
 }
 
+// pool intentionally created for local testing if needed
 const pool = new Pool(buildPgPoolConfig());
+void pool;
 
 let redisClient = null;
 const redisUrl = process.env.REDIS_URL || process.env.REDIS_URI || '';
@@ -41,7 +40,21 @@ if (redisUrl) {
   try {
     redisClient = createClient({ url: redisUrl, username: redisUsername || undefined, password: redisPassword || undefined, socket: { tls: String(redisUrl).startsWith('rediss://') } });
     redisClient.on('error', (err) => safeLog('Redis error:', err?.message || String(err)));
-    (async () => { try { await redisClient.connect(); const p = await redisClient.ping(); safeLog('Redis connected (PING):', p); } catch (e) { safeLog('Redis connect failed:', e?.message || String(e)); try { await redisClient.disconnect(); } catch {} redisClient = null; } })();
+    (async () => {
+      try {
+        await redisClient.connect();
+        const p = await redisClient.ping();
+        safeLog('Redis connected (PING):', p);
+      } catch (e) {
+        safeLog('Redis connect failed:', e?.message || String(e));
+        try {
+          await redisClient.disconnect();
+        } catch (err2) {
+          safeLog('Redis disconnect failed:', err2?.message || String(err2));
+        }
+        redisClient = null;
+      }
+    })();
   } catch (e) { safeLog('Failed to create Redis client:', e?.message || String(e)); redisClient = null; }
 } else { safeLog('REDIS_URL not set; skipping Redis client initialization'); }
 app.locals.redis = redisClient;

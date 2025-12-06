@@ -33,7 +33,7 @@ const pool = new Pool(poolConfig);
 // capture raw body for HMAC verification
 app.use(bodyParser.json({ limit: '5mb', verify: (req, _res, buf) => { req.rawBody = buf; } }));
 
-function safeLog(...args) { try { console.log(...args); } catch (e) {} }
+function safeLog(...args) { try { console.log(...args); } catch (e) { void e; } }
 
 app.get('/health', (_req, res) => res.status(200).json({ ok: true }));
 
@@ -111,7 +111,7 @@ app.post('/webhook/mpesa', async (req, res) => {
 
 export function registerDataExposureAPI(sportsAggregator) {
   try {
-    if (typeof DataExposureHandler !== 'undefined') new DataExposureHandler(app, sportsAggregator);
+    if (typeof globalThis.DataExposureHandler !== 'undefined') new globalThis.DataExposureHandler(app, sportsAggregator);
     safeLog('DATA_EXPOSURE: registered endpoints');
   } catch (err) { safeLog('DATA_EXPOSURE registration failed:', String(err)); }
 }
@@ -126,5 +126,5 @@ try {
   if (invokedScript && invokedScript === appScript) {
     app.listen(PORT, () => safeLog(`Server running on port ${PORT}`));
   }
-} catch (e) { /* non-fatal */ }
+} catch (e) { void e; }
 

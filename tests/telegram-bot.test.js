@@ -7,9 +7,7 @@
  */
 
 import assert from 'assert';
-import { Logger } from '../src/utils/logger.js';
-
-const logger = new Logger('BotTests');
+// test logger intentionally omitted to reduce noise
 
 // Mock Redis client
 class MockRedis {
@@ -39,7 +37,7 @@ class MockRedis {
 // Mock services
 const mockServices = {
   telegram: {
-    sendMessage: async (chatId, text, opts) => ({ ok: true, result: { message_id: 1 } })
+    sendMessage: async (chatId, text, opts) => { void chatId; void text; void opts; return { ok: true, result: { message_id: 1 } }; }
   },
   api: {}
 };
@@ -58,7 +56,6 @@ async function runTests() {
     // Import handlers
     const { handleCommand } = await import('../src/handlers/commands.js');
     const { handleCallback } = await import('../src/handlers/callbacks.js');
-    const { mainMenu } = await import('../src/handlers/menu-system.js');
 
     const userId = 123456;
     const chatId = 789012;

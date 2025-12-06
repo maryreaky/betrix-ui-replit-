@@ -3,10 +3,7 @@
  * Controls feature access based on user tier
  */
 
-import { Logger } from "../utils/logger.js";
 import { UIBuilder, EMOJIS } from "../utils/ui-builder.js";
-
-const logger = new Logger("SubscriptionGatekeeper");
 
 class SubscriptionGatekeeper {
   constructor(userService, telegram) {
@@ -136,6 +133,7 @@ class SubscriptionGatekeeper {
    * Check rate limits by tier
    */
   async checkRateLimit(userId, action) {
+    void action;
     const tier = await this.getUserTier(userId);
     const limits = {
       free: 30,     // 30 requests per minute
@@ -185,9 +183,7 @@ class SubscriptionGatekeeper {
       const key = `access:${feature}:${tier}`;
       const field = allowed ? "allowed" : "blocked";
       await this.redis?.hincrby(key, field, 1);
-    } catch {
-      // Ignore errors
-    }
+    } catch (e) { void e; }
   }
 }
 

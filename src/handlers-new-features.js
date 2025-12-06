@@ -7,7 +7,7 @@ import { Logger } from "./utils/logger.js";
 import { MemeService } from "./services/meme-service.js";
 import { CryptoPredictionsService } from "./services/crypto-predictions-service.js";
 import { NewsService } from "./services/news-service.js";
-import { AIFallbackService } from "./services/ai-fallback-service.js";
+// AIFallbackService intentionally not used here yet; keep imports minimal
 import { ContentGenerationService } from "./services/content-generation-service.js";
 import { BrandingService } from "./services/branding-service.js";
 
@@ -25,7 +25,7 @@ class NewFeaturesHandlers {
   /**
    * /meme - Random betting meme
    */
-  async handleMeme(chatId, userId) {
+  async handleMeme(chatId) {
     try {
       const meme = MemeService.generateTextMeme("Your Team", 2.5, "The Favorites");
       
@@ -48,7 +48,7 @@ ${MemeService.formatMeme(meme)}
   /**
    * /crypto [symbol] - Crypto prediction
    */
-  async handleCrypto(chatId, userId, symbol = "bitcoin") {
+  async handleCrypto(chatId, symbol = "bitcoin") {
     try {
       const symbol_lower = (symbol || "bitcoin").toLowerCase();
       const prediction = await this.cryptoService.predictCryptoPrice(symbol_lower);
@@ -79,7 +79,7 @@ ${this.cryptoService.formatPrediction(prediction)}
   /**
    * /news - Latest sports news
    */
-  async handleNews(chatId, userId, query = "football") {
+  async handleNews(chatId, query = "football") {
     try {
       const articles = await this.newsService.getSportsNews(query || "football");
 
@@ -102,7 +102,7 @@ ${this.newsService.formatNews(articles)}
   /**
    * /tip - Random betting strategy tip
    */
-  async handleTip(chatId, userId) {
+  async handleTip(chatId) {
     try {
       const tip = ContentGenerationService.generateBettingTip();
 
@@ -125,7 +125,7 @@ ${tip}
   /**
    * Enhanced /menu with modern design
    */
-  async enhancedMenu(chatId, userId) {
+  async enhancedMenu(chatId) {
     const { ModernMenuService } = await import("./services/modern-menu-service.js");
     const menuData = ModernMenuService.mainMenu();
     
@@ -137,7 +137,7 @@ ${tip}
   /**
    * Enhanced /help with modern design
    */
-  async enhancedHelp(chatId, userId) {
+  async enhancedHelp(chatId) {
     const { ModernMenuService } = await import("./services/modern-menu-service.js");
     const text = ModernMenuService.helpMenu();
     return this.telegram.sendMessage(chatId, text);
@@ -146,7 +146,7 @@ ${tip}
   /**
    * Sports menu
    */
-  async sportsMenu(chatId, userId) {
+  async sportsMenu(chatId) {
     const { ModernMenuService } = await import("./services/modern-menu-service.js");
     const text = ModernMenuService.sportsMenu();
     return this.telegram.sendMessage(chatId, text);
@@ -155,7 +155,7 @@ ${tip}
   /**
    * Free features menu
    */
-  async freeFeaturesMenu(chatId, userId) {
+  async freeFeaturesMenu(chatId) {
     const { ModernMenuService } = await import("./services/modern-menu-service.js");
     const text = ModernMenuService.freeFeaturesMenu();
     return this.telegram.sendMessage(chatId, text);
@@ -164,7 +164,7 @@ ${tip}
   /**
    * Premium features menu
    */
-  async premiumMenu(chatId, userId) {
+  async premiumMenu(chatId) {
     const { ModernMenuService } = await import("./services/modern-menu-service.js");
     const text = ModernMenuService.premiumMenu();
     return this.telegram.sendMessage(chatId, text);

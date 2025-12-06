@@ -3,11 +3,7 @@
  * Subscription-aware command responses with gating
  */
 
-import { Logger } from "./utils/logger.js";
 import { UIBuilder, EMOJIS } from "./utils/ui-builder.js";
-import { escapeHtml } from "./utils/formatters.js";
-
-const logger = new Logger("TierHandlers");
 
 class TierAwareHandlers {
   constructor(handlers, gatekeeper, userService) {
@@ -21,6 +17,7 @@ class TierAwareHandlers {
    */
   async liveWithTier(chatId, userId) {
     const tier = await this.gatekeeper.getUserTier(userId);
+    void tier;
     return this.handlers.live(chatId, userId);
   }
 
@@ -55,6 +52,7 @@ class TierAwareHandlers {
     }
 
     const tier = await this.gatekeeper.getUserTier(userId);
+    void tier;
 
     if (!matchQuery) {
       return this.handlers.telegram.sendMessage(

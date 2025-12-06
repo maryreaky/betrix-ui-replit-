@@ -24,7 +24,7 @@ class MockRedis {
   async lpush(key, val) { const arr = this.store.get(key) ? JSON.parse(this.store.get(key)) : []; arr.unshift(val); this.store.set(key, JSON.stringify(arr)); return arr.length; }
   async rpush(key, val) { const arr = this.store.get(key) ? JSON.parse(this.store.get(key)) : []; arr.push(val); this.store.set(key, JSON.stringify(arr)); return arr.length; }
   async lrange(key, start, stop) { const arr = this.store.get(key) ? JSON.parse(this.store.get(key)) : []; return arr.slice(start, stop + 1); }
-  async expire(key, ttl) { /* noop */ return 1; }
+  async expire(key, ttl) { void key; void ttl; return 1; }
   quit() { /* noop */ }
 }
 
@@ -44,7 +44,7 @@ async function run() {
     // Simulate pressing quick bet callback for fixture 11111
     console.log('--- Simulating bet callback ---');
     const cb = { id: 'cb1', from: { id: 424242 }, message: { chat: { id: 9999 } }, data: 'bet_fixture_11111' };
-    const cbRes = await handleCallbackQuery(cb, redisClient, { apiFootball: { getFixture: async (id) => ({ response: [ { teams: { home: { name: 'Home FC' }, away: { name: 'Away United' } } } ] }) } });
+    const cbRes = await handleCallbackQuery(cb, redisClient, { apiFootball: { getFixture: async () => ({ response: [ { teams: { home: { name: 'Home FC' }, away: { name: 'Away United' } } } ] }) } });
     console.log('Callback result:', cbRes);
     
     // Simulate a payment flow if payment-router available

@@ -128,7 +128,7 @@ async function performHealthCheck() {
     }
 
     // Test 3: Database info
-    const info = await redis.info('stats');
+    await redis.info('stats');
     
     // Test 4: Command latency
     const latencyStart = Date.now();
@@ -288,9 +288,7 @@ async function startMonitoring() {
 // EVENT HANDLERS
 // ============================================================================
 
-redis.on('error', (err) => {
-  // Errors are handled in performHealthCheck
-});
+redis.on('error', (err) => { void err; });
 
 redis.on('connect', () => {
   console.log('[redis-health] ✅ Connected to Redis');

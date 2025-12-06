@@ -2,7 +2,7 @@
 // Quick script to check API-Sports (primary) health via SportsAggregator
 // Usage: set your env vars (API keys) and run: node ./scripts/check-live-health.js
 
-import SportsAggregator from '../src/services/sports-aggregator.js';
+import { SportsAggregator } from '../src/services/sports-aggregator.js';
 
 (async () => {
   try {

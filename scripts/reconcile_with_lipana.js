@@ -6,7 +6,6 @@
 import 'dotenv/config';
 import { Pool } from 'pg';
 import { reconcileWithLipana } from '../src/tasks/reconcile-lipana.js';
-import TelegramService from '../src/services/telegram.js';
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const telegram = new (await import('../src/services/telegram.js')).TelegramService(process.env.TELEGRAM_TOKEN || '', 3000);

@@ -30,7 +30,7 @@ async function run() {
     await client.query('COMMIT');
     console.log('Migrations applied successfully');
   } catch (err) {
-    try { await client.query('ROLLBACK'); } catch (e) {}
+    try { await client.query('ROLLBACK'); } catch (e) { void e; }
     console.error('Migration failed:', err && err.message ? err.message : err);
     process.exitCode = 1;
   } finally {

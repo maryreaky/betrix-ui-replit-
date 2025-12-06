@@ -5,8 +5,8 @@
 
 import Redis from 'ioredis';
 import { CONFIG } from '../src/config.js';
-import SportsAggregator from '../src/services/sports-aggregator.js';
-import v2Handler from '../src/handlers/telegram-handler-v2-clean.js';
+import { SportsAggregator } from '../src/services/sports-aggregator.js';
+import { handleMessage } from '../src/handlers/telegram-handler-v2-clean.js';
 import { Logger } from '../src/utils/logger.js';
 
 const logger = new Logger('TestSportMonksLive');
@@ -30,7 +30,7 @@ const logger = new Logger('TestSportMonksLive');
     // Test handler /live command
     logger.info('\n🔍 Testing handler /live command...');
     const update = { message: { chat: { id: 123 }, from: { id: 456 }, text: '/live' } };
-    const result = await v2Handler.handleMessage(update, redis, { sportsAggregator: aggregator });
+    const result = await handleMessage(update, redis, { sportsAggregator: aggregator });
     
     if (result) {
       logger.info('✅ Handler response:', {

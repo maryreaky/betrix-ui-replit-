@@ -15,10 +15,7 @@ function waitForPort(host, port, timeoutMs = 10000) {
         s.end();
         resolve(true);
       });
-      s.on('error', (err) => {
-        if (Date.now() - start > timeoutMs) return reject(new Error('timeout'));
-        setTimeout(attempt, 200);
-      });
+      s.on('error', (err) => { void err; if (Date.now() - start > timeoutMs) return reject(new Error('timeout')); setTimeout(attempt, 200); });
     })();
   });
 }
@@ -35,17 +32,17 @@ async function run() {
     sim.on('exit', (code) => {
       console.log('Simulator exited with code', code);
       // Kill server child and exit with simulator code
-      try { child.kill('SIGINT'); } catch (e) {}
+      try { child.kill('SIGINT'); } catch (e) { console.error('error killing server child', e); }
       process.exit(code || 0);
     });
     sim.on('error', (err) => {
       console.error('Simulator failed', err);
-      try { child.kill('SIGINT'); } catch (e) {}
+      try { child.kill('SIGINT'); } catch (e) { console.error('error killing server child', e); }
       process.exit(1);
     });
   } catch (e) {
     console.error('Port wait failed', e && e.message ? e.message : e);
-    try { child.kill('SIGINT'); } catch (er) {}
+    try { child.kill('SIGINT'); } catch (er) { console.error('error killing server child', er); }
     process.exit(2);
   }
 }

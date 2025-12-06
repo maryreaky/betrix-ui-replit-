@@ -4,7 +4,7 @@
  */
 
 import { Logger } from "./utils/logger.js";
-import { ICONS, escapeHtml, pickRandom, formatList, MEMES, STRATEGY_TIPS } from "./utils/formatters.js";
+import { ICONS, escapeHtml, pickRandom, MEMES, STRATEGY_TIPS } from "./utils/formatters.js";
 import { CONFIG } from "./config.js";
 
 const logger = new Logger("Handlers");
@@ -81,6 +81,7 @@ class BotHandlers {
   // ===== LIVE & STANDINGS =====
 
   async live(chatId, userId) {
+    void userId;
     try {
       const data = await this.apiFootball.getLive();
 
@@ -113,7 +114,7 @@ class BotHandlers {
               const sample = fd.fixtures.slice(0,6).map((f,i)=>`${i+1}. ${f.home} vs ${f.away} (${f.date||'TBD'})`).join('\n');
               return this.telegram.sendMessage(chatId, `${ICONS.live} <b>Upcoming (from CSV)</b>\n\n${sample}`);
             }
-          } catch(e) {}
+          } catch (e) { void e; }
         }
 
         const msg = await this.gemini.chat("No live football matches right now. Give a friendly 2-line response.");

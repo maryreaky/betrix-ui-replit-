@@ -4,6 +4,7 @@
  * Tests the payment flow: tier selection -> payment method selection -> payment order
  */
 
+/* eslint-disable import/namespace, import/default, import/no-named-as-default, import/no-named-as-default-member */
 // Minimal in-memory Redis mock for local testing
 class MockRedis {
   constructor() {
@@ -12,7 +13,7 @@ class MockRedis {
   }
   async get(key) { return this.store.has(key) ? this.store.get(key) : null; }
   async set(key, val) { this.store.set(key, String(val)); return 'OK'; }
-  async setex(key, ttl, val) { this.store.set(key, String(val)); return 'OK'; }
+  async setex(key, _ttl, val) { void _ttl; this.store.set(key, String(val)); return 'OK'; }
   async del(key) { return this.store.delete(key) ? 1 : 0; }
   async exists(key) { return this.store.has(key) ? 1 : 0; }
   async hset(hash, field, val) { 
@@ -32,8 +33,8 @@ class MockRedis {
   async rpush(key, val) { if (!this.store.has(key)) this.store.set(key, []); this.store.get(key).push(val); return 1; }
   async llen(key) { return (this.store.get(key) || []).length; }
   async lrange(key, start, end) { return (this.store.get(key) || []).slice(start, end + 1); }
-  async expire(key, ttl) { return 1; }
-  async ttl(key) { return -1; }
+  async expire(_key, _ttl) { void _key; void _ttl; return 1; }
+  async ttl(_key) { void _key; return -1; }
 }
 
 import v2Handler from '../src/handlers/telegram-handler-v2.js';
@@ -83,11 +84,11 @@ async function runPaymentTest() {
       services
     );
     
-    if (paymentResponse && paymentResponse.text) {
+    if (paymentResponse && paymentResponse.method === 'answerCallbackQuery' && paymentResponse.text) {
+      console.log(`⚠️  Alert: ${paymentResponse.text}`);
+    } else if (paymentResponse && paymentResponse.text) {
       console.log(`✓ Payment order created successfully`);
       console.log(`  Response text preview: ${paymentResponse.text.substring(0, 80)}...`);
-    } else if (paymentResponse && paymentResponse.method === 'answerCallbackQuery' && paymentResponse.text) {
-      console.log(`⚠️  Alert: ${paymentResponse.text}`);
     } else {
       console.log('❌ Unexpected response:', paymentResponse);
     }

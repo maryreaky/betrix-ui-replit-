@@ -1,5 +1,4 @@
-import axios from 'axios';
-import SportsAggregator from '../../services/sports-aggregator.js';
+import { SportsAggregator } from '../../services/sports-aggregator.js';
 
 export async function analyse_match(ctx, matchId) {
   try {
@@ -100,6 +99,6 @@ Total: ${h2h.totalMatches} | Home wins: ${h2h.homeWins} | Away wins: ${h2h.awayW
     await ctx.editMessageText(analysisText, { parse_mode: 'Markdown' });
   } catch (err) {
     console.error('analyse_match handler failed', err);
-    try { await ctx.editMessageText('⚠️ Analysis failed.'); } catch(_) {}
+    try { await ctx.editMessageText('⚠️ Analysis failed.'); } catch (e) { void e; }
   }
 }
