@@ -23,7 +23,11 @@ function fetchLivescoresViaPowershell() {
   return new Promise((resolve, reject) => {
     const uri = `https://api.sportmonks.com/v3/football/livescores?api_token=${API}`;
     // Construct a PowerShell command that returns pure JSON
+<<<<<<< HEAD
     const cmd = `powershell -NoProfile -Command "try { (Invoke-RestMethod -Uri '${uri}' -Method Get) | ConvertTo-Json -Depth 5 } catch { Write-Error 'PSERR:$($_.Exception.Message)'; exit 2 }"`;
+=======
+    const cmd = `powershell -NoProfile -Command "try { (Invoke-RestMethod -Uri '${uri}' -Method Get) | ConvertTo-Json -Depth 5 } catch { Write-Error \"PSERR:$($_.Exception.Message)\"; exit 2 }"`;
+>>>>>>> upstream/main
 
     exec(cmd, { maxBuffer: 10 * 1024 * 1024 }, (err, stdout, stderr) => {
       if (err) return reject(new Error(stderr || err.message));

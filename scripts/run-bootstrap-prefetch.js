@@ -1,7 +1,11 @@
 import 'dotenv/config';
 import Redis from 'ioredis';
 import { CONFIG } from '../src/config.js';
+<<<<<<< HEAD
 import { SportsAggregator } from '../src/services/sports-aggregator.js';
+=======
+import SportsAggregator from '../src/services/sports-aggregator.js';
+>>>>>>> upstream/main
 import { APIBootstrap } from '../src/tasks/api-bootstrap.js';
 
 (async function(){

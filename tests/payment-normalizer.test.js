@@ -86,7 +86,11 @@ console.log('✅ PASS: All mixed case inputs normalize correctly\n');
 
 // Test: All defined providers can be normalized from lowercase
 console.log('📌 Test: All defined providers normalize from lowercase');
+<<<<<<< HEAD
 for (const key of Object.keys(PAYMENT_PROVIDERS)) {
+=======
+for (const [key, _] of Object.entries(PAYMENT_PROVIDERS)) {
+>>>>>>> upstream/main
   const normalized = normalizePaymentMethod(key.toLowerCase());
   assert(normalized === key, `${key.toLowerCase()} should normalize to ${key}, got ${normalized}`);
 }

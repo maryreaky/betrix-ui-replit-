@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 import 'dotenv/config';
+<<<<<<< HEAD
 import { stkPush } from '../src/bot/mpesa.js';
+=======
+import mpesa from '../src/bot/mpesa.js';
+>>>>>>> upstream/main
 
 async function main() {
   const phone = process.argv[2] || process.env.TEST_PHONE;
@@ -11,7 +15,11 @@ async function main() {
   }
   console.log('Calling Daraja STK push (direct) to', phone, 'amount', amount);
   try {
+<<<<<<< HEAD
     const resp = await stkPush({ phone, amount });
+=======
+    const resp = await mpesa.stkPush({ phone, amount });
+>>>>>>> upstream/main
     console.log('Daraja response:', JSON.stringify(resp, null, 2));
   } catch (err) {
     console.error('Daraja STK push error:', err);

@@ -2,7 +2,11 @@
 import dotenv from 'dotenv';
 dotenv.config();
 import IORedis from 'ioredis';
+<<<<<<< HEAD
 import { SportsAggregator } from '../src/services/sports-aggregator.js';
+=======
+import SportsAggregator from '../src/services/sports-aggregator.js';
+>>>>>>> upstream/main
 import * as MH from '../src/handlers/menu-handler.js';
 
 async function main() {

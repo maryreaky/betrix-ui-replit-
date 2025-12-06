@@ -8,7 +8,13 @@ import assert from 'assert';
 import {
   normalizePaymentMethod,
   createPaymentOrder,
+<<<<<<< HEAD
   createCustomPaymentOrder
+=======
+  createCustomPaymentOrder,
+  getPaymentInstructions,
+  verifyAndActivatePayment
+>>>>>>> upstream/main
 } from '../src/handlers/payment-router.js';
 
 let redis;
@@ -47,7 +53,11 @@ console.log('🧪 Payment Integration Tests\n');
 async function runTests() {
   try {
     // Try to connect to Redis; if it fails, use a simple mock
+<<<<<<< HEAD
     await redis.ping().catch(() => {
+=======
+    await redis.ping().catch(err => {
+>>>>>>> upstream/main
       console.warn('⚠️  Redis not available; using mock for tests');
       return false;
     });
@@ -63,11 +73,17 @@ async function runTests() {
   // Test 2: createPaymentOrder accepts normalized and non-normalized methods
   console.log('📌 Test: createPaymentOrder accepts various method formats');
   const userId = 123456;
+<<<<<<< HEAD
   const region = 'KE';
 
   // `tier` is intentionally unused in this test; keep signature stable if needed.
   void 0;
 
+=======
+  const tier = 'VVIP';
+  const region = 'KE';
+
+>>>>>>> upstream/main
   try {
     // Test with canonical key
     const order1 = await createPaymentOrder(redis, userId, 'VVIP', 'SAFARICOM_TILL', region);

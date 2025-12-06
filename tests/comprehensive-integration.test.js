@@ -9,10 +9,19 @@ import { test } from 'node:test';
 
 // Import all v3 handlers
 const { handleCommand } = await import('../src/handlers/commands-v3.js');
+<<<<<<< HEAD
 const { classifyIntent } = await import('../src/handlers/message-handler-v3.js');
 const { handleCallbackQuery } = await import('../src/handlers/callbacks-v3.js');
 const { getBettingSitesForCountry, formatBettingSites } = await import('../src/handlers/betting-sites.js');
 const { formatCurrency, calculateVVIPExpiry } = await import('../src/handlers/data-models.js');
+=======
+const { handleMessage, classifyIntent } = await import('../src/handlers/message-handler-v3.js');
+const { handleCallbackQuery } = await import('../src/handlers/callbacks-v3.js');
+const { getBettingSitesForCountry, formatBettingSites } = await import('../src/handlers/betting-sites.js');
+const { 
+  createUserProfile, getUserProfile, updateUserProfile, formatCurrency, calculateVVIPExpiry 
+} = await import('../src/handlers/data-models.js');
+>>>>>>> upstream/main
 
 // Mock Redis
 const mockRedis = {
@@ -27,11 +36,16 @@ const mockRedis = {
     }
     return {};
   },
+<<<<<<< HEAD
   hset: async () => null,
+=======
+  hset: async (key, ...args) => null,
+>>>>>>> upstream/main
   hget: async (key, field) => {
     if (key.includes('user:123') && field === 'name') return 'John Doe';
     return null;
   },
+<<<<<<< HEAD
   get: async () => null,
   set: async () => null,
   expire: async () => null,
@@ -39,6 +53,15 @@ const mockRedis = {
   incr: async () => 1,
   lpush: async () => null,
   lrange: async () => []
+=======
+  get: async (key) => null,
+  set: async (key, val, ex, ttl) => null,
+  expire: async (key, ttl) => null,
+  del: async (key) => null,
+  incr: async (key) => 1,
+  lpush: async (key, ...vals) => null,
+  lrange: async (key, start, end) => []
+>>>>>>> upstream/main
 };
 
 // ============================================================================
@@ -82,7 +105,11 @@ test('NLP - Intent classification works with core commands', () => {
     ['back', 'menu']
   ];
   
+<<<<<<< HEAD
   intents.forEach(([text]) => {
+=======
+  intents.forEach(([text, expectedIntent]) => {
+>>>>>>> upstream/main
     const result = classifyIntent(text);
     assert(result !== undefined, `Failed for "${text}", returned undefined`);
   });
@@ -160,6 +187,10 @@ test('Betting sites - Kenya sites available with all info', async () => {
   assert(sites && Array.isArray(sites), 'Should return array');
   assert(sites.length > 0, 'Should have Kenya sites');
   
+<<<<<<< HEAD
+=======
+  const keySites = ['Betika', 'SportPesa', 'Odibets', 'Betway', '1xBet'];
+>>>>>>> upstream/main
   sites.forEach(site => {
     assert(site.name, 'Site missing name');
     assert(site.bonus, 'Site missing bonus');

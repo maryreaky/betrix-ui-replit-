@@ -29,7 +29,11 @@ export async function safeEdit(ctx, newText, newMarkup) {
     const msg = String(err?.description || err?.message || err || '');
     const isNotModified = msg.includes('message is not modified') || msg.includes('Bad Request: message is not modified');
     if (isNotModified) {
+<<<<<<< HEAD
       try { if (ctx && typeof ctx.answerCbQuery === 'function') await ctx.answerCbQuery('Already up to date ✅', { show_alert: false }); } catch (_) { void _; }
+=======
+      try { if (ctx && typeof ctx.answerCbQuery === 'function') await ctx.answerCbQuery('Already up to date ✅', { show_alert: false }); } catch (_) {}
+>>>>>>> upstream/main
       return;
     }
 
@@ -40,7 +44,13 @@ export async function safeEdit(ctx, newText, newMarkup) {
           await ctx.reply(newText, { reply_markup: newMarkup });
           return;
         }
+<<<<<<< HEAD
       } catch (e) { void e; }
+=======
+      } catch (e) {
+        // fallthrough
+      }
+>>>>>>> upstream/main
     }
 
     // Unexpected: rethrow so callers can log

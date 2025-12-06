@@ -85,6 +85,7 @@ class MockRedis {
   }
 
   async ping() { return 'PONG'; }
+<<<<<<< HEAD
 
   // Compatibility methods used by the worker or other services
   async expire() {
@@ -131,6 +132,8 @@ class MockRedis {
   async disconnect() {
     return 'OK';
   }
+=======
+>>>>>>> upstream/main
 }
 
 export function getRedis(opts = {}) {
@@ -211,6 +214,7 @@ export function getRedis(opts = {}) {
     console.log('[redis-factory] ⚠️  Redis connection ended');
   });
 
+<<<<<<< HEAD
   // Compatibility wrappers: some hosted Redis clients or proxy libraries
   // may not expose the exact ioredis method names (e.g. brpoplpush, expire, publish).
   // If the methods are missing but the client supports `sendCommand` or `call`,
@@ -302,6 +306,8 @@ export function getRedis(opts = {}) {
     console.warn('[redis-factory] ⚠️  Could not perform capability check', e && e.message ? e.message : e);
   }
 
+=======
+>>>>>>> upstream/main
   return _instance;
 }
 

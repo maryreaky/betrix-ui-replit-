@@ -62,6 +62,10 @@ if (fs.existsSync(envPath)) {
     }
     console.error('Test failed:', e);
   } finally {
+<<<<<<< HEAD
     try { redis.disconnect(); } catch (ex) { void ex; }
+=======
+    try { redis.disconnect(); } catch (ex) {}
+>>>>>>> upstream/main
   }
 })();
