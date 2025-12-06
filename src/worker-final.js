@@ -102,7 +102,7 @@ try {
 
 // attach a safe error handler to avoid unhandled errors
 if (redis && typeof redis.on === 'function') {
-  try { redis.on('error', (err) => logger.error('Redis error', err)); } catch(e){}
+  try { redis.on('error', (err) => logger.error('Redis error', err)); } catch(e){ logger.warn('Failed to attach redis error handler', e && (e.message||String(e))); }
 }
 
 // Initialize Postgres pool (optional) — fall back gracefully if DATABASE_URL not set or connection fails
@@ -120,7 +120,7 @@ try {
   }
 } catch (err) {
   logger.warn('⚠️ Postgres pool initialization failed — continuing without DB', err?.message || String(err));
-  try { if (pgPool && typeof pgPool.end === 'function') await pgPool.end(); } catch(e){}
+  try { if (pgPool && typeof pgPool.end === 'function') await pgPool.end(); } catch(e){ logger.warn('Failed to end postgres pool after init failure', e && (e.message||String(e))); }
   pgPool = null;
 }
 
@@ -304,15 +304,15 @@ const basicHandlers = new BotHandlers(telegram, userService, apiFootball, ai, re
 });
 
 // StatPal integration removed: system now uses SPORTSMONKS and FOOTBALLDATA only
-let statpalInitSuccess = false;
+let _statpalInitSuccess = false;
 logger.info('ℹ️ StatPal integration disabled/removed — using SPORTSMONKS and FOOTBALL-DATA only');
 
 // ===== API BOOTSTRAP: Validate keys and immediately prefetch data =====
-let apiBootstrapSuccess = false;
+let _apiBootstrapSuccess = false;
 try {
   const apiBootstrap = new APIBootstrap(sportsAggregator, oddsAnalyzer, redis);
   const bootstrapResult = await apiBootstrap.initialize();
-  apiBootstrapSuccess = bootstrapResult.success;
+  _apiBootstrapSuccess = bootstrapResult.success;
   
   if (bootstrapResult.success) {
     logger.info('✅ API Bootstrap successful', bootstrapResult.data);
@@ -385,7 +385,7 @@ try {
 }
 // Inject Redis into v2 handler for telemetry wiring (no-op for MockRedis)
 if (typeof v2Handler.setTelemetryRedis === 'function') {
-  try { v2Handler.setTelemetryRedis(redis); logger.info('✅ Telemetry Redis injected into v2Handler'); } catch(e){}
+  try { v2Handler.setTelemetryRedis(redis); logger.info('✅ Telemetry Redis injected into v2Handler'); } catch(e){ logger.warn('Failed to inject telemetry redis into v2Handler', e && (e.message||String(e))); }
 }
 
 // ===== INITIALIZE PERFORMANCE OPTIMIZER =====
