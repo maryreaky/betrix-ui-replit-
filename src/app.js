@@ -10,6 +10,7 @@ import os from 'os';
 process.env.PGSSLMODE = process.env.PGSSLMODE || 'require';
 
 const app = express();
+app.use(express.json({ limit: '1mb' }));
 
 // DB pool: best-effort TLS settings for managed Postgres (fine-tune in prod)
 const pool = new Pool({ connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } });

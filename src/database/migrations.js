@@ -3,7 +3,6 @@
  * Create all tables and indexes
  */
 
-import { db } from "./db.js";
 import { Logger } from "../utils/logger.js";
 
 const logger = new Logger("Migrations");

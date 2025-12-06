@@ -85,6 +85,7 @@ class MockRedis {
   }
 
   async ping() { return 'PONG'; }
+
 }
 
 export function getRedis(opts = {}) {
@@ -164,6 +165,7 @@ export function getRedis(opts = {}) {
   _instance.on('end', () => {
     console.log('[redis-factory] ⚠️  Redis connection ended');
   });
+
 
   return _instance;
 }

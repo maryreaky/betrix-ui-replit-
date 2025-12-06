@@ -3,17 +3,15 @@
  */
 
 import Joi from "joi";
-import { Logger } from "../utils/logger.js";
-
-const logger = new Logger("Validation");
 
 class ValidationMiddleware {
   /**
    * Validate phone number
    */
   static validatePhone(phone, country = "KE") {
+    void country;
     const schema = Joi.string()
-      .pattern(/^[\d\s\-\+]+$/)
+      .pattern(/[\d\s\-+]+$/)
       .min(10)
       .max(15)
       .required();
@@ -58,7 +56,7 @@ class ValidationMiddleware {
   static sanitize(input) {
     return String(input)
       .trim()
-      .replace(/[<>\"']/g, "")
+      .replace(/[<>"']/g, "")
       .slice(0, 500); // Max 500 chars
   }
 
@@ -68,7 +66,7 @@ class ValidationMiddleware {
   static validateUserData(data) {
     const schema = Joi.object({
       name: Joi.string().max(100),
-      phone: Joi.string().pattern(/^[\d\s\-\+]+$/),
+      phone: Joi.string().pattern(/[\d\s\-+]+$/),
       country: Joi.string().length(2),
       email: Joi.string().email(),
     });

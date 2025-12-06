@@ -32,29 +32,30 @@ server.listen(PORT, () => console.log("[health] server listening on port", PORT)
    This block is safe to insert multiple times; it checks for existing app and markers.
 */
 try {
-  if (typeof app !== "undefined" && typeof globalThis.__copilotReadyInserted === "undefined") {
+  if (typeof globalThis.app !== "undefined" && typeof globalThis.__copilotReadyInserted === "undefined") {
     globalThis.__copilotReadyInserted = true;
-    if (!app._router || !app._router.stack) {
+    if (!globalThis.app._router || !globalThis.app._router.stack) {
       // If app exists but router not ready, still attach endpoints
+      console.debug('[health] app router not ready yet');
     }
     // Liveness
-    if (!app._copilotHasHealth) {
-      app.get('/health', (req, res) => {
+    if (!globalThis.app._copilotHasHealth) {
+      globalThis.app.get('/health', (req, res) => {
         try {
           res.status(200).json({ status: 'healthy', uptime: process.uptime(), redis: !!globalThis.redisClient, version: process.env.npm_package_version || process.env.VERSION || 'unknown' });
         } catch (e) { res.status(200).send('ok'); }
       });
-      app._copilotHasHealth = true;
+      globalThis.app._copilotHasHealth = true;
     }
 
     // Readiness
-    if (!app._copilotHasReady) {
-      app.get('/ready', (req, res) => {
+    if (!globalThis.app._copilotHasReady) {
+      globalThis.app.get('/ready', (req, res) => {
         try {
           res.status(globalThis.__isReady ? 200 : 503).send(globalThis.__isReady ? 'ready' : 'not ready');
         } catch (e) { res.status(503).send('not ready'); }
       });
-      app._copilotHasReady = true;
+      globalThis.app._copilotHasReady = true;
     }
   }
 } catch (e) { console.error('COPILOT-READY-ENDPOINT ERROR', e); }
@@ -64,24 +65,24 @@ try {
    Idempotent: adds /health and /ready, queue wrapper (Bull/BullMQ/ioredis fallback), and graceful shutdown.
 */
 try {
-  if (typeof app !== "undefined" && typeof globalThis.__copilotOpsInserted === "undefined") {
+  if (typeof globalThis.app !== "undefined" && typeof globalThis.__copilotOpsInserted === "undefined") {
     globalThis.__copilotOpsInserted = true;
     // Liveness
-    if (!app._copilotHasHealth) {
-      app.get('/health', (req, res) => {
+    if (!globalThis.app._copilotHasHealth) {
+      globalThis.app.get('/health', (req, res) => {
         try {
           res.status(200).json({ status: 'healthy', uptime: process.uptime(), redis: !!globalThis.redisClient, version: process.env.npm_package_version || process.env.VERSION || 'unknown' });
         } catch (e) { res.status(200).send('ok'); }
       });
-      app._copilotHasHealth = true;
+      globalThis.app._copilotHasHealth = true;
     }
     // Readiness
-    if (!app._copilotHasReady) {
+    if (!globalThis.app._copilotHasReady) {
       globalThis.__isReady = (typeof globalThis.__isReady === 'undefined') ? true : globalThis.__isReady;
-      app.get('/ready', (req, res) => {
+      globalThis.app.get('/ready', (req, res) => {
         try { res.status(globalThis.__isReady ? 200 : 503).send(globalThis.__isReady ? 'ready' : 'not ready'); } catch (e) { res.status(503).send('not ready'); }
       });
-      app._copilotHasReady = true;
+      globalThis.app._copilotHasReady = true;
     }
 
     // Queue wrapper
@@ -92,8 +93,8 @@ try {
 
       try {
         let QueueClient = null;
-        try { QueueClient = require('bullmq').Queue; safeLog({event:'queue.impl','impl':'bullmq'}); } catch(e){}
-        if (!QueueClient) { try { QueueClient = require('bull').Queue; safeLog({event:'queue.impl','impl':'bull'}); } catch(e){} }
+        try { QueueClient = require('bullmq').Queue; safeLog({event:'queue.impl','impl':'bullmq'}); } catch(e){ void 0; }
+        if (!QueueClient) { try { QueueClient = require('bull').Queue; safeLog({event:'queue.impl','impl':'bull'}); } catch(e){ void 0; } }
 
         if (QueueClient) {
           if (globalThis.myQueue) {
@@ -105,10 +106,10 @@ try {
               globalThis.myQueue = q;
               wrapper.enqueue = async (name,payload)=>{ try{ await q.add(name,payload); safeLog({event:'webhook.enqueued',name}); }catch(e){ safeLog({event:'enqueue.error',error:e.message}); } };
               wrapper.drain = async ()=>{ try{ if(q.close) await q.close(); safeLog({event:'queue.closed'}); }catch(e){ safeLog({event:'drain.error',error:e.message}); } };
-            } catch(e){ safeLog({event:'queue.create.failed',error:e.message}); }
+            } catch(e){ safeLog({event:'queue.create.failed',error:e && e.message ? e.message : e}); }
           }
         }
-      } catch(e){ safeLog({event:'queue.require.failed',error:e.message}); }
+      } catch(e){ safeLog({event:'queue.require.failed',error:e && e.message ? e.message : e}); }
 
       if (!wrapper.enqueue || !wrapper.drain) {
         try {
@@ -116,12 +117,12 @@ try {
           const redisUrl = process.env.REDIS_URL || process.env.REDIS || 'redis://127.0.0.1:6379';
           const redisClient = new IORedis(redisUrl);
           globalThis.redisClient = redisClient;
-          wrapper.enqueue = async (name,payload)=>{ try{ await redisClient.rpush('queue:telegram:updates', JSON.stringify(payload)); safeLog({event:'webhook.enqueued.redis'}); }catch(e){ safeLog({event:'enqueue.redis.error',error:e.message}); } };
-          wrapper.drain = async ()=>{ try{ const timeout = parseInt(process.env.SHUTDOWN_TIMEOUT_MS||'30000',10); const start=Date.now(); while((Date.now()-start)<timeout){ const len = await redisClient.llen('queue:telegram:updates'); if(len===0) break; await new Promise(r=>setTimeout(r,200)); } safeLog({event:'queue.drained.redis'}); }catch(e){ safeLog({event:'drain.redis.error',error:e.message}); } };
-        } catch(e){ safeLog({event:'ioredis.not.available',error:e.message}); }
+          wrapper.enqueue = async (name,payload)=>{ try{ await redisClient.rpush('queue:telegram:updates', JSON.stringify(payload)); safeLog({event:'webhook.enqueued.redis'}); }catch(e){ safeLog({event:'enqueue.redis.error',error:e && e.message ? e.message : e}); } };
+          wrapper.drain = async ()=>{ try{ const timeout = parseInt(process.env.SHUTDOWN_TIMEOUT_MS||'30000',10); const start=Date.now(); while((Date.now()-start)<timeout){ const len = await redisClient.llen('queue:telegram:updates'); if(len===0) break; await new Promise(r=>setTimeout(r,200)); } safeLog({event:'queue.drained.redis'}); }catch(e){ safeLog({event:'drain.redis.error',error:e && e.message ? e.message : e}); } };
+        } catch(e){ safeLog({event:'ioredis.not.available',error:e && e.message ? e.message : e}); }
       }
 
-      if (!wrapper.enqueue) wrapper.enqueue = async (name,payload)=>{ safeLog({event:'enqueue.noop',name}); };
+      if (!wrapper.enqueue) wrapper.enqueue = async (name)=>{ safeLog({event:'enqueue.noop',name}); };
       if (!wrapper.drain) wrapper.drain = async ()=>{ safeLog({event:'drain.noop'}); };
 
       globalThis.queue = wrapper;
@@ -133,7 +134,7 @@ try {
       const shutdownTimeoutMs = parseInt(process.env.SHUTDOWN_TIMEOUT_MS || '30000',10);
       let shuttingDown = false;
       let inflight = 0;
-      app.use((req,res,next)=>{
+      globalThis.app.use((req,res,next)=>{
         if (shuttingDown) { res.setHeader('Connection','close'); return res.status(503).send('shutting down'); }
         inflight++; res.on('finish',()=>{ inflight = Math.max(0,inflight-1); }); next();
       });
@@ -145,7 +146,7 @@ try {
         while(inflight>0 && (Date.now()-start) < shutdownTimeoutMs){ await new Promise(r=>setTimeout(r,200)); }
         try{ if(globalThis.queue && typeof globalThis.queue.drain === 'function'){ await globalThis.queue.drain(); console.info(JSON.stringify({event:'queue.drained',timestamp:new Date().toISOString()})); } else { console.info('No queue.drain found; best-effort drain.'); } }catch(e){ console.error('queue drain error',e); }
         console.info(JSON.stringify({event:'shutdown.complete',timestamp:new Date().toISOString(),inflight}));
-        try{ process.exit(0); }catch(e){}
+        try { process.exit(0); } catch (e) { console.error('process.exit error', e); }
       }
       process.on('SIGTERM',()=>doShutdown('SIGTERM')); process.on('SIGINT',()=>doShutdown('SIGINT'));
     })();

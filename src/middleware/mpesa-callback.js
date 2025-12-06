@@ -5,7 +5,7 @@
 
 import { Logger } from "../utils/logger.js";
 import { db } from "../database/db.js";
-import { payments, subscriptions, users } from "../database/schema.js";
+import { payments, users } from "../database/schema.js";
 import { eq } from "drizzle-orm";
 
 const logger = new Logger("MpesaCallback");
@@ -32,6 +32,7 @@ class MpesaCallbackHandler {
       const amount = this.extractValue(callbackData, 1);
       const code = this.extractValue(callbackData, 2);
       const phone = this.extractValue(callbackData, 4);
+      void phone;
 
       // Find payment by reference code
       const payment = await db.query.payments.findFirst({

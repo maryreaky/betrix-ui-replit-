@@ -6,6 +6,7 @@ import { BrandingService } from "./services/branding-service.js";
 import { Logger } from "./utils/logger.js";
 
 const logger = new Logger("BrandedHandlers");
+void logger;
 
 class BrandedHandlers {
   constructor(telegram, userService, gemini) {

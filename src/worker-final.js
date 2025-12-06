@@ -5,6 +5,7 @@
  * Complete integration of all services and intelligence
  */
 
+
 // NOTE: Do NOT disable global TLS verification here. Use per-service TLS config
 // via `SPORTSMONKS_INSECURE=true` if absolutely required for local testing.
 
@@ -12,6 +13,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import Redis from "ioredis";
+
 import { getRedis, MockRedis } from "./lib/redis-factory.js";
 import { CONFIG, validateConfig } from "./config.js";
 import { Logger } from "./utils/logger.js";
@@ -40,7 +42,6 @@ import { AdvancedHandler } from "./advanced-handler.js";
 import { PremiumService } from "./services/premium.js";
 import { AdminDashboard } from "./admin/dashboard.js";
 import { AnalyticsService } from "./services/analytics.js";
-import { RateLimiter } from "./middleware/rate-limiter.js";
 import { ContextManager } from "./middleware/context-manager.js";
 import v2Handler from "./handlers/telegram-handler-v2-clean.js";
 import completeHandler from "./handlers/handler-complete.js";
@@ -285,7 +286,6 @@ const ai = {
   }
 };
 const analytics = new AnalyticsService(redis);
-const rateLimiter = new RateLimiter(redis);
 const contextManager = new ContextManager(redis);
 const basicHandlers = new BotHandlers(telegram, userService, apiFootball, ai, redis, freeSports, {
   openLiga,
@@ -336,10 +336,10 @@ try {
 // Subscribe to prefetch events for internal observability and reactive caching
 try {
   const sub = new Redis(CONFIG.REDIS_URL);
-  sub.subscribe('prefetch:updates', 'prefetch:error').then(() => logger.info('Subscribed to prefetch pub/sub channels')).catch(()=>{});
+  sub.subscribe('prefetch:updates', 'prefetch:error').then(() => logger.info('Subscribed to prefetch pub/sub channels')).catch((err)=>{ logger.warn('Prefetch subscribe failed', err && (err.message||String(err))); });
   sub.on('message', async (channel, message) => {
     let payload = message;
-    try { payload = JSON.parse(message); } catch (e) { /* raw */ }
+    try { payload = JSON.parse(message); } catch (e) { logger.debug('Prefetch message parse failed (raw payload)', { err: e && (e.message||String(e)), raw: message }); }
     logger.info('Prefetch event', { channel, payload });
     // Example reactive action: when openligadb updates, optionally warm specific caches
     try {
@@ -452,12 +452,84 @@ logger.info("🚀 BETRIX Final Worker - All Services Initialized");
 
 let running = true; // flag used to gracefully stop the main loop on SIGTERM/SIGINT
 
+// Start a minimal HTTP server that accepts Telegram webhook POSTs and a health check.
+// This makes the deployment robust if a platform accidentally runs the worker as the
+// web process: the worker will still accept webhooks and enqueue them for processing.
+try {
+  const enableMinimalWeb = (process.env.START_MINIMAL_WEB_ON_WORKER || 'true').toString().toLowerCase() !== 'false';
+  if (enableMinimalWeb) {
+    const httpPort = process.env.PORT || 5000;
+    const minimalApp = express();
+    minimalApp.use(express.json({ limit: '1mb' }));
+
+    minimalApp.get('/admin/health', (req, res) => {
+      res.json({ status: 'ok', role: 'worker', worker: true });
+    });
+
+    minimalApp.post('/webhook/telegram', async (req, res) => {
+      try {
+        const body = req.body;
+        // Enqueue the update for the worker main loop to process
+        if (redis && typeof redis.lpush === 'function') {
+          let accepted = true;
+          const updateId = (body && (body.update_id || (body.message && body.message.update_id))) || null;
+          if (updateId || updateId === 0) {
+            const dedupKey = `telegram:update:${updateId}`;
+            try {
+              const setRes = await redis.set(dedupKey, '1', 'EX', 24 * 3600, 'NX');
+              if (setRes === null) accepted = false;
+            } catch (e) {
+              try {
+                if (typeof redis.setnx === 'function') {
+                  const ok = await redis.setnx(dedupKey, '1');
+                  if (ok === 1 || ok === 'OK') {
+                    if (typeof redis.expire === 'function') await redis.expire(dedupKey, 24 * 3600);
+                    accepted = true;
+                  } else accepted = false;
+                } else if (typeof redis.get === 'function' && typeof redis.setex === 'function') {
+                  const cur = await redis.get(dedupKey);
+                  if (!cur) { await redis.setex(dedupKey, 24 * 3600, '1'); accepted = true; } else accepted = false;
+                }
+              } catch (e2) {
+                console.warn('[TELEGRAM][WORKER-SERVER] Redis dedupe fallback failed', e2?.message || e2);
+              }
+            }
+          }
+
+          if (!accepted) {
+            console.log('[TELEGRAM][WORKER-SERVER] Duplicate update ignored', updateId);
+            return res.sendStatus(200);
+          }
+
+          await redis.lpush('telegram:updates', JSON.stringify(body));
+          try { await redis.ltrim('telegram:updates', 0, 10000); } catch (e){ console.debug('[TELEGRAM][WORKER-SERVER] ltrim failed (non-fatal)', e && (e.message||String(e))); }
+          console.log('[TELEGRAM][WORKER-SERVER] Update enqueued');
+          return res.sendStatus(200);
+        } else {
+          console.warn('[TELEGRAM][WORKER-SERVER] Redis not available, dropping update');
+          return res.sendStatus(503);
+        }
+      } catch (err) {
+        console.error('[TELEGRAM][WORKER-SERVER] enqueue failed', err?.message || err);
+        return res.sendStatus(500);
+      }
+    });
+
+    minimalApp.listen(httpPort, '0.0.0.0', () => logger.info(`Minimal webhook server listening on ${httpPort}`));
+  } else {
+    logger.info('Minimal webhook server disabled by START_MINIMAL_WEB_ON_WORKER=false');
+  }
+} catch (e) {
+  logger.warn('Failed to start minimal webhook server', e?.message || String(e));
+}
+
 async function main() {
   logger.info("🌟 BETRIX Worker started - waiting for Telegram updates");
 
   // On startup, move any items left in processing back to the main queue so they are retried
   try {
     let moved = 0;
+    /* eslint-disable no-constant-condition */
     while (true) {
       const item = await redis.rpoplpush("telegram:processing", "telegram:updates");
       if (!item) break;
@@ -465,6 +537,7 @@ async function main() {
       // avoid busy looping
       if (moved % 100 === 0) await sleep(10);
     }
+    /* eslint-enable no-constant-condition */
     if (moved > 0) logger.info(`Requeued ${moved} items from telegram:processing to telegram:updates`);
   } catch (err) {
     logger.warn("Failed to requeue processing list on startup", err?.message || String(err));
@@ -870,6 +943,7 @@ async function handleCommand(chatId, userId, cmd, args, fullText) {
   }
 }
 
+/* eslint-disable no-unused-vars */
 async function handleCallback(chatId, userId, data) {
   const [action, ...params] = data.split(":");
   try {
@@ -887,6 +961,7 @@ async function handleCallback(chatId, userId, data) {
     logger.error(`Callback ${data} failed`, err);
   }
 }
+/* eslint-enable no-unused-vars */
 
 async function handleSignupFlow(chatId, userId, text, state) {
   try {
@@ -953,6 +1028,27 @@ process.on("uncaughtException", (err) => {
   logger.error("Uncaught exception", err);
   process.exit(1);
 });
+
+// Start the HTTP admin/debug server inside the worker process as a fallback
+// This ensures admin endpoints (e.g. /admin/routes, /admin/redis-ping, /webhook/*)
+// are available even if Render or another platform invokes the worker entrypoint
+// as the service start command. Set START_HTTP_IN_WORKER=false to disable.
+if (process.env.START_HTTP_IN_WORKER !== 'false') {
+  try {
+    const { default: app } = await import('./app.js');
+    try {
+      const httpPort = Number(process.env.PORT || 5000);
+      const server = app.listen(httpPort, () => logger.info(`⚓ HTTP admin server started inside worker on port ${httpPort}`));
+      server.on('error', (e) => logger.warn('HTTP admin server error', e?.message || String(e)));
+    } catch (e) {
+      logger.warn('Failed to start HTTP server inside worker', e?.message || String(e));
+    }
+  } catch (e) {
+    logger.warn('Could not import app to start HTTP server inside worker', e?.message || String(e));
+  }
+} else {
+  logger.info('START_HTTP_IN_WORKER set to false — not starting HTTP admin server in worker');
+}
 
 main().catch(err => {
   logger.error("Fatal", err);

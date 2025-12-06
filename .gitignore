@@ -1,3 +1,26 @@
+# Ignore local artifacts and secrets
+.ssh/
+*.bundle
+deploy-response.json
+patched-web.json
+patched-worker.json
+web-logs.json
+webhook_resp.txt
+deploy-*.json
+*_raw.txt
+*_raw.json
+node_app.err
+post.json
+post_raw.txt
+routes_out.json
+routes_raw.txt
+
+# OS / editor
+.DS_Store
+npm-debug.log
+coverage/
+dist/
+build/
 # ===================================================================
 # Node dependencies and lockfile handling
 # ===================================================================

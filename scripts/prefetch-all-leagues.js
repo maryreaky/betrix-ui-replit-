@@ -7,6 +7,7 @@ import ScoreBatService from '../src/services/scorebat.js';
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
 const openLiga = new OpenLigaDBService();
 const fd = new FootballDataService();
+void fd;
 const scorebat = new ScoreBatService(process.env.SCOREBAT_TOKEN || null);
 
 async function prefetch() {

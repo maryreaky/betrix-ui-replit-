@@ -1,0 +1,55 @@
+name: Endpoint Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      baseUrl:
+        description: 'Base URL to test (e.g. https://betrix-ui-new.onrender.com)'
+        required: true
+        default: 'https://betrix-ui-new.onrender.com'
+
+jobs:
+  curl-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Curl: show environment
+        run: |
+          echo "::group::Runner environment"
+          uname -a
+          curl --version
+          echo "::endgroup::"
+
+      - name: Curl: test endpoints
+        env:
+          BASE_URL: ${{ github.event.inputs.baseUrl }}
+        run: |
+          set -euo pipefail
+          echo "Testing against $BASE_URL"
+
+          for path in "/health" "/admin/process-info" "/admin/routes" "/admin/redis-ping" "/redis-ping" "/webhook/mpesa" "/webhook/telegram" "/telegram" "/.well-known/betrix-check"; do
+            echo
+            echo "===================="
+            echo "REQUEST: GET $BASE_URL$path"
+            echo "--------------------"
+            # Use -i to include headers, -s for silent progress, -S to show errors
+            curl -i -S -X GET "$BASE_URL$path" || echo "(request failed or returned non-2xx)"
+            echo "===================="
+          done
+
+      - name: Curl: POST tests
+        env:
+          BASE_URL: ${{ github.event.inputs.baseUrl }}
+        run: |
+          set -euo pipefail
+          echo "POST tests against $BASE_URL"
+          PAYLOAD='{"test":"smoke","ts":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}'
+
+          for path in "/webhook/mpesa" "/webhook/telegram" "/telegram"; do
+            echo
+            echo "===================="
+            echo "REQUEST: POST $BASE_URL$path"
+            echo "BODY: $PAYLOAD"
+            echo "--------------------"
+            curl -i -S -X POST -H 'Content-Type: application/json' -d "$PAYLOAD" "$BASE_URL$path" || echo "(POST failed)"
+            echo "===================="
+          done

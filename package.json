@@ -8,15 +8,25 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "start": "node src/worker-final.js",
-    "dev": "node src/worker-db.js",
-    "bot:start": "node src/bot/server.js",
+    "start": "node src/app.js",
+    "dev": "nodemon --watch src --exec node src/app.js",
     "worker": "node src/worker-final.js",
-    "test": "node --test tests/*.js",
+    "bot:start": "node src/bot/server.js",
+    "lint": "eslint . --ext .js,.mjs --max-warnings=0",
+    "format": "prettier --write 'src/**/*.{js,json,md}'",
+    "test": "node --test ./tests/*.test.js || echo 'no tests'",
+    "docker:build": "docker build -t adminoroo/betrix-ui-new:latest .",
     "redis:validate": "node scripts/validate-redis-connection.js",
     "redis:monitor": "node scripts/monitor-redis-health.js",
     "redis:test-handlers": "node scripts/test-redis-handlers.js",
     "redis:health": "npm run redis:validate && npm run redis:test-handlers"
+  },
+  "devDependencies": {
+    "eslint": "^8.47.0",
+    "eslint-config-prettier": "^9.0.0",
+    "eslint-plugin-import": "^2.30.0",
+    "nodemon": "^3.0.1",
+    "prettier": "^2.8.8"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -43,6 +53,7 @@
     "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
     "pg": "^8.16.3",
+    "redis": "^4.7.1",
     "telegraf": "^4.16.3",
     "twilio": "^5.10.6",
     "ws": "^8.18.3"

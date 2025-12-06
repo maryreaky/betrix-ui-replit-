@@ -6,7 +6,7 @@
 import express from "express";
 import helmet from "helmet";
 import cors from "cors";
-import rateLimit from "express-rate-limit";
+import rateLimitLib from "express-rate-limit";
 import { Logger } from "./utils/logger.js";
 import fs from "fs";
 import path from "path";
@@ -25,7 +25,7 @@ app.use(cors());
 app.use(express.json({ limit: "10mb", verify: (req, res, buf) => { req.rawBody = buf; } }));
 
 // Rate limiting
-const limiter = rateLimit({
+const limiter = rateLimitLib({
   windowMs: 15 * 60 * 1000,
   max: 100,
 });

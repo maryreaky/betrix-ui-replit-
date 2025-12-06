@@ -4,7 +4,7 @@
  */
 
 import { Logger } from "./utils/logger.js";
-import { ICONS, escapeHtml } from "./utils/formatters.js";
+import { ICONS } from "./utils/formatters.js";
 import { PredictionEngine } from "./services/predictor.js";
 import { AnalyticsService } from "./services/analytics.js";
 import { AlertsService } from "./services/alerts.js";
@@ -101,7 +101,6 @@ class AdvancedHandler {
    */
   async handleInsights(chatId, userId) {
     try {
-      const user = await this.userService.getUser(userId);
       const prefs = await this.context.getPreferences(userId);
       const recommendation = await this.predictor.recommendMatch(userId);
 
@@ -153,7 +152,7 @@ class AdvancedHandler {
       const accuracy = await this.predictor.getPredictionAccuracy(userId);
       const topPredictors = await this.redis.zrevrange("user:accuracy", 0, 4, "WITHSCORES");
 
-      const text =
+        let text =
         `🏆 <b>Prediction Leaderboard</b>\n\n` +
         `Your accuracy: ${accuracy}%\n\n` +
         `<b>Top Predictors:</b>\n`;

@@ -36,6 +36,7 @@ function mainKeyboard() {
   ]);
 }
 
+
 function payKeyboard() {
   return Markup.inlineKeyboard([
     [Markup.button.callback('M-Pesa (Lipana)', 'pay:method:lipana'), Markup.button.callback('M-Pesa (Daraja)', 'pay:method:mpesa')]
@@ -391,6 +392,7 @@ app.post('/webhook/mpesa', async (req, res) => {
       const checkout = stk.CheckoutRequestID;
       const resultCode = stk.ResultCode;
       const resultDesc = stk.ResultDesc || stk.ResultDescription || null;
+
       // find payment by provider checkout id
       const payment = await getPaymentByProviderCheckout(checkout);
       if (!payment) {
