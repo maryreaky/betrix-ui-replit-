@@ -85,55 +85,7 @@ class MockRedis {
   }
 
   async ping() { return 'PONG'; }
-<<<<<<< HEAD
 
-  // Compatibility methods used by the worker or other services
-  async expire() {
-    // No TTL semantics in MockRedis; pretend success
-    return 1;
-  }
-
-  async publish() {
-    // Mock publish: no-op but return number of subscribers (0)
-    return 0;
-  }
-
-  async rpop(source) {
-    const arr = this.kv.get(source) || [];
-    const v = arr.pop();
-    this.kv.set(source, arr);
-    return v || null;
-  }
-
-  async lpush(dest, value) {
-    const arr = this.kv.get(dest) || [];
-    arr.unshift(value);
-    this.kv.set(dest, arr);
-    return arr.length;
-  }
-
-  async rpoplpush(source, dest) {
-    const val = await this.rpop(source);
-    if (!val) return null;
-    await this.lpush(dest, val);
-    return val;
-  }
-
-  async brpoplpush(source, dest) {
-    // Blocking is not implemented for MockRedis; behave like rpoplpush
-    return await this.rpoplpush(source, dest);
-  }
-
-  async quit() {
-    // No real connection to close in MockRedis; behave like OK
-    return 'OK';
-  }
-
-  async disconnect() {
-    return 'OK';
-  }
-=======
->>>>>>> upstream/main
 }
 
 export function getRedis(opts = {}) {
@@ -214,100 +166,7 @@ export function getRedis(opts = {}) {
     console.log('[redis-factory] ⚠️  Redis connection ended');
   });
 
-<<<<<<< HEAD
-  // Compatibility wrappers: some hosted Redis clients or proxy libraries
-  // may not expose the exact ioredis method names (e.g. brpoplpush, expire, publish).
-  // If the methods are missing but the client supports `sendCommand` or `call`,
-  // provide thin wrappers so the rest of the codebase can use the expected API.
-  const sendCmd = typeof _instance.sendCommand === 'function' ? (args) => _instance.sendCommand(args) : null;
-  const callCmd = typeof _instance.call === 'function' ? (cmd, ...args) => _instance.call(cmd, ...args) : null;
 
-  function attachIfMissing(name, impl) {
-    if (typeof _instance[name] !== 'function') {
-      try {
-        // If an original implementation exists, capture it so wrappers
-        // can call the original without recursing into themselves.
-        const original = _instance[name];
-        const wrapped = typeof impl === 'function' ? impl : () => { throw new Error('invalid impl'); };
-        // Attach both to the instance and the prototype to cover
-        // different client shapes (proxied objects, wrapped clients).
-        try { _instance[name] = wrapped.bind(_instance, original); } catch (e) { _instance[name] = wrapped; }
-        try { if (_instance && _instance.constructor && _instance.constructor.prototype) _instance.constructor.prototype[name] = wrapped; } catch (e) { void 0; }
-        console.log(`[redis-factory] ⚙️  Attached compatibility wrapper for ${name}`);
-      } catch (e) {
-        console.warn(`[redis-factory] ⚠️  Could not attach wrapper for ${name}`, e && e.message ? e.message : e);
-      }
-    }
-  }
-
-  // EXPIRE key seconds
-  attachIfMissing('expire', (original) => async (key, seconds) => {
-    if (typeof original === 'function') return await original.call(_instance, key, seconds);
-    if (sendCmd) return await sendCmd(['EXPIRE', key, String(seconds)]);
-    if (callCmd) return await callCmd('EXPIRE', key, String(seconds));
-    throw new Error('redis.expire not supported by client');
-  });
-
-  // PUBLISH channel message
-  attachIfMissing('publish', (original) => async (channel, message) => {
-    if (typeof original === 'function') return await original.call(_instance, channel, message);
-    if (sendCmd) return await sendCmd(['PUBLISH', channel, String(message)]);
-    if (callCmd) return await callCmd('PUBLISH', channel, String(message));
-    throw new Error('redis.publish not supported by client');
-  });
-
-  // BRPOPLPUSH source dest timeout
-  attachIfMissing('brpoplpush', (original) => async (source, dest, timeout = 0) => {
-    if (typeof original === 'function') return await original.call(_instance, source, dest, timeout);
-    if (sendCmd) return await sendCmd(['BRPOPLPUSH', source, dest, String(timeout)]);
-    if (callCmd) return await callCmd('BRPOPLPUSH', source, dest, String(timeout));
-    // Fallback: try BRPOP followed by LPUSH (non-atomic, only for best-effort fallback)
-    if (typeof _instance.brpop === 'function' && typeof _instance.lpush === 'function') {
-      const res = await _instance.brpop(source, timeout);
-      if (!res) return null;
-      // res can be [key, value]
-      const val = Array.isArray(res) ? res[1] : res;
-      await _instance.lpush(dest, val);
-      return val;
-    }
-    throw new Error('redis.brpoplpush not supported by client');
-  });
-
-  // RPOPLPUSH source dest
-  attachIfMissing('rpoplpush', (original) => async (source, dest) => {
-    if (typeof original === 'function') return await original.call(_instance, source, dest);
-    if (sendCmd) return await sendCmd(['RPOPLPUSH', source, dest]);
-    if (callCmd) return await callCmd('RPOPLPUSH', source, dest);
-    // Fallback: try RPOP then LPUSH (non-atomic)
-    if (typeof _instance.rpop === 'function' && typeof _instance.lpush === 'function') {
-      const val = await _instance.rpop(source);
-      if (!val) return null;
-      await _instance.lpush(dest, val);
-      return val;
-    }
-    throw new Error('redis.rpoplpush not supported by client');
-  });
-
-  // QUIT / graceful disconnect shim (some clients expose quit, others disconnect)
-  attachIfMissing('quit', (original) => async () => {
-    if (typeof original === 'function') return await original.call(_instance);
-    if (typeof _instance.disconnect === 'function') return await _instance.disconnect();
-    if (typeof _instance.quit === 'function') return await _instance.quit();
-    // As a last resort, no-op
-    return 'OK';
-  });
-
-  // Log the final capabilities to help diagnose hosted clients at startup
-  try {
-    const required = ['expire', 'publish', 'brpoplpush', 'rpoplpush', 'rpop', 'lpush'];
-    const present = required.reduce((acc, k) => { acc[k] = typeof _instance[k] === 'function'; return acc; }, {});
-    console.log('[redis-factory] 🔎 Redis capability check:', present);
-  } catch (e) {
-    console.warn('[redis-factory] ⚠️  Could not perform capability check', e && e.message ? e.message : e);
-  }
-
-=======
->>>>>>> upstream/main
   return _instance;
 }
 

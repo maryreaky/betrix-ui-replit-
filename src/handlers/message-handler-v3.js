@@ -6,13 +6,8 @@
 
 import { Logger } from '../utils/logger.js';
 const logger = new Logger('MessageHandler');
-<<<<<<< HEAD
-import { getUserState, setUserState, getStateData, setStateData, setUserState as updateUserStateData, StateTypes , createUserProfile, getUserProfile, updateUserProfile } from './data-models.js';
-
-=======
 import { getUserState, setUserState, getStateData, setStateData, setUserState as updateUserStateData, StateTypes } from './data-models.js';
 import { createUserProfile, getUserProfile, updateUserProfile } from './data-models.js';
->>>>>>> upstream/main
 
 // ============================================================================
 // INTENT CLASSIFICATION

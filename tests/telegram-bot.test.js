@@ -7,13 +7,9 @@
  */
 
 import assert from 'assert';
-<<<<<<< HEAD
-// test logger intentionally omitted to reduce noise
-=======
 import { Logger } from '../src/utils/logger.js';
 
 const logger = new Logger('BotTests');
->>>>>>> upstream/main
 
 // Mock Redis client
 class MockRedis {
@@ -43,11 +39,7 @@ class MockRedis {
 // Mock services
 const mockServices = {
   telegram: {
-<<<<<<< HEAD
-    sendMessage: async (chatId, text, opts) => { void chatId; void text; void opts; return { ok: true, result: { message_id: 1 } }; }
-=======
     sendMessage: async (chatId, text, opts) => ({ ok: true, result: { message_id: 1 } })
->>>>>>> upstream/main
   },
   api: {}
 };
@@ -66,10 +58,7 @@ async function runTests() {
     // Import handlers
     const { handleCommand } = await import('../src/handlers/commands.js');
     const { handleCallback } = await import('../src/handlers/callbacks.js');
-<<<<<<< HEAD
-=======
     const { mainMenu } = await import('../src/handlers/menu-system.js');
->>>>>>> upstream/main
 
     const userId = 123456;
     const chatId = 789012;

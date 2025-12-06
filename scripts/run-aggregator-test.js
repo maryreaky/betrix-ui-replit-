@@ -2,11 +2,7 @@
 import dotenv from 'dotenv';
 dotenv.config();
 import IORedis from 'ioredis';
-<<<<<<< HEAD
-import { SportsAggregator } from '../src/services/sports-aggregator.js';
-=======
 import SportsAggregator from '../src/services/sports-aggregator.js';
->>>>>>> upstream/main
 
 async function main() {
   const redisUrl = process.env.REDIS_URL;
@@ -14,11 +10,7 @@ async function main() {
   if (redisUrl) {
     redis = new IORedis(redisUrl);
     // allow connection
-<<<<<<< HEAD
-    try { await redis.connect(); } catch (e) { void e; }
-=======
     try { await redis.connect(); } catch (_) {}
->>>>>>> upstream/main
   }
 
   const agg = new SportsAggregator(redis);

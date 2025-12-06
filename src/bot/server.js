@@ -1,12 +1,4 @@
 import 'dotenv/config';
-<<<<<<< HEAD
-import { Telegraf, session, Markup } from 'telegraf';
-import express from 'express';
-import bodyParser from 'body-parser';
-import { upsertUser, getUserById, getRecentPayments, getPaymentByProviderCheckout, getPaymentByTxRef, updatePaymentStatus } from './db.js';
-import { initiateStkPush, handleMpesaCallback } from './payments.js';
-import * as football from './football.js';
-=======
 import { Telegraf, Scenes, session, Markup } from 'telegraf';
 import express from 'express';
 import bodyParser from 'body-parser';
@@ -14,18 +6,13 @@ import { Pool } from 'pg';
 import { upsertUser, createPayment, getUserById, getRecentPayments, getPaymentByProviderCheckout, getPaymentByTxRef, updatePaymentStatus } from './db.js';
 import { initiateStkPush, handleMpesaCallback } from './payments.js';
 import football, { setAggregator } from './football.js';
->>>>>>> upstream/main
 import { getRedis } from '../../src/lib/redis-factory.js';
 import { SportsAggregator } from '../../src/services/sports-aggregator.js';
 
 // Initialize a SportsAggregator instance (shared Redis)
 const redisClient = getRedis();
 const sportsAgg = new SportsAggregator(redisClient);
-<<<<<<< HEAD
-football.setAggregator(sportsAgg);
-=======
 setAggregator(sportsAgg);
->>>>>>> upstream/main
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 if (!BOT_TOKEN) {
@@ -48,10 +35,7 @@ function mainKeyboard() {
     [Markup.button.callback('💳 Pay 300 KES', 'pay:start')]
   ]);
 }
-<<<<<<< HEAD
-void mainKeyboard;
-=======
->>>>>>> upstream/main
+
 
 function payKeyboard() {
   return Markup.inlineKeyboard([
@@ -94,10 +78,7 @@ bot.action('pay:method:lipana', async (ctx) => {
   ctx.session.paymentMethod = 'lipana';
   await ctx.reply('You chose Lipana M-Pesa. We will use M-Pesa STK to collect 300 KES.');
   // trigger payment flow
-<<<<<<< HEAD
-=======
   const fakeCtx = ctx; // reuse same ctx
->>>>>>> upstream/main
   await (async function trigger() {
     const userId = ctx.from.id;
     let msisdn = ctx.session?.msisdn || null;
@@ -154,8 +135,6 @@ bot.action('pay:method:mpesa', async (ctx) => {
     await ctx.reply('Failed to initiate payment. Please try again later.');
   }
 });
-<<<<<<< HEAD
-=======
   }
   const lines = [ `⚽ BETRIX • Upcoming Fixtures (showing ${items.length} of ${total})` ];
   const kb = [];
@@ -168,16 +147,11 @@ bot.action('pay:method:mpesa', async (ctx) => {
   await ctx.editMessageText(lines.join('\n'), { reply_markup: Markup.inlineKeyboard(kb).reply_markup });
 });
 
->>>>>>> upstream/main
 // Match details handler (best-effort id lookup)
 bot.action(/match:(.+):football/, async (ctx) => {
   await ctx.answerCbQuery();
   const matchId = ctx.match[1];
-<<<<<<< HEAD
-  const all = await football.getLiveMatches();
-=======
   const all = await football.loadMatches();
->>>>>>> upstream/main
   const found = all.find(m => String(m.id) === String(matchId) || String(m.match_id) === String(matchId) || String(m.fixture?.id) === String(matchId) || (`${m.home?.id || ''}:${m.away?.id || ''}`) === String(matchId));
   if (!found) {
     await ctx.editMessageText(`Match not found. Showing list instead.`, { reply_markup: Markup.inlineKeyboard([[Markup.button.callback('🔙 Back', 'sport:football')]]).reply_markup });
@@ -418,10 +392,7 @@ app.post('/webhook/mpesa', async (req, res) => {
       const checkout = stk.CheckoutRequestID;
       const resultCode = stk.ResultCode;
       const resultDesc = stk.ResultDesc || stk.ResultDescription || null;
-<<<<<<< HEAD
-      void resultDesc;
-=======
->>>>>>> upstream/main
+
       // find payment by provider checkout id
       const payment = await getPaymentByProviderCheckout(checkout);
       if (!payment) {

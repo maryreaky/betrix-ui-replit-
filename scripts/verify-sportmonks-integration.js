@@ -6,13 +6,8 @@
 
 import Redis from 'ioredis';
 import { CONFIG } from '../src/config.js';
-<<<<<<< HEAD
-import { SportsAggregator } from '../src/services/sports-aggregator.js';
-import { handleMessage, handleCallbackQuery } from '../src/handlers/telegram-handler-v2-clean.js';
-=======
 import SportsAggregator from '../src/services/sports-aggregator.js';
 import v2Handler from '../src/handlers/telegram-handler-v2-clean.js';
->>>>>>> upstream/main
 import { Logger } from '../src/utils/logger.js';
 
 const logger = new Logger('VerifySportMonksLive');
@@ -59,11 +54,7 @@ const logger = new Logger('VerifySportMonksLive');
           text: '/live'
         }
       };
-<<<<<<< HEAD
-      const result = await handleMessage(update, redis, { sportsAggregator: aggregator });
-=======
       const result = await v2Handler.handleMessage(update, redis, { sportsAggregator: aggregator });
->>>>>>> upstream/main
       
       if (result && result.method === 'sendMessage') {
         logger.info('✓ Handler processed /live command');
@@ -115,11 +106,7 @@ const logger = new Logger('VerifySportMonksLive');
         }
       };
       
-<<<<<<< HEAD
-      const result = await handleCallbackQuery(cbUpdate, redis, { sportsAggregator: aggregator });
-=======
       const result = await v2Handler.handleCallbackQuery(cbUpdate, redis, { sportsAggregator: aggregator });
->>>>>>> upstream/main
       
       if (Array.isArray(result)) {
         logger.info(`✓ Handler returned array of ${result.length} action(s)`);
@@ -151,11 +138,7 @@ const logger = new Logger('VerifySportMonksLive');
         }
       };
       
-<<<<<<< HEAD
-      const result = await handleCallbackQuery(cbUpdate, redis, { sportsAggregator: aggregator });
-=======
       const result = await v2Handler.handleCallbackQuery(cbUpdate, redis, { sportsAggregator: aggregator });
->>>>>>> upstream/main
       
       if (result && result.method) {
         logger.info(`✓ Match details callback processed: ${result.method}`);

@@ -20,15 +20,9 @@ Quick verification steps after deployment
    - `[verifySignature] Computed expectedHex(first16)= ...`
 3. Test STK push creation (use your local helper script or call the API):
    - Run locally (replace URL and key):
-<<<<<<< HEAD
-   ```pwsh
-   node .\scripts\create_lipana_stk.js
-   ```
-=======
      ```pwsh
      node .\scripts\create_lipana_stk_fix.js
      ```
->>>>>>> upstream/main
    - Confirm the API returns `201` and a `transactionId`.
 4. Send a signed test webhook (the project includes `scripts/send_signed_webhook.js`) to the deployed `https://<your-service>/webhook/mpesa` endpoint.
 5. Confirm the webhook is accepted (HTTP 200) and that the `webhooks` table / `payments` table has a row with the `transactionId` and `status` updated.

@@ -5,11 +5,7 @@
  * Complete integration of all services and intelligence
  */
 
-<<<<<<< HEAD
-// Targeted ESLint relaxations for named-import warnings only.
 
-=======
->>>>>>> upstream/main
 // NOTE: Do NOT disable global TLS verification here. Use per-service TLS config
 // via `SPORTSMONKS_INSECURE=true` if absolutely required for local testing.
 
@@ -17,10 +13,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import Redis from "ioredis";
-<<<<<<< HEAD
-import express from "express";
-=======
->>>>>>> upstream/main
+
 import { getRedis, MockRedis } from "./lib/redis-factory.js";
 import { CONFIG, validateConfig } from "./config.js";
 import { Logger } from "./utils/logger.js";
@@ -39,13 +32,8 @@ import RSSAggregator from "./services/rss-aggregator.js";
 import FootballDataService from "./services/footballdata.js";
 import ScoreBatService from "./services/scorebat-enhanced.js";
 import Scrapers from "./services/scrapers.js";
-<<<<<<< HEAD
-import { SportsAggregator } from "./services/sports-aggregator.js";
-import { OddsAnalyzer } from "./services/odds-analyzer.js";
-=======
 import SportsAggregator from "./services/sports-aggregator.js";
 import OddsAnalyzer from "./services/odds-analyzer.js";
->>>>>>> upstream/main
 import { MultiSportAnalyzer } from "./services/multi-sport-analyzer.js";
 import { startPrefetchScheduler } from "./tasks/prefetch-scheduler.js";
 import { APIBootstrap } from "./tasks/api-bootstrap.js";
@@ -55,33 +43,20 @@ import { PremiumService } from "./services/premium.js";
 import { AdminDashboard } from "./admin/dashboard.js";
 import { AnalyticsService } from "./services/analytics.js";
 import { ContextManager } from "./middleware/context-manager.js";
-<<<<<<< HEAD
-import * as v2Handler from "./handlers/telegram-handler-v2-clean.js";
-import * as completeHandler from "./handlers/handler-complete.js";
-import { handleLegacyCallback } from "./bot/callbacks.js";
-import { SportMonksAPI } from "./services/sportmonks-api.js";
-import { SportsDataAPI } from "./services/sportsdata-api.js";
-import { registerDataExposureAPI } from "./app_clean.js";
-=======
 import v2Handler from "./handlers/telegram-handler-v2-clean.js";
 import completeHandler from "./handlers/handler-complete.js";
 import SportMonksAPI from "./services/sportmonks-api.js";
 import SportsDataAPI from "./services/sportsdata-api.js";
 import { registerDataExposureAPI } from "./app.js";
->>>>>>> upstream/main
 import { Pool } from 'pg';
 import { reconcileWithLipana } from './tasks/reconcile-lipana.js';
 
 // ===== PREMIUM ENHANCEMENT MODULES =====
-<<<<<<< HEAD
-// Removed unused utility imports to satisfy strict linting.
-=======
 import premiumUI from "./utils/premium-ui-builder.js";
 import advancedAnalysis from "./utils/advanced-match-analysis.js";
 import fixturesManager from "./utils/fixtures-manager.js";
 import intelligentMenus from "./utils/intelligent-menu-builder.js";
 import brandingUtils from "./utils/betrix-branding.js";
->>>>>>> upstream/main
 import perfUtils from "./utils/performance-optimizer.js";
 
 const logger = new Logger("FinalWorker");
@@ -120,11 +95,7 @@ try {
 
 // attach a safe error handler to avoid unhandled errors
 if (redis && typeof redis.on === 'function') {
-<<<<<<< HEAD
-  try { redis.on('error', (err) => logger.error('Redis error', err)); } catch(e){ logger.warn('Failed to attach redis error handler', e && (e.message||String(e))); }
-=======
   try { redis.on('error', (err) => logger.error('Redis error', err)); } catch(e){}
->>>>>>> upstream/main
 }
 
 // Initialize Postgres pool (optional) — fall back gracefully if DATABASE_URL not set or connection fails
@@ -142,11 +113,7 @@ try {
   }
 } catch (err) {
   logger.warn('⚠️ Postgres pool initialization failed — continuing without DB', err?.message || String(err));
-<<<<<<< HEAD
-  try { if (pgPool && typeof pgPool.end === 'function') await pgPool.end(); } catch(e){ logger.warn('Failed to end postgres pool after init failure', e && (e.message||String(e))); }
-=======
   try { if (pgPool && typeof pgPool.end === 'function') await pgPool.end(); } catch(e){}
->>>>>>> upstream/main
   pgPool = null;
 }
 
@@ -329,16 +296,6 @@ const basicHandlers = new BotHandlers(telegram, userService, apiFootball, ai, re
 });
 
 // StatPal integration removed: system now uses SPORTSMONKS and FOOTBALLDATA only
-<<<<<<< HEAD
-logger.info('ℹ️ StatPal integration disabled/removed — using SPORTSMONKS and FOOTBALL-DATA only');
-
-// ===== API BOOTSTRAP: Validate keys and immediately prefetch data =====
-try {
-  const apiBootstrap = new APIBootstrap(sportsAggregator, oddsAnalyzer, redis);
-  const bootstrapResult = await apiBootstrap.initialize();
-
-  if (bootstrapResult && bootstrapResult.success) {
-=======
 let statpalInitSuccess = false;
 logger.info('ℹ️ StatPal integration disabled/removed — using SPORTSMONKS and FOOTBALL-DATA only');
 
@@ -350,7 +307,6 @@ try {
   apiBootstrapSuccess = bootstrapResult.success;
   
   if (bootstrapResult.success) {
->>>>>>> upstream/main
     logger.info('✅ API Bootstrap successful', bootstrapResult.data);
     // Start continuous prefetch after initial success
     apiBootstrap.startContinuousPrefetch(Number(process.env.PREFETCH_INTERVAL_SECONDS || 60));
@@ -401,17 +357,10 @@ try {
   const isMock = redis && redis.constructor && redis.constructor.name === 'MockRedis';
   if (!isMock && CONFIG.REDIS_URL) {
     const sub = new Redis(CONFIG.REDIS_URL);
-<<<<<<< HEAD
-    sub.subscribe('prefetch:updates', 'prefetch:error').then(() => logger.info('Subscribed to prefetch pub/sub channels')).catch((err)=>{ logger.warn('Prefetch subscribe failed (external)', err && (err.message||String(err))); });
-    sub.on('message', async (channel, message) => {
-      let payload = message;
-        try { payload = JSON.parse(message); } catch (e) { logger.debug('Prefetch message parse failed (external)', { err: e && (e.message||String(e)), raw: message }); }
-=======
     sub.subscribe('prefetch:updates', 'prefetch:error').then(() => logger.info('Subscribed to prefetch pub/sub channels')).catch(()=>{});
     sub.on('message', async (channel, message) => {
       let payload = message;
       try { payload = JSON.parse(message); } catch (e) { /* raw */ }
->>>>>>> upstream/main
       logger.info('Prefetch event', { channel, payload });
       try {
         if (channel === 'prefetch:updates' && payload && payload.type === 'openligadb') {
@@ -426,27 +375,20 @@ try {
 } catch (e) {
   logger.warn('Prefetch subscriber failed to start', e?.message || String(e));
 }
-<<<<<<< HEAD
-// Note: v2Handler telemetry injection removed — handlers expose named functions
-=======
 // Inject Redis into v2 handler for telemetry wiring (no-op for MockRedis)
 if (typeof v2Handler.setTelemetryRedis === 'function') {
   try { v2Handler.setTelemetryRedis(redis); logger.info('✅ Telemetry Redis injected into v2Handler'); } catch(e){}
 }
->>>>>>> upstream/main
 
 // ===== INITIALIZE PERFORMANCE OPTIMIZER =====
 // perfUtils is a class (default export). Create an instance to access methods.
 const perfInstance = new perfUtils(redis);
-<<<<<<< HEAD
-=======
 const perfOptimizer = {
   instance: perfInstance,
   prefetcher: perfInstance.prefetchData.bind(perfInstance),
   rateLimiterFactory: perfInstance.createRateLimiter.bind(perfInstance),
   getMetrics: perfInstance.getMetrics.bind(perfInstance)
 };
->>>>>>> upstream/main
 logger.info('✅ Performance Optimizer instance created (PerformanceOptimizer)');
 
 // Wrap sportsAggregator methods with caching
@@ -697,11 +639,7 @@ async function handleUpdate(update) {
     if (update.callback_query) {
       const callbackQuery = update.callback_query;
       const callbackId = callbackQuery.id;
-<<<<<<< HEAD
-      // callbackQuery.from may exist; we don't need local userId here
-=======
       const userId = callbackQuery.from?.id;
->>>>>>> upstream/main
       const chatId = callbackQuery.message?.chat?.id;
 
       // Avoid answering callback queries that are already too old (Telegram rejects if >60s)
@@ -721,19 +659,7 @@ async function handleUpdate(update) {
       try {
         const services = { openLiga, footballData: footballDataService, rss: rssAggregator, scrapers, sportsAggregator, oddsAnalyzer, multiSportAnalyzer, cache, sportMonks: sportMonksAPI, sportsData: sportsDataAPI };
         const res = await completeHandler.handleCallbackQuery(callbackQuery, redis, services);
-<<<<<<< HEAD
-        if (!res) {
-          // Fallback to legacy/simple callback router when rich handler returns nothing
-          try {
-            await handleLegacyCallback(chatId, callbackQuery.from?.id, callbackQuery.data, { basicHandlers, logger });
-          } catch (e) {
-            logger.warn('Legacy callback fallback failed', e && (e.message || e));
-          }
-          return;
-        }
-=======
         if (!res) return;
->>>>>>> upstream/main
 
         // Normalize to array for uniform processing
         const actions = Array.isArray(res) ? res : [res];
@@ -894,8 +820,6 @@ async function handleCommand(chatId, userId, cmd, args, fullText) {
         }
       },
       "/about": () => basicHandlers.about(chatId),
-<<<<<<< HEAD
-=======
       "/live": async () => {
         // route /live to the complete handler (same as above)
         try {
@@ -905,7 +829,6 @@ async function handleCommand(chatId, userId, cmd, args, fullText) {
           logger.warn('/live handler (duplicate) error', e?.message);
         }
       },
->>>>>>> upstream/main
       "/news": () => basicHandlers.news(chatId),
       "/highlights": () => basicHandlers.highlights(chatId),
       "/standings": async () => {
